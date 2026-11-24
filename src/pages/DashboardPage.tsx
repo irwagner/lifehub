@@ -6,11 +6,13 @@ import {
   CheckCircle2,
   Circle,
   Compass,
+  FileBarChart2,
   Heart,
   Users,
   Wallet,
 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
+import { MonthlyReportModal } from '../components/MonthlyReportModal';
 import { useApp } from '../context/AppContext';
 import { toggleTaskStatus } from '../repositories/calendarRepo';
 import { loadDashboardSnapshot, type DashboardSnapshot } from '../repositories/dashboardRepo';
@@ -29,6 +31,7 @@ export const DashboardPage: React.FC = () => {
   const { db, dataVersion, bumpDataVersion, openQuickAction, setActiveSection, notify } = useApp();
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reportOpen, setReportOpen] = useState(false);
 
   useEffect(() => {
     if (!db) return;
@@ -103,13 +106,22 @@ export const DashboardPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setActiveSection('settings')}
-          className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:border-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
-        >
-          Alternar modo ({ROUTINE_MODE_LABELS[settings.routine_mode]})
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:border-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <FileBarChart2 className="h-3.5 w-3.5" /> Relatório do Mês
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSection('settings')}
+            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-medium text-slate-700 hover:border-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            Alternar modo ({ROUTINE_MODE_LABELS[settings.routine_mode]})
+          </button>
+        </div>
       </div>
 
       {/* KPI Cards */}
@@ -431,6 +443,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </section>
       )}
+      <MonthlyReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
     </div>
   );
 };

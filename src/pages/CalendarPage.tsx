@@ -4,7 +4,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
-import { CheckCircle2, Circle, Trash2, Wand2 } from 'lucide-react';
+import { CheckCircle2, Circle, Pencil, Trash2, Wand2 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
 import { Modal } from '../components/Modal';
 import { useApp } from '../context/AppContext';
@@ -17,6 +17,7 @@ import {
   toggleTaskStatus,
   updateCalendarEvent,
   updateCalendarEventTiming,
+  updateTask,
 } from '../repositories/calendarRepo';
 import {
   SCHEDULE_TEMPLATES,
@@ -27,6 +28,7 @@ import {
   type CalendarEvent,
   type EventCategory,
   type TaskItem,
+  type TaskPriority,
 } from '../types/domain';
 import { formatDateBR, todayISO } from '../utils/format';
 
@@ -57,6 +59,13 @@ export const CalendarPage: React.FC = () => {
   const [editEnd, setEditEnd] = useState('10:00');
   const [editLocation, setEditLocation] = useState('');
   const [editNotes, setEditNotes] = useState('');
+
+  // Task edit/reschedule modal state
+  const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskDue, setEditTaskDue] = useState('');
+  const [editTaskPriority, setEditTaskPriority] = useState<TaskPriority>('medium');
+  const [editTaskCategory, setEditTaskCategory] = useState('geral');
 
   useEffect(() => {
     if (!db) return;
@@ -174,6 +183,32 @@ export const CalendarPage: React.FC = () => {
     await deleteTask(db, id);
     bumpDataVersion();
     notify('Tarefa excluída.');
+  };
+
+  const openEditTask = (task: TaskItem) => {
+    setEditingTask(task);
+    setEditTaskTitle(task.title);
+    setEditTaskDue(task.due_date ?? '');
+    setEditTaskPriority(task.priority);
+    setEditTaskCategory(task.category);
+  };
+
+  const handleSaveEditTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !editingTask) return;
+    try {
+      await updateTask(db, editingTask.id, {
+        title: editTaskTitle,
+        due_date: editTaskDue || null,
+        priority: editTaskPriority,
+        category: editTaskCategory,
+      });
+      setEditingTask(null);
+      bumpDataVersion();
+      notify('Tarefa atualizada/reagendada.');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao editar tarefa.', 'error');
+    }
   };
 
   const inputClass =
@@ -320,14 +355,24 @@ export const CalendarPage: React.FC = () => {
                       {task.due_date ? ` · ${formatDateBR(task.due_date)}` : ''}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteTask(task.id)}
-                    className="text-slate-400 hover:text-rose-500"
-                    aria-label="Excluir tarefa"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => openEditTask(task)}
+                      className="text-slate-400 hover:text-brand-500"
+                      aria-label="Editar ou reagendar tarefa"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTask(task.id)}
+                      className="text-slate-400 hover:text-rose-500"
+                      aria-label="Excluir tarefa"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -439,6 +484,71 @@ export const CalendarPage: React.FC = () => {
                 Salvar Alterações
               </button>
             </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Task Edit / Reschedule Modal */}
+      <Modal
+        open={Boolean(editingTask)}
+        title="Editar / Reagendar Tarefa"
+        onClose={() => setEditingTask(null)}
+      >
+        <form onSubmit={handleSaveEditTask} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium">Título</label>
+            <input
+              required
+              value={editTaskTitle}
+              onChange={(e) => setEditTaskTitle(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Prioridade</label>
+              <select
+                value={editTaskPriority}
+                onChange={(e) => setEditTaskPriority(e.target.value as TaskPriority)}
+                className={inputClass}
+              >
+                <option value="high">Alta</option>
+                <option value="medium">Média</option>
+                <option value="low">Baixa</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Prazo</label>
+              <input
+                type="date"
+                value={editTaskDue}
+                onChange={(e) => setEditTaskDue(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Categoria</label>
+              <input
+                value={editTaskCategory}
+                onChange={(e) => setEditTaskCategory(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setEditingTask(null)}
+              className="rounded-lg px-4 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            >
+              Salvar Tarefa
+            </button>
           </div>
         </form>
       </Modal>

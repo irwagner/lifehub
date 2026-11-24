@@ -76,3 +76,53 @@ export async function logHabitSession(
 export async function deleteHabitLog(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM habit_logs WHERE id = ?', [id]);
 }
+
+export interface HabitWeekConsistency {
+  weekStart: string;
+  weekEnd: string;
+  academiaCount: number;
+  corridaCount: number;
+  totalSessions: number;
+}
+
+/**
+ * Returns non-punitive 4-week rolling consistency summary (Blueprint 6.5).
+ */
+export async function getHabitsFourWeekConsistency(
+  db: SqlExecutor,
+  referenceDateISO: string,
+): Promise<HabitWeekConsistency[]> {
+  const currentMonday = startOfWeekISO(referenceDateISO);
+  const earliestMonday = addDaysISO(currentMonday, -21);
+  const latestSunday = addDaysISO(currentMonday, 6);
+
+  const rows = await db.select<{ date: string; category: string }>(
+    `SELECT hl.date, h.category
+     FROM habit_logs hl
+     JOIN habits h ON h.id = hl.habit_id
+     WHERE hl.completed = 1 AND hl.date >= ? AND hl.date <= ?`,
+    [earliestMonday, latestSunday],
+  );
+
+  const weeks: HabitWeekConsistency[] = [];
+  for (let w = 3; w >= 0; w--) {
+    const ws = addDaysISO(currentMonday, -w * 7);
+    const we = addDaysISO(ws, 6);
+    const weekRows = rows.filter((r) => r.date >= ws && r.date <= we);
+    const academiaDates = new Set(
+      weekRows.filter((r) => r.category === 'academia').map((r) => r.date),
+    );
+    const corridaDates = new Set(
+      weekRows.filter((r) => r.category === 'corrida').map((r) => r.date),
+    );
+    weeks.push({
+      weekStart: ws,
+      weekEnd: we,
+      academiaCount: academiaDates.size,
+      corridaCount: corridaDates.size,
+      totalSessions: weekRows.length,
+    });
+  }
+
+  return weeks;
+}

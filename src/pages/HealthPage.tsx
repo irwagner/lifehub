@@ -4,18 +4,22 @@ import { useApp } from '../context/AppContext';
 import {
   createHabit,
   deleteHabitLog,
+  getHabitsFourWeekConsistency,
   listHabitLogs,
   listHabitsWithProgress,
   logHabitSession,
+  type HabitWeekConsistency,
   type HabitWithWeeklyProgress,
 } from '../repositories/habitsRepo';
+import { isChildWeekend, normalizeToSaturday } from '../services/recurrence';
 import type { HabitCategory, HabitLog } from '../types/domain';
 import { formatDateBR, todayISO } from '../utils/format';
 
 export const HealthPage: React.FC = () => {
-  const { db, dataVersion, bumpDataVersion, notify } = useApp();
+  const { db, settings, dataVersion, bumpDataVersion, notify } = useApp();
   const [habits, setHabits] = useState<HabitWithWeeklyProgress[]>([]);
   const [logs, setLogs] = useState<HabitLog[]>([]);
+  const [fourWeeks, setFourWeeks] = useState<HabitWeekConsistency[]>([]);
 
   const [selectedHabitId, setSelectedHabitId] = useState('');
   const [logDate, setLogDate] = useState(todayISO());
@@ -30,13 +34,15 @@ export const HealthPage: React.FC = () => {
     if (!db) return;
     let active = true;
     (async () => {
-      const [h, l] = await Promise.all([
+      const [h, l, fw] = await Promise.all([
         listHabitsWithProgress(db, todayISO()),
         listHabitLogs(db, 25),
+        getHabitsFourWeekConsistency(db, todayISO()),
       ]);
       if (active) {
         setHabits(h);
         setLogs(l);
+        setFourWeeks(fw);
         if (h[0] && !selectedHabitId) setSelectedHabitId(h[0].id);
       }
     })();
@@ -83,6 +89,14 @@ export const HealthPage: React.FC = () => {
   const inputClass =
     'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950';
 
+  const hasChildThisWeek = settings
+    ? isChildWeekend(
+        normalizeToSaturday(todayISO()),
+        settings.child_weekend_mode,
+        settings.child_weekend_anchor,
+      )
+    : false;
+
   return (
     <div className="space-y-6">
       <div>
@@ -91,6 +105,12 @@ export const HealthPage: React.FC = () => {
           Consistência realista (academia 3x, corrida 1–3x, sono e descanso), sem penalizar semanas com o filho ou imprevistos.
         </p>
       </div>
+
+      {hasChildThisWeek && (
+        <div className="rounded-xl border border-pink-500/30 bg-pink-500/10 px-4 py-3 text-xs text-pink-300">
+          Esta semana inclui <strong>fim de semana com o filho</strong>. Priorize descanso e convivência — nenhuma métrica penaliza semanas mais leves.
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {habits.map((h) => {
@@ -267,6 +287,29 @@ export const HealthPage: React.FC = () => {
           )}
         </section>
       </div>
+
+      {/* 4-week non-punitive consistency */}
+      <section className={cardClass}>
+        <h3 className="mb-3 font-semibold">Consistência das Últimas 4 Semanas (sem punição)</h3>
+        <div className="grid gap-3 sm:grid-cols-4">
+          {fourWeeks.map((w) => (
+            <div
+              key={w.weekStart}
+              className="rounded-xl border border-slate-200 p-3 text-xs dark:border-slate-800"
+            >
+              <p className="font-mono text-[11px] text-slate-500">
+                {formatDateBR(w.weekStart)} – {formatDateBR(w.weekEnd)}
+              </p>
+              <p className="mt-1.5 text-sm font-semibold">
+                {w.academiaCount} academia · {w.corridaCount} corrida
+              </p>
+              <p className="mt-0.5 text-[11px] text-slate-400">
+                {w.totalSessions} registro(s) totais
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 };

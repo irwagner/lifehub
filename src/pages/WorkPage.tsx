@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Bike, Calculator, Check, Download, Plus, Trash2 } from 'lucide-react';
+import { Bike, Calculator, Check, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
+import { Modal } from '../components/Modal';
 import { useApp } from '../context/AppContext';
 import {
   createVehicle,
@@ -13,6 +14,7 @@ import {
   listVehicles,
   listWorkSessions,
   setActiveVehicle,
+  updateWorkSession,
 } from '../repositories/workRepo';
 import {
   calculateWorkSessionMetrics,
@@ -27,6 +29,7 @@ import {
   type VehicleExpenseCategory,
   type VehicleStatus,
   type WorkDaysPerWeek,
+  type WorkPlatform,
   type WorkSession,
 } from '../types/domain';
 import { formatBRL, formatDateBR, formatNumber, todayISO } from '../utils/format';
@@ -66,6 +69,20 @@ export const WorkPage: React.FC = () => {
   const [simKmPerHour, setSimKmPerHour] = useState('18');
   const [simFuelPerKm, setSimFuelPerKm] = useState('0.19');
   const [simVehiclePayment, setSimVehiclePayment] = useState('0');
+
+  // Platform filter & Edit work session modal
+  const [platformFilter, setPlatformFilter] = useState<'all' | WorkPlatform>('all');
+  const [editingWs, setEditingWs] = useState<WorkSession | null>(null);
+  const [editWsDate, setEditWsDate] = useState('');
+  const [editWsPlatform, setEditWsPlatform] = useState<WorkPlatform>('ambos');
+  const [editWsStart, setEditWsStart] = useState('06:00');
+  const [editWsEnd, setEditWsEnd] = useState('12:30');
+  const [editWsGross, setEditWsGross] = useState('');
+  const [editWsKm, setEditWsKm] = useState('');
+  const [editWsFuelCost, setEditWsFuelCost] = useState('');
+  const [editWsFuelLiters, setEditWsFuelLiters] = useState('');
+  const [editWsTolls, setEditWsTolls] = useState('0');
+  const [editWsNotes, setEditWsNotes] = useState('');
 
   useEffect(() => {
     if (!db || !settings) return;
@@ -156,6 +173,50 @@ export const WorkPage: React.FC = () => {
     }
   };
 
+  const openEditWorkSession = (ws: WorkSession) => {
+    setEditingWs(ws);
+    setEditWsDate(ws.date);
+    setEditWsPlatform(ws.platform);
+    setEditWsStart(ws.start_time);
+    setEditWsEnd(ws.end_time);
+    setEditWsGross(String(ws.gross_amount));
+    setEditWsKm(String(ws.km_total));
+    setEditWsFuelCost(String(ws.fuel_cost));
+    setEditWsFuelLiters(String(ws.fuel_liters));
+    setEditWsTolls(String(ws.tolls_parking));
+    setEditWsNotes(ws.notes);
+  };
+
+  const handleSaveEditWs = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !editingWs) return;
+    try {
+      await updateWorkSession(db, editingWs.id, {
+        vehicle_id: editingWs.vehicle_id,
+        date: editWsDate,
+        platform: editWsPlatform,
+        start_time: editWsStart,
+        end_time: editWsEnd,
+        gross_amount: Number(editWsGross),
+        km_total: Number(editWsKm),
+        fuel_cost: Number(editWsFuelCost) || 0,
+        fuel_liters: Number(editWsFuelLiters) || 0,
+        tolls_parking: Number(editWsTolls) || 0,
+        notes: editWsNotes,
+      });
+      setEditingWs(null);
+      bumpDataVersion();
+      notify('Jornada atualizada no SQLite.');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao atualizar jornada.', 'error');
+    }
+  };
+
+  const filteredSessions =
+    platformFilter === 'all'
+      ? sessions
+      : sessions.filter((s) => s.platform === platformFilter);
+
   const cardClass =
     'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
   const inputClass =
@@ -242,16 +303,27 @@ export const WorkPage: React.FC = () => {
 
       {/* Sessions table */}
       <section className={cardClass}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-semibold">Jornadas Registradas</h3>
-          <span className="text-xs text-slate-500">
-            Somente dados informados por você — sem integração não autorizada
-          </span>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="font-semibold">
+            Jornadas Registradas ({filteredSessions.length})
+          </h3>
+          <div className="flex items-center gap-2">
+            <select
+              value={platformFilter}
+              onChange={(e) => setPlatformFilter(e.target.value as 'all' | WorkPlatform)}
+              className="rounded-lg border border-slate-300 bg-white px-2.5 py-1 text-xs dark:border-slate-700 dark:bg-slate-950"
+            >
+              <option value="all">Todas plataformas</option>
+              <option value="uber_moto">Uber Moto</option>
+              <option value="99_moto">99Moto</option>
+              <option value="ambos">Uber + 99</option>
+            </select>
+          </div>
         </div>
 
-        {sessions.length === 0 ? (
+        {filteredSessions.length === 0 ? (
           <EmptyState
-            title="Nenhuma jornada registrada ainda"
+            title="Nenhuma jornada registrada"
             description="Registre suas jornadas de Uber Moto ou 99Moto para calcular lucro líquido real por hora e por km."
             actionLabel="+ Jornada Uber/99"
             onAction={() => openQuickAction('work_session')}
@@ -275,7 +347,7 @@ export const WorkPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {sessions.map((s) => {
+                {filteredSessions.map((s) => {
                   const m = calculateWorkSessionMetrics(s);
                   return (
                     <tr key={s.id}>
@@ -302,19 +374,29 @@ export const WorkPage: React.FC = () => {
                         {formatBRL(m.operationalNetPerHour)}
                       </td>
                       <td className="py-2.5 text-right">
-                        <button
-                          type="button"
-                          onClick={async () => {
-                            if (!db) return;
-                            await deleteWorkSession(db, s.id);
-                            bumpDataVersion();
-                            notify('Jornada excluída.');
-                          }}
-                          className="text-slate-400 hover:text-rose-500"
-                          aria-label="Excluir jornada"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditWorkSession(s)}
+                            className="text-slate-400 hover:text-brand-500"
+                            aria-label="Editar jornada"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!db) return;
+                              await deleteWorkSession(db, s.id);
+                              bumpDataVersion();
+                              notify('Jornada excluída.');
+                            }}
+                            className="text-slate-400 hover:text-rose-500"
+                            aria-label="Excluir jornada"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -684,6 +766,146 @@ export const WorkPage: React.FC = () => {
           </form>
         </section>
       </div>
+
+      {/* Edit Work Session Modal */}
+      <Modal
+        open={Boolean(editingWs)}
+        title="Editar Jornada Uber/99"
+        onClose={() => setEditingWs(null)}
+      >
+        <form onSubmit={handleSaveEditWs} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Data</label>
+              <input
+                required
+                type="date"
+                value={editWsDate}
+                onChange={(e) => setEditWsDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Plataforma</label>
+              <select
+                value={editWsPlatform}
+                onChange={(e) => setEditWsPlatform(e.target.value as WorkPlatform)}
+                className={inputClass}
+              >
+                <option value="ambos">Uber Moto + 99Moto</option>
+                <option value="uber_moto">Uber Moto</option>
+                <option value="99_moto">99Moto</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Início</label>
+              <input
+                required
+                type="time"
+                value={editWsStart}
+                onChange={(e) => setEditWsStart(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Fim</label>
+              <input
+                required
+                type="time"
+                value={editWsEnd}
+                onChange={(e) => setEditWsEnd(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Faturamento Bruto (R$)</label>
+              <input
+                required
+                type="number"
+                step="0.01"
+                min="0"
+                value={editWsGross}
+                onChange={(e) => setEditWsGross(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Km rodados</label>
+              <input
+                required
+                type="number"
+                step="0.1"
+                min="0"
+                value={editWsKm}
+                onChange={(e) => setEditWsKm(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Combustível (R$)</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editWsFuelCost}
+                onChange={(e) => setEditWsFuelCost(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Litros</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editWsFuelLiters}
+                onChange={(e) => setEditWsFuelLiters(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Pedágio/Estac.</label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={editWsTolls}
+                onChange={(e) => setEditWsTolls(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Observações</label>
+            <input
+              value={editWsNotes}
+              onChange={(e) => setEditWsNotes(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setEditingWs(null)}
+              className="rounded-lg px-4 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            >
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

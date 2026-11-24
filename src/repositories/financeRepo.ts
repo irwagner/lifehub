@@ -234,6 +234,56 @@ export async function deleteTransaction(db: SqlExecutor, id: string): Promise<vo
   await db.execute('DELETE FROM transactions WHERE id = ?', [id]);
 }
 
+export async function updateTransaction(
+  db: SqlExecutor,
+  id: string,
+  input: {
+    account_id: string;
+    destination_account_id?: string | null;
+    category_id?: string | null;
+    type: TransactionType;
+    source_type: TransactionSourceType;
+    description: string;
+    amount: number;
+    date: string;
+    due_date?: string | null;
+    status: TransactionStatus;
+    notes?: string;
+  },
+): Promise<Transaction> {
+  const parsed = createTransactionSchema.parse({
+    ...input,
+    installments: 1,
+    notes: input.notes ?? '',
+  });
+  const now = new Date().toISOString();
+  await db.execute(
+    `UPDATE transactions
+     SET account_id = ?, destination_account_id = ?, category_id = ?, type = ?,
+         source_type = ?, description = ?, amount = ?, date = ?, due_date = ?,
+         status = ?, notes = ?, updated_at = ?
+     WHERE id = ?`,
+    [
+      parsed.account_id,
+      parsed.type === 'transfer' ? (parsed.destination_account_id ?? null) : null,
+      parsed.type === 'transfer' ? null : (parsed.category_id ?? null),
+      parsed.type,
+      parsed.source_type,
+      parsed.description,
+      round2(parsed.amount),
+      parsed.date,
+      parsed.due_date ?? null,
+      parsed.status,
+      parsed.notes,
+      now,
+      id,
+    ],
+  );
+  const rows = await db.select<Transaction>('SELECT * FROM transactions WHERE id = ?', [id]);
+  if (rows.length === 0) throw new Error('Transação não encontrada.');
+  return rows[0];
+}
+
 export async function getMonthlyFinanceSummary(
   db: SqlExecutor,
   month: string,

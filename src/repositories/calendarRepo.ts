@@ -331,3 +331,35 @@ export async function toggleTaskStatus(db: SqlExecutor, id: string): Promise<Tas
 export async function deleteTask(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM tasks WHERE id = ?', [id]);
 }
+
+export async function updateTask(
+  db: SqlExecutor,
+  id: string,
+  rawInput: {
+    title: string;
+    description?: string;
+    due_date?: string | null;
+    priority?: TaskPriority;
+    category?: string;
+  },
+): Promise<TaskItem> {
+  const input = createTaskSchema.parse(rawInput);
+  const now = new Date().toISOString();
+  await db.execute(
+    `UPDATE tasks
+     SET title = ?, description = ?, due_date = ?, priority = ?, category = ?, updated_at = ?
+     WHERE id = ?`,
+    [
+      input.title,
+      input.description,
+      input.due_date ?? null,
+      input.priority,
+      input.category,
+      now,
+      id,
+    ],
+  );
+  const rows = await db.select<TaskItem>('SELECT * FROM tasks WHERE id = ?', [id]);
+  if (rows.length === 0) throw new Error('Tarefa não encontrada.');
+  return rows[0];
+}

@@ -4,8 +4,10 @@ import {
   Clock,
   Download,
   FileUp,
+  Pencil,
   Plus,
   RefreshCw,
+  Search,
   Trash2,
 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
@@ -32,6 +34,7 @@ import {
   listRecurringRules,
   listTransactions,
   toggleTransactionStatus,
+  updateTransaction,
   upsertCategoryBudget,
   type AccountWithBalance,
   type BudgetWithUsage,
@@ -49,6 +52,8 @@ import type {
   RecurringRule,
   Transaction,
   TransactionSourceType,
+  TransactionStatus,
+  TransactionType,
 } from '../types/domain';
 import { currentMonthISO, formatBRL, formatDateBR, formatNumber } from '../utils/format';
 
@@ -97,6 +102,22 @@ export const FinancePage: React.FC = () => {
   >([]);
   const [importSkippedRows, setImportSkippedRows] = useState(0);
   const [importing, setImporting] = useState(false);
+
+  // Filters & Edit Transaction modal state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | TransactionType>('all');
+  const [filterStatus, setFilterStatus] = useState<'all' | TransactionStatus>('all');
+  const [editingTx, setEditingTx] = useState<Transaction | null>(null);
+  const [editTxDesc, setEditTxDesc] = useState('');
+  const [editTxAmount, setEditTxAmount] = useState('');
+  const [editTxDate, setEditTxDate] = useState('');
+  const [editTxType, setEditTxType] = useState<TransactionType>('expense');
+  const [editTxSource, setEditTxSource] = useState<TransactionSourceType>('outros');
+  const [editTxStatus, setEditTxStatus] = useState<TransactionStatus>('realized');
+  const [editTxAccount, setEditTxAccount] = useState('acc_principal');
+  const [editTxDestAccount, setEditTxDestAccount] = useState('acc_carteira');
+  const [editTxCategory, setEditTxCategory] = useState('');
+  const [editTxNotes, setEditTxNotes] = useState('');
 
   useEffect(() => {
     if (!db) return;
@@ -271,6 +292,55 @@ export const FinancePage: React.FC = () => {
   const newItemsCount = importPreview.filter((i) => !i.isDuplicate).length;
   const dupItemsCount = importPreview.filter((i) => i.isDuplicate).length;
 
+  const filteredTransactions = transactions.filter((tx) => {
+    if (filterType !== 'all' && tx.type !== filterType) return false;
+    if (filterStatus !== 'all' && tx.status !== filterStatus) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const catName = tx.category_id ? (catMap.get(tx.category_id)?.name ?? '').toLowerCase() : '';
+      if (!tx.description.toLowerCase().includes(q) && !catName.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const openEditTx = (tx: Transaction) => {
+    setEditingTx(tx);
+    setEditTxDesc(tx.description);
+    setEditTxAmount(String(tx.amount));
+    setEditTxDate(tx.date);
+    setEditTxType(tx.type);
+    setEditTxSource(tx.source_type);
+    setEditTxStatus(tx.status);
+    setEditTxAccount(tx.account_id);
+    setEditTxDestAccount(tx.destination_account_id ?? accounts[1]?.id ?? accounts[0]?.id ?? '');
+    setEditTxCategory(tx.category_id ?? '');
+    setEditTxNotes(tx.notes);
+  };
+
+  const handleSaveEditTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !editingTx) return;
+    try {
+      await updateTransaction(db, editingTx.id, {
+        account_id: editTxAccount,
+        destination_account_id: editTxType === 'transfer' ? editTxDestAccount : null,
+        category_id: editTxType === 'transfer' ? null : editTxCategory || null,
+        type: editTxType,
+        source_type: editTxSource,
+        description: editTxDesc,
+        amount: Number(editTxAmount),
+        date: editTxDate,
+        status: editTxStatus,
+        notes: editTxNotes,
+      });
+      setEditingTx(null);
+      bumpDataVersion();
+      notify('Lançamento atualizado no SQLite.');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao atualizar lançamento.', 'error');
+    }
+  };
+
   const cardClass =
     'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
   const inputClass =
@@ -369,15 +439,49 @@ export const FinancePage: React.FC = () => {
 
       {/* Transactions table */}
       <section className={cardClass}>
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-semibold">Lançamentos de {month}</h3>
-          <span className="text-xs text-slate-500">{transactions.length} registro(s)</span>
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">Lançamentos de {month}</h3>
+            <span className="text-xs text-slate-500">
+              ({filteredTransactions.length} de {transactions.length})
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+              <input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Buscar descrição/categoria..."
+                className={`${inputClass} pl-8 text-xs`}
+              />
+            </div>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value as 'all' | TransactionType)}
+              className={`${inputClass} text-xs`}
+            >
+              <option value="all">Todos tipos</option>
+              <option value="income">Receitas</option>
+              <option value="expense">Despesas</option>
+              <option value="transfer">Transferências</option>
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value as 'all' | TransactionStatus)}
+              className={`${inputClass} text-xs`}
+            >
+              <option value="all">Todos status</option>
+              <option value="realized">Realizado</option>
+              <option value="planned">Previsto</option>
+            </select>
+          </div>
         </div>
 
-        {transactions.length === 0 ? (
+        {filteredTransactions.length === 0 ? (
           <EmptyState
-            title="Nenhum lançamento neste mês"
-            description="Registre receitas, despesas, gere suas recorrências ou importe um extrato CSV/OFX local."
+            title="Nenhum lançamento encontrado"
+            description="Ajuste os filtros ou registre receitas, despesas ou importe um extrato CSV/OFX local."
             actionLabel="+ Transação"
             onAction={() => openQuickAction('transaction')}
           />
@@ -396,7 +500,7 @@ export const FinancePage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                {transactions.map((tx) => (
+                {filteredTransactions.map((tx) => (
                   <tr key={tx.id}>
                     <td className="py-2.5 pr-3 font-mono text-xs">{formatDateBR(tx.date)}</td>
                     <td className="py-2.5 pr-3 font-medium">
@@ -448,19 +552,29 @@ export const FinancePage: React.FC = () => {
                       {formatBRL(tx.amount)}
                     </td>
                     <td className="py-2.5 text-right">
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          if (!db) return;
-                          await deleteTransaction(db, tx.id);
-                          bumpDataVersion();
-                          notify('Transação excluída.');
-                        }}
-                        className="text-slate-400 hover:text-rose-500"
-                        aria-label="Excluir lançamento"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="inline-flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openEditTx(tx)}
+                          className="text-slate-400 hover:text-brand-500"
+                          aria-label="Editar lançamento"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!db) return;
+                            await deleteTransaction(db, tx.id);
+                            bumpDataVersion();
+                            notify('Transação excluída.');
+                          }}
+                          className="text-slate-400 hover:text-rose-500"
+                          aria-label="Excluir lançamento"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -970,6 +1084,158 @@ export const FinancePage: React.FC = () => {
             </button>
           </div>
         </div>
+      </Modal>
+
+      {/* Edit Transaction Modal */}
+      <Modal
+        open={Boolean(editingTx)}
+        title="Editar Lançamento"
+        onClose={() => setEditingTx(null)}
+      >
+        <form onSubmit={handleSaveEditTx} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium">Descrição</label>
+            <input
+              required
+              value={editTxDesc}
+              onChange={(e) => setEditTxDesc(e.target.value)}
+              className={`${inputClass} w-full`}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Tipo</label>
+              <select
+                value={editTxType}
+                onChange={(e) => setEditTxType(e.target.value as TransactionType)}
+                className={`${inputClass} w-full`}
+              >
+                <option value="expense">Despesa</option>
+                <option value="income">Receita</option>
+                <option value="transfer">Transferência</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Valor (R$)</label>
+              <input
+                required
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editTxAmount}
+                onChange={(e) => setEditTxAmount(e.target.value)}
+                className={`${inputClass} w-full`}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Data</label>
+              <input
+                required
+                type="date"
+                value={editTxDate}
+                onChange={(e) => setEditTxDate(e.target.value)}
+                className={`${inputClass} w-full`}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Conta</label>
+              <select
+                value={editTxAccount}
+                onChange={(e) => setEditTxAccount(e.target.value)}
+                className={`${inputClass} w-full`}
+              >
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {editTxType === 'transfer' ? (
+              <div>
+                <label className="mb-1 block text-xs font-medium">Conta destino</label>
+                <select
+                  value={editTxDestAccount}
+                  onChange={(e) => setEditTxDestAccount(e.target.value)}
+                  className={`${inputClass} w-full`}
+                >
+                  {accounts.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="mb-1 block text-xs font-medium">Categoria</label>
+                <select
+                  value={editTxCategory}
+                  onChange={(e) => setEditTxCategory(e.target.value)}
+                  className={`${inputClass} w-full`}
+                >
+                  <option value="">Sem categoria</option>
+                  {categories.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Origem</label>
+              <select
+                value={editTxSource}
+                onChange={(e) => setEditTxSource(e.target.value as TransactionSourceType)}
+                className={`${inputClass} w-full`}
+              >
+                <option value="outros">Outros</option>
+                <option value="salario">Salário CLT</option>
+                <option value="aplicativos">Uber/99 Moto</option>
+                <option value="servicos_ti">Serviços TI</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Status</label>
+              <select
+                value={editTxStatus}
+                onChange={(e) => setEditTxStatus(e.target.value as TransactionStatus)}
+                className={`${inputClass} w-full`}
+              >
+                <option value="realized">Realizado</option>
+                <option value="planned">Previsto</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Observações</label>
+            <input
+              value={editTxNotes}
+              onChange={(e) => setEditTxNotes(e.target.value)}
+              className={`${inputClass} w-full`}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setEditingTx(null)}
+              className="rounded-lg px-4 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            >
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

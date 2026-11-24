@@ -246,6 +246,63 @@ export async function deleteWorkSession(db: SqlExecutor, id: string): Promise<vo
   await db.execute('DELETE FROM work_sessions WHERE id = ?', [id]);
 }
 
+export async function updateWorkSession(
+  db: SqlExecutor,
+  id: string,
+  rawInput: {
+    vehicle_id?: string | null;
+    date: string;
+    platform: WorkPlatform;
+    start_time: string;
+    end_time: string;
+    gross_amount: number;
+    km_start?: number | null;
+    km_end?: number | null;
+    km_total?: number | null;
+    fuel_liters?: number;
+    fuel_cost?: number;
+    tolls_parking?: number;
+    notes?: string;
+  },
+): Promise<WorkSession> {
+  const input = createWorkSessionSchema.parse(rawInput);
+  const kmTotal = resolveSessionKm({
+    km_start: input.km_start,
+    km_end: input.km_end,
+    km_total: input.km_total,
+  });
+  const now = new Date().toISOString();
+
+  await db.execute(
+    `UPDATE work_sessions
+     SET vehicle_id = ?, date = ?, platform = ?, start_time = ?, end_time = ?,
+         gross_amount = ?, km_start = ?, km_end = ?, km_total = ?,
+         fuel_liters = ?, fuel_cost = ?, tolls_parking = ?, notes = ?, updated_at = ?
+     WHERE id = ?`,
+    [
+      input.vehicle_id ?? null,
+      input.date,
+      input.platform,
+      input.start_time,
+      input.end_time,
+      round2(input.gross_amount),
+      input.km_start ?? null,
+      input.km_end ?? null,
+      kmTotal,
+      round2(input.fuel_liters),
+      round2(input.fuel_cost),
+      round2(input.tolls_parking),
+      input.notes,
+      now,
+      id,
+    ],
+  );
+
+  const rows = await db.select<WorkSession>('SELECT * FROM work_sessions WHERE id = ?', [id]);
+  if (rows.length === 0) throw new Error('Jornada não encontrada.');
+  return rows[0];
+}
+
 export async function getWorkDashboardStats(
   db: SqlExecutor,
   settings: Settings,

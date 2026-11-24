@@ -1,4 +1,5 @@
 import React from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { QuickActionsModal } from './components/QuickActionsModal';
@@ -64,9 +65,11 @@ const AppShell: React.FC = () => {
 
 export function App() {
   return (
-    <AppProvider>
-      <AppShell />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <AppShell />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 
