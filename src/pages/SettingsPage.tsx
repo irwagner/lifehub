@@ -1,4 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Database,
   Download,
@@ -9,6 +10,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { isTauriRuntime } from '../db/client';
 import { runMigrations } from '../db/migrations';
 import {
   clearAllUserData,
@@ -44,7 +46,15 @@ export const SettingsPage: React.FC = () => {
   const [remindersEnabled, setRemindersEnabled] = useState(
     (settings?.reminders_enabled ?? 1) === 1,
   );
+  const [nativeDbPath, setNativeDbPath] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) return;
+    invoke<string>('get_db_file_path')
+      .then((p) => setNativeDbPath(p))
+      .catch(() => setNativeDbPath(null));
+  }, []);
 
   if (!db || !settings) return null;
 
@@ -384,7 +394,13 @@ export const SettingsPage: React.FC = () => {
         </div>
         <p className="mb-4 text-xs text-slate-500 dark:text-slate-400">
           O backup JSON exporta todas as tabelas com validação de integridade e restauração atômica (em transação SQLite). Driver ativo:{' '}
-          <code>{db.driverName}</code>.
+          <code>{db.driverName}</code>
+          {nativeDbPath ? (
+            <>
+              {' '}· Arquivo local: <code className="break-all">{nativeDbPath}</code>
+            </>
+          ) : null}
+          .
         </p>
 
         <div className="flex flex-wrap gap-3">

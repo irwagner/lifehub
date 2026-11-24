@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { convertPlaceholdersToDollar } from '../db/tauriAdapter';
+import { convertPlaceholdersToDollar, TauriSqliteAdapter } from '../db/tauriAdapter';
 import {
   calculateSessionDurationHours,
   calculateWeeklyAndDailyGoals,
@@ -157,5 +157,39 @@ describe('Cálculos de Trabalho por Aplicativos e Financeiro', () => {
     expect(convertPlaceholdersToDollar(sql)).toBe(
       "SELECT * FROM tasks WHERE title != 'Qual?' AND status = $1 AND priority = $2",
     );
+  });
+
+  it('TauriSqliteAdapter serializa transações sem emitir BEGIN/COMMIT em pool sqlx', async () => {
+    const executedSql: string[] = [];
+    const adapter = TauriSqliteAdapter.fromInstance({
+      async execute(query) {
+        executedSql.push(query);
+        await new Promise((r) => setTimeout(r, 5));
+        return { rowsAffected: 1 };
+      },
+      async select<T>() {
+        return [] as unknown as T;
+      },
+      async close() {
+        return true;
+      },
+    });
+
+    await Promise.all([
+      adapter.transaction(async (tx) => {
+        await tx.execute('INSERT INTO t VALUES (?)', [1]);
+        await tx.execute('INSERT INTO t VALUES (?)', [2]);
+      }),
+      adapter.transaction(async (tx) => {
+        await tx.execute('INSERT INTO t VALUES (?)', [3]);
+      }),
+    ]);
+
+    expect(executedSql).toEqual([
+      'INSERT INTO t VALUES ($1)',
+      'INSERT INTO t VALUES ($1)',
+      'INSERT INTO t VALUES ($1)',
+    ]);
+    expect(executedSql.some((s) => /BEGIN|COMMIT|ROLLBACK/i.test(s))).toBe(false);
   });
 });

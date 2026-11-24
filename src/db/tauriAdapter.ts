@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import Database from '@tauri-apps/plugin-sql';
 import type { ExecuteResult, SqlExecutor, SqlValue } from './types';
 
@@ -33,14 +34,35 @@ export function convertPlaceholdersToDollar(sql: string): string {
   return result;
 }
 
+export interface TauriDbLike {
+  execute(query: string, bindValues?: unknown[]): Promise<{ rowsAffected: number; lastInsertId?: number }>;
+  select<T>(query: string, bindValues?: unknown[]): Promise<T>;
+  close(): Promise<boolean>;
+}
+
+/**
+ * Adapter for official `@tauri-apps/plugin-sql` (SQLite).
+ *
+ * IMPORTANT: `tauri-plugin-sql` v2 uses a multi-connection `sqlx::Pool<Sqlite>`, where each
+ * `execute()` call may borrow a different connection from the pool. Sending raw `BEGIN TRANSACTION`
+ * / `COMMIT` across separate `execute()` calls causes `database is locked` or
+ * `cannot commit - no transaction is active` errors on pooled connections.
+ * Therefore, `transaction()` serializes multi-step writes through an async mutex queue without
+ * leaving dangling transactions on random pooled connections.
+ */
 export class TauriSqliteAdapter implements SqlExecutor {
   readonly driverName = 'tauri-sqlite' as const;
-  private inTransaction = false;
+  private writeQueue: Promise<unknown> = Promise.resolve();
+  private inMutex = false;
 
-  private constructor(private readonly db: Database) {}
+  private constructor(private readonly db: TauriDbLike) {}
 
   static async open(dbUrl = 'sqlite:lifehub.db'): Promise<TauriSqliteAdapter> {
     const db = await Database.load(dbUrl);
+    return new TauriSqliteAdapter(db);
+  }
+
+  static fromInstance(db: TauriDbLike): TauriSqliteAdapter {
     return new TauriSqliteAdapter(db);
   }
 
@@ -62,22 +84,29 @@ export class TauriSqliteAdapter implements SqlExecutor {
   }
 
   async transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T> {
-    if (this.inTransaction) {
+    if (this.inMutex) {
       return fn(this);
     }
 
-    this.inTransaction = true;
-    await this.db.execute('BEGIN TRANSACTION');
+    const prev = this.writeQueue;
+    let release!: () => void;
+    this.writeQueue = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await prev;
+    this.inMutex = true;
     try {
-      const value = await fn(this);
-      await this.db.execute('COMMIT');
-      return value;
-    } catch (error) {
-      await this.db.execute('ROLLBACK');
-      throw error;
+      return await fn(this);
     } finally {
-      this.inTransaction = false;
+      this.inMutex = false;
+      release();
     }
+  }
+
+  async exportBinary(): Promise<Uint8Array | null> {
+    const bytes = await invoke<number[]>('export_sqlite_bytes');
+    return new Uint8Array(bytes);
   }
 
   async close(): Promise<void> {
