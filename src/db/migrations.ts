@@ -6,7 +6,7 @@ export interface Migration {
   statements: string[];
 }
 
-export const CURRENT_SCHEMA_VERSION = 1;
+export const CURRENT_SCHEMA_VERSION = 2;
 
 export const MIGRATIONS: Migration[] = [
   {
@@ -271,6 +271,42 @@ export const MIGRATIONS: Migration[] = [
       `CREATE INDEX IF NOT EXISTS idx_tasks_status_due ON tasks(status, due_date)`,
       `CREATE INDEX IF NOT EXISTS idx_habit_logs_date ON habit_logs(date)`,
       `CREATE INDEX IF NOT EXISTS idx_study_sessions_date ON study_sessions(date)`,
+    ],
+  },
+  {
+    version: 2,
+    name: '002_import_hash_recurring_budgets_reminders',
+    statements: [
+      `ALTER TABLE transactions ADD COLUMN external_hash TEXT`,
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_external_hash ON transactions(external_hash) WHERE external_hash IS NOT NULL`,
+      `ALTER TABLE settings ADD COLUMN reminders_enabled INTEGER NOT NULL DEFAULT 1`,
+      `CREATE TABLE IF NOT EXISTS recurring_rules (
+        id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL,
+        category_id TEXT,
+        type TEXT NOT NULL CHECK (type IN ('income', 'expense')),
+        source_type TEXT NOT NULL DEFAULT 'outros',
+        description TEXT NOT NULL,
+        amount REAL NOT NULL CHECK (amount > 0),
+        day_of_month INTEGER NOT NULL CHECK (day_of_month BETWEEN 1 AND 31),
+        active INTEGER NOT NULL DEFAULT 1,
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE RESTRICT,
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE SET NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS budgets (
+        id TEXT PRIMARY KEY,
+        month TEXT NOT NULL,
+        category_id TEXT NOT NULL,
+        limit_amount REAL NOT NULL CHECK (limit_amount > 0),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(month, category_id),
+        FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_budgets_month ON budgets(month)`,
     ],
   },
 ];

@@ -23,6 +23,7 @@ export interface Settings {
   study_weekly_goal_hours: number;
   onboarding_completed: number;
   demo_data_loaded: number;
+  reminders_enabled: number;
   updated_at: string;
 }
 
@@ -66,7 +67,32 @@ export interface Transaction {
   installment_group_id: string | null;
   installment_number: number | null;
   installment_total: number | null;
+  external_hash: string | null;
   notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurringRule {
+  id: string;
+  account_id: string;
+  category_id: string | null;
+  type: 'income' | 'expense';
+  source_type: TransactionSourceType;
+  description: string;
+  amount: number;
+  day_of_month: number;
+  active: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CategoryBudget {
+  id: string;
+  month: string; // YYYY-MM
+  category_id: string;
+  limit_amount: number;
   created_at: string;
   updated_at: string;
 }

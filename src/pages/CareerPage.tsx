@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Briefcase, Trash2 } from 'lucide-react';
+import { BookOpen, Briefcase, Pause, Play, RotateCcw, Timer, Trash2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
   createJobApplication,
@@ -38,6 +38,29 @@ export const CareerPage: React.FC = () => {
   const [studyDate, setStudyDate] = useState(todayISO());
   const [studyMinutes, setStudyMinutes] = useState('60');
   const [studyTopic, setStudyTopic] = useState('');
+
+  // Optional study stopwatch
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!timerRunning) return;
+    const interval = window.setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => window.clearInterval(interval);
+  }, [timerRunning]);
+
+  const formattedTimer = `${String(Math.floor(elapsedSeconds / 3600)).padStart(2, '0')}:${String(
+    Math.floor((elapsedSeconds % 3600) / 60),
+  ).padStart(2, '0')}:${String(elapsedSeconds % 60).padStart(2, '0')}`;
+
+  const handleUseTimerMinutes = () => {
+    setTimerRunning(false);
+    const mins = Math.max(1, Math.round(elapsedSeconds / 60));
+    setStudyMinutes(String(mins));
+    notify(`Tempo do cronômetro aplicado (${mins} min). Informe o tema e clique em Salvar Estudo.`);
+  };
 
   // Job application form
   const [company, setCompany] = useState('');
@@ -180,7 +203,41 @@ export const CareerPage: React.FC = () => {
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Study Sessions */}
         <section className={cardClass}>
-          <h3 className="mb-3 font-semibold">Registrar Sessão de Estudo</h3>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">Registrar Sessão de Estudo</h3>
+            <div className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs dark:border-slate-800 dark:bg-slate-950">
+              <Timer className="h-3.5 w-3.5 text-sky-500" />
+              <span className="font-mono font-semibold">{formattedTimer}</span>
+              <button
+                type="button"
+                onClick={() => setTimerRunning((r) => !r)}
+                className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+                title={timerRunning ? 'Pausar cronômetro' : 'Iniciar cronômetro'}
+              >
+                {timerRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setTimerRunning(false);
+                  setElapsedSeconds(0);
+                }}
+                className="rounded p-1 hover:bg-slate-200 dark:hover:bg-slate-800"
+                title="Zerar cronômetro"
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </button>
+              {elapsedSeconds >= 60 && (
+                <button
+                  type="button"
+                  onClick={handleUseTimerMinutes}
+                  className="rounded bg-sky-600 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-sky-700"
+                >
+                  Usar tempo
+                </button>
+              )}
+            </div>
+          </div>
           <form onSubmit={handleLogStudy} className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               <select

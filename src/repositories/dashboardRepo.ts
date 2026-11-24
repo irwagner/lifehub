@@ -3,6 +3,10 @@ import {
   generateUpcomingChildWeekends,
   type ChildWeekendWindow,
 } from '../services/recurrence';
+import {
+  buildDiscreteReminders,
+  type DiscreteReminder,
+} from '../services/reminders';
 import type {
   CalendarEvent,
   JobApplication,
@@ -42,6 +46,7 @@ export interface DashboardSnapshot {
   weeklyStudyHours: number;
   activeApplications: JobApplication[];
   upcomingInterviews: JobApplication[];
+  reminders: DiscreteReminder[];
 }
 
 export async function loadDashboardSnapshot(
@@ -91,6 +96,13 @@ export async function loadDashboardSnapshot(
     (j) => j.status === 'interview' || j.status === 'technical',
   );
 
+  const reminders = buildDiscreteReminders({
+    todayISO: referenceDateISO,
+    upcomingBills,
+    todayEvents,
+    pendingTasks: todoTasks,
+  });
+
   return {
     today: referenceDateISO,
     month,
@@ -108,5 +120,6 @@ export async function loadDashboardSnapshot(
     weeklyStudyHours,
     activeApplications,
     upcomingInterviews,
+    reminders,
   };
 }

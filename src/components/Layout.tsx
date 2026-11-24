@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp, type NavSection } from '../context/AppContext';
 import { ROUTINE_MODE_LABELS } from '../types/domain';
+import { RemindersMenu } from './RemindersMenu';
 
 const NAV_ITEMS: Array<{ id: NavSection; label: string; icon: React.FC<{ className?: string }> }> = [
   { id: 'dashboard', label: 'Hoje', icon: Home },
@@ -147,6 +148,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               <Plus className="h-3.5 w-3.5" /> Ideia
             </button>
           </div>
+          <RemindersMenu />
         </header>
 
         <main className="mx-auto w-full max-w-7xl flex-1 p-6">{children}</main>

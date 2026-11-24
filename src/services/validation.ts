@@ -21,6 +21,7 @@ export const settingsUpdateSchema = z.object({
   study_weekly_goal_hours: z.number().min(0).max(60).optional(),
   onboarding_completed: z.number().int().min(0).max(1).optional(),
   demo_data_loaded: z.number().int().min(0).max(1).optional(),
+  reminders_enabled: z.number().int().min(0).max(1).optional(),
 });
 
 export const createTransactionSchema = z

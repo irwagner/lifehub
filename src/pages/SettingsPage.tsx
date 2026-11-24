@@ -39,6 +39,9 @@ export const SettingsPage: React.FC = () => {
   const [childAnchor, setChildAnchor] = useState(settings?.child_weekend_anchor ?? '');
   const [commuteMin, setCommuteMin] = useState(String(settings?.commute_minutes ?? 60));
   const [studyGoal, setStudyGoal] = useState(String(settings?.study_weekly_goal_hours ?? 6));
+  const [remindersEnabled, setRemindersEnabled] = useState(
+    (settings?.reminders_enabled ?? 1) === 1,
+  );
   const [busy, setBusy] = useState(false);
 
   if (!db || !settings) return null;
@@ -61,6 +64,7 @@ export const SettingsPage: React.FC = () => {
         child_weekend_anchor: childMode === 'alternating' && childAnchor ? childAnchor : null,
         commute_minutes: Number(commuteMin) || 0,
         study_weekly_goal_hours: Number(studyGoal) || 6,
+        reminders_enabled: remindersEnabled ? 1 : 0,
       });
       notify('Preferências salvas no SQLite.');
     } catch (err) {
@@ -321,6 +325,16 @@ export const SettingsPage: React.FC = () => {
           </div>
         </div>
 
+        <label className="flex items-center gap-2.5 text-xs text-slate-600 dark:text-slate-300">
+          <input
+            type="checkbox"
+            checked={remindersEnabled}
+            onChange={(e) => setRemindersEnabled(e.target.checked)}
+            className="h-4 w-4 rounded border-slate-400"
+          />
+          Ativar lembretes locais discretos (vencimentos, agenda do dia e tarefas — sem exibir valores financeiros em R$).
+        </label>
+
         <button
           type="submit"
           disabled={busy}
@@ -398,16 +412,13 @@ export const SettingsPage: React.FC = () => {
 
       {/* Planned future features (transparent, zero fake buttons) */}
       <section className={cardClass}>
-        <h3 className="mb-2 font-semibold">Funcionalidades Futuras (Planejadas — fora do MVP atual)</h3>
+        <h3 className="mb-2 font-semibold">Funcionalidades Futuras (Planejadas — fora do escopo atual)</h3>
         <ul className="list-disc space-y-1.5 pl-5 text-xs text-slate-500 dark:text-slate-400">
           <li>
             <strong>Sincronização opcional com smartphone:</strong> prevista para etapa futura com criptografia ponta a ponta e consentimento explícito.
           </li>
           <li>
             <strong>Integração Google Calendar (OAuth):</strong> sincronização bidirecional somente mediante autorização do usuário.
-          </li>
-          <li>
-            <strong>Importação CSV/OFX:</strong> importação de extratos bancários com detecção de lançamentos duplicados.
           </li>
           <li>
             <strong>Resumos assistidos por IA local (opt-in):</strong> planejamento opcional sobre dados locais sem envio automático para nuvem.

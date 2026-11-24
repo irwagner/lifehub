@@ -24,4 +24,21 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['sql.js'],
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          fullcalendar: [
+            '@fullcalendar/core',
+            '@fullcalendar/react',
+            '@fullcalendar/daygrid',
+            '@fullcalendar/timegrid',
+            '@fullcalendar/interaction',
+          ],
+          sqljs: ['sql.js'],
+          icons: ['lucide-react'],
+        },
+      },
+    },
+  },
 });

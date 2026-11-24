@@ -17,6 +17,8 @@ export const BACKUP_TABLES = [
   'job_applications',
   'ideas',
   'weekly_reviews',
+  'recurring_rules',
+  'budgets',
   'transactions',
   'vehicle_expenses',
   'work_sessions',
