@@ -2,5 +2,11 @@
 .env.*
 !.env.example
 node_modules/
+dist/
 bin/
 obj/
+src-tauri/target/
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
