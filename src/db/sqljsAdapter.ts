@@ -48,7 +48,7 @@ export class SqlJsSqliteAdapter implements SqlExecutor {
   private inTransaction = false;
 
   private constructor(
-    private readonly db: SqlJsDatabase,
+    private db: SqlJsDatabase,
     private readonly persistLocal: boolean,
   ) {}
 
@@ -144,6 +144,39 @@ export class SqlJsSqliteAdapter implements SqlExecutor {
 
   async exportBinary(): Promise<Uint8Array | null> {
     return this.db.export();
+  }
+
+  async importBinary(bytes: Uint8Array): Promise<void> {
+    // Validate SQLite 3 file magic header: "SQLite format 3\0"
+    const magic = 'SQLite format 3\0';
+    if (bytes.length < 100) {
+      throw new Error('Arquivo SQLite inválido ou incompleto.');
+    }
+    for (let i = 0; i < magic.length; i++) {
+      if (bytes[i] !== magic.charCodeAt(i)) {
+        throw new Error('O arquivo selecionado não é um banco SQLite 3 válido.');
+      }
+    }
+
+    const SQL = await getSqlJs();
+    const candidate = new SQL.Database(bytes);
+    try {
+      // Sanity check that the database is readable and has LifeHub schema
+      const res = candidate.exec(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='settings'",
+      );
+      if (!res.length || !res[0].values.length) {
+        throw new Error('Este arquivo SQLite não contém um banco LifeHub válido.');
+      }
+    } catch (err) {
+      candidate.close();
+      throw err;
+    }
+
+    const oldDb = this.db;
+    this.db = candidate;
+    oldDb.close();
+    this.saveIfNeeded();
   }
 
   async close(): Promise<void> {

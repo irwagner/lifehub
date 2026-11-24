@@ -11,5 +11,6 @@ export interface SqlExecutor {
   select<T = Record<string, unknown>>(sql: string, params?: SqlValue[]): Promise<T[]>;
   transaction<T>(fn: (tx: SqlExecutor) => Promise<T>): Promise<T>;
   exportBinary?(): Promise<Uint8Array | null>;
+  importBinary?(bytes: Uint8Array): Promise<void>;
   close(): Promise<void>;
 }

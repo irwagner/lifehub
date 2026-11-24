@@ -1,0 +1,128 @@
+import { describe, expect, it } from 'vitest';
+import { createInMemoryTestDatabase } from '../db/client';
+import { runMigrations } from '../db/migrations';
+import { createCalendarEvent, createTask } from '../repositories/calendarRepo';
+import { createJobApplication } from '../repositories/careerRepo';
+import {
+  createCategory,
+  createTransaction,
+  deleteCategory,
+  listCategories,
+  listTransactions,
+} from '../repositories/financeRepo';
+import { createIdea } from '../repositories/ideasRepo';
+import { createProject } from '../repositories/projectsRepo';
+import { searchAllModules } from '../repositories/searchRepo';
+import { getSettings } from '../repositories/settingsRepo';
+import { createWorkSession, getLastRecordedOdometer } from '../repositories/workRepo';
+import { clearAllUserData } from '../services/backup';
+
+describe('Restauração Binária SQLite, Categorias Personalizadas, Odômetro e Busca Global', () => {
+  it('exporta e restaura banco SQLite binário (.sqlite) e rejeita arquivo inválido', async () => {
+    const db = await createInMemoryTestDatabase();
+    await createTransaction(db, {
+      account_id: 'acc_principal',
+      category_id: 'cat_salario',
+      type: 'income',
+      source_type: 'salario',
+      description: 'Registro binário SQLite',
+      amount: 1234.56,
+      date: '2026-11-20',
+      status: 'realized',
+    });
+
+    const binary = await db.exportBinary!();
+    expect(binary).not.toBeNull();
+    expect(binary!.length).toBeGreaterThan(4096);
+
+    // Clear all data then restore from binary
+    await clearAllUserData(db);
+    expect(await listTransactions(db)).toHaveLength(0);
+
+    await db.importBinary!(binary!);
+    await runMigrations(db);
+
+    const restoredTxs = await listTransactions(db);
+    expect(restoredTxs).toHaveLength(1);
+    expect(restoredTxs[0].description).toBe('Registro binário SQLite');
+
+    // Invalid binary must be rejected without crashing or losing restored data
+    await expect(db.importBinary!(new Uint8Array([1, 2, 3, 4]))).rejects.toThrow(/inválido/i);
+    expect(await listTransactions(db)).toHaveLength(1);
+
+    await db.close();
+  });
+
+  it('permite criar e remover categorias personalizadas, mas protege categorias padrão', async () => {
+    const db = await createInMemoryTestDatabase();
+    const custom = await createCategory(db, {
+      name: 'Peças Moto',
+      kind: 'expense',
+      color: '#f97316',
+    });
+    expect(custom.is_default).toBe(0);
+
+    await expect(deleteCategory(db, 'cat_salario')).rejects.toThrow(/padrão/i);
+
+    await deleteCategory(db, custom.id);
+    const cats = await listCategories(db);
+    expect(cats.some((c) => c.id === custom.id)).toBe(false);
+    await db.close();
+  });
+
+  it('recupera último odômetro registrado para agilizar próxima jornada', async () => {
+    const db = await createInMemoryTestDatabase();
+    const settings = await getSettings(db);
+    expect(await getLastRecordedOdometer(db)).toBeNull();
+
+    await createWorkSession(
+      db,
+      {
+        date: '2026-11-23',
+        platform: 'uber_moto',
+        start_time: '06:00',
+        end_time: '12:00',
+        gross_amount: 190,
+        km_start: 35000,
+        km_end: 35115,
+      },
+      settings,
+    );
+
+    expect(await getLastRecordedOdometer(db)).toBe(35115);
+    await db.close();
+  });
+
+  it('realiza busca global unificada em transações, tarefas, agenda, ideias, projetos e vagas', async () => {
+    const db = await createInMemoryTestDatabase();
+    await createTransaction(db, {
+      account_id: 'acc_principal',
+      type: 'expense',
+      description: 'Curso Redes Mikrotik',
+      amount: 80,
+      date: '2026-11-24',
+      status: 'realized',
+    });
+    await createTask(db, { title: 'Praticar laboratório de Redes' });
+    await createCalendarEvent(db, {
+      title: 'Aula de Redes TCP/IP',
+      category: 'estudos',
+      start_at: '2026-11-24T16:00:00',
+      end_at: '2026-11-24T17:00:00',
+    });
+    await createIdea(db, { title: 'Monitor de Redes em Python' });
+    await createProject(db, { title: 'Portfólio Redes HomeLab' });
+    await createJobApplication(db, {
+      company: 'NetOps',
+      role: 'Analista de Redes Júnior',
+      applied_date: '2026-11-24',
+    });
+
+    const hits = await searchAllModules(db, 'Redes');
+    expect(hits).toHaveLength(6);
+    expect(new Set(hits.map((h) => h.sectionLabel))).toEqual(
+      new Set(['Financeiro', 'Tarefas', 'Calendário', 'Ideias', 'Portfólio TI', 'Vagas TI']),
+    );
+    await db.close();
+  });
+});

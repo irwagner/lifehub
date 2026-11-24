@@ -9,6 +9,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { runMigrations } from '../db/migrations';
 import {
   clearAllUserData,
   exportBackupJson,
@@ -21,6 +22,7 @@ import { todayISO } from '../utils/format';
 export const SettingsPage: React.FC = () => {
   const { db, settings, patchSettings, reloadSettings, bumpDataVersion, notify } = useApp();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const sqliteFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [userName, setUserName] = useState(settings?.user_name ?? '');
   const [theme, setTheme] = useState<ThemeMode>(settings?.theme ?? 'dark');
@@ -130,6 +132,36 @@ export const SettingsPage: React.FC = () => {
     } finally {
       setBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const handleImportSqliteFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!db.importBinary) {
+      notify(
+        'No modo Tauri desktop, restaure via Backup JSON ou substitua lifehub.db na pasta de dados do app com o aplicativo fechado.',
+        'info',
+      );
+      if (sqliteFileInputRef.current) sqliteFileInputRef.current.value = '';
+      return;
+    }
+    setBusy(true);
+    try {
+      const buffer = await file.arrayBuffer();
+      await db.importBinary(new Uint8Array(buffer));
+      await runMigrations(db);
+      await reloadSettings();
+      bumpDataVersion();
+      notify('Banco SQLite (.sqlite) restaurado e migrado com sucesso.');
+    } catch (err) {
+      notify(
+        err instanceof Error ? `Arquivo SQLite inválido: ${err.message}` : 'Erro ao restaurar SQLite.',
+        'error',
+      );
+    } finally {
+      setBusy(false);
+      if (sqliteFileInputRef.current) sqliteFileInputRef.current.value = '';
     }
   };
 
@@ -389,6 +421,22 @@ export const SettingsPage: React.FC = () => {
           >
             <Database className="h-4 w-4" /> Exportar SQLite (.sqlite)
           </button>
+
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => sqliteFileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold hover:border-brand-500 dark:border-slate-700"
+          >
+            <Upload className="h-4 w-4" /> Restaurar SQLite (.sqlite)
+          </button>
+          <input
+            ref={sqliteFileInputRef}
+            type="file"
+            accept=".sqlite,.db,.sqlite3"
+            onChange={handleImportSqliteFile}
+            className="hidden"
+          />
 
           <button
             type="button"

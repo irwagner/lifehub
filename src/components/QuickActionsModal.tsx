@@ -7,7 +7,11 @@ import {
 } from '../repositories/calendarRepo';
 import { createTransaction, listAccounts, listCategories } from '../repositories/financeRepo';
 import { createIdea } from '../repositories/ideasRepo';
-import { createWorkSession, listVehicles } from '../repositories/workRepo';
+import {
+  createWorkSession,
+  getLastRecordedOdometer,
+  listVehicles,
+} from '../repositories/workRepo';
 import { isChildWeekend } from '../services/recurrence';
 import {
   EVENT_CATEGORY_META,
@@ -50,11 +54,15 @@ export const QuickActionsModal: React.FC = () => {
   const [wsStart, setWsStart] = useState('06:00');
   const [wsEnd, setWsEnd] = useState('12:30');
   const [wsGross, setWsGross] = useState('');
+  const [wsKmMode, setWsKmMode] = useState<'total' | 'odometer'>('total');
   const [wsKmTotal, setWsKmTotal] = useState('');
+  const [wsKmStart, setWsKmStart] = useState('');
+  const [wsKmEnd, setWsKmEnd] = useState('');
   const [wsFuelLiters, setWsFuelLiters] = useState('');
   const [wsFuelCost, setWsFuelCost] = useState('');
   const [wsTolls, setWsTolls] = useState('0');
   const [wsVehicleId, setWsVehicleId] = useState('');
+  const [wsSyncFinance, setWsSyncFinance] = useState(false);
   const [wsNotes, setWsNotes] = useState('');
 
   // Event state
@@ -82,10 +90,11 @@ export const QuickActionsModal: React.FC = () => {
   useEffect(() => {
     if (!db || !quickAction) return;
     (async () => {
-      const [accs, cats, vehs] = await Promise.all([
+      const [accs, cats, vehs, lastOdo] = await Promise.all([
         listAccounts(db),
         listCategories(db),
         listVehicles(db),
+        getLastRecordedOdometer(db),
       ]);
       setAccounts(accs);
       setCategories(cats);
@@ -94,6 +103,9 @@ export const QuickActionsModal: React.FC = () => {
       if (accs[1]) setTxDestAccount(accs[1].id);
       const activeVeh = vehs.find((v) => v.is_active === 1);
       setWsVehicleId(activeVeh?.id ?? '');
+      if (lastOdo != null && !wsKmStart) {
+        setWsKmStart(String(lastOdo));
+      }
     })();
   }, [db, quickAction]);
 
@@ -134,7 +146,11 @@ export const QuickActionsModal: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createWorkSession(
+      const grossNum = Number(wsGross);
+      const fuelCostNum = Number(wsFuelCost) || 0;
+      const tollsNum = Number(wsTolls) || 0;
+
+      const created = await createWorkSession(
         db,
         {
           vehicle_id: wsVehicleId || null,
@@ -142,23 +158,63 @@ export const QuickActionsModal: React.FC = () => {
           platform: wsPlatform,
           start_time: wsStart,
           end_time: wsEnd,
-          gross_amount: Number(wsGross),
-          km_total: Number(wsKmTotal),
+          gross_amount: grossNum,
+          km_start: wsKmMode === 'odometer' ? Number(wsKmStart) : null,
+          km_end: wsKmMode === 'odometer' ? Number(wsKmEnd) : null,
+          km_total: wsKmMode === 'total' ? Number(wsKmTotal) : null,
           fuel_liters: Number(wsFuelLiters) || 0,
-          fuel_cost: Number(wsFuelCost) || 0,
-          tolls_parking: Number(wsTolls) || 0,
+          fuel_cost: fuelCostNum,
+          tolls_parking: tollsNum,
           notes: wsNotes,
         },
         settings,
       );
+
+      if (wsSyncFinance && accounts[0]) {
+        const targetAcc = accounts[0].id;
+        if (grossNum > 0) {
+          await createTransaction(db, {
+            account_id: targetAcc,
+            category_id: 'cat_apps',
+            type: 'income',
+            source_type: 'aplicativos',
+            description: `Jornada ${wsPlatform === 'uber_moto' ? 'Uber Moto' : wsPlatform === '99_moto' ? '99Moto' : 'Uber/99'} (${created.km_total} km)`,
+            amount: grossNum,
+            date: wsDate,
+            status: 'realized',
+            notes: `Vinculado à jornada ${created.id}`,
+          });
+        }
+        if (fuelCostNum + tollsNum > 0) {
+          await createTransaction(db, {
+            account_id: targetAcc,
+            category_id: 'cat_combustivel',
+            type: 'expense',
+            source_type: 'aplicativos',
+            description: `Combustível/pedágio jornada (${created.km_total} km)`,
+            amount: fuelCostNum + tollsNum,
+            date: wsDate,
+            status: 'realized',
+            notes: `Vinculado à jornada ${created.id}`,
+          });
+        }
+      }
+
       setWsGross('');
       setWsKmTotal('');
+      setWsKmStart(wsKmMode === 'odometer' && wsKmEnd ? wsKmEnd : wsKmStart);
+      setWsKmEnd('');
       setWsFuelLiters('');
       setWsFuelCost('');
       setWsTolls('0');
+      setWsSyncFinance(false);
       setWsNotes('');
       bumpDataVersion();
-      notify('Jornada Uber/99 registrada no SQLite.');
+      notify(
+        wsSyncFinance
+          ? 'Jornada Uber/99 registrada e lançada no Financeiro.'
+          : 'Jornada Uber/99 registrada no SQLite.',
+      );
       close();
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao registrar jornada.', 'error');
@@ -521,19 +577,65 @@ export const QuickActionsModal: React.FC = () => {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium">Km rodados</label>
-              <input
-                required
-                type="number"
-                step="0.1"
-                min="0"
-                value={wsKmTotal}
-                onChange={(e) => setWsKmTotal(e.target.value)}
-                placeholder="Ex.: 115"
-                className={inputClass}
-              />
+              <div className="mb-1 flex items-center justify-between">
+                <label className="text-xs font-medium">Quilometragem</label>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setWsKmMode((m) => (m === 'total' ? 'odometer' : 'total'))
+                  }
+                  className="text-[11px] font-medium text-brand-500 hover:underline"
+                >
+                  {wsKmMode === 'total' ? 'Usar odômetro' : 'Usar km total'}
+                </button>
+              </div>
+              {wsKmMode === 'total' ? (
+                <input
+                  required
+                  type="number"
+                  step="0.1"
+                  min="0"
+                  value={wsKmTotal}
+                  onChange={(e) => setWsKmTotal(e.target.value)}
+                  placeholder="Ex.: 115"
+                  className={inputClass}
+                />
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5">
+                  <input
+                    required
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={wsKmStart}
+                    onChange={(e) => setWsKmStart(e.target.value)}
+                    placeholder="Km inic."
+                    className={inputClass}
+                  />
+                  <input
+                    required
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    value={wsKmEnd}
+                    onChange={(e) => setWsKmEnd(e.target.value)}
+                    placeholder="Km final"
+                    className={inputClass}
+                  />
+                </div>
+              )}
             </div>
           </div>
+
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-slate-800 dark:bg-slate-950/60 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={wsSyncFinance}
+              onChange={(e) => setWsSyncFinance(e.target.checked)}
+              className="h-3.5 w-3.5 rounded"
+            />
+            Lançar também no Financeiro (receita bruta + despesa de combustível/pedágio)
+          </label>
 
           <div className="grid grid-cols-3 gap-3">
             <div>

@@ -16,8 +16,10 @@ import { useApp } from '../context/AppContext';
 import {
   addGoalContribution,
   createAccount,
+  createCategory,
   createGoal,
   createRecurringRule,
+  deleteCategory,
   deleteCategoryBudget,
   deleteGoal,
   deleteRecurringRule,
@@ -118,6 +120,11 @@ export const FinancePage: React.FC = () => {
   const [editTxDestAccount, setEditTxDestAccount] = useState('acc_carteira');
   const [editTxCategory, setEditTxCategory] = useState('');
   const [editTxNotes, setEditTxNotes] = useState('');
+
+  // Custom category inline state
+  const [newCatName, setNewCatName] = useState('');
+  const [newCatKind, setNewCatKind] = useState<'income' | 'expense' | 'both'>('expense');
+  const [newCatColor, setNewCatColor] = useState('#6366f1');
 
   useEffect(() => {
     if (!db) return;
@@ -338,6 +345,23 @@ export const FinancePage: React.FC = () => {
       notify('Lançamento atualizado no SQLite.');
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao atualizar lançamento.', 'error');
+    }
+  };
+
+  const handleAddCustomCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db) return;
+    try {
+      await createCategory(db, {
+        name: newCatName,
+        kind: newCatKind,
+        color: newCatColor,
+      });
+      setNewCatName('');
+      bumpDataVersion();
+      notify('Categoria personalizada criada.');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao criar categoria.', 'error');
     }
   };
 
@@ -962,6 +986,74 @@ export const FinancePage: React.FC = () => {
           </form>
         </section>
       </div>
+
+      {/* Customizable Categories */}
+      <section className={cardClass}>
+        <h3 className="mb-3 font-semibold">Categorias Personalizáveis</h3>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {categories.map((cat) => (
+            <span
+              key={cat.id}
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1 text-xs dark:border-slate-800"
+            >
+              <span
+                className="h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: cat.color }}
+              />
+              <span>{cat.name}</span>
+              <span className="text-[10px] text-slate-400">
+                ({cat.kind === 'income' ? 'Receita' : cat.kind === 'expense' ? 'Despesa' : 'Ambos'})
+              </span>
+              {cat.is_default === 0 && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!db) return;
+                    await deleteCategory(db, cat.id);
+                    bumpDataVersion();
+                    notify('Categoria removida.');
+                  }}
+                  className="ml-0.5 text-slate-400 hover:text-rose-500"
+                  aria-label={`Remover categoria ${cat.name}`}
+                >
+                  ×
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+        <form onSubmit={handleAddCustomCategory} className="flex flex-wrap items-center gap-2">
+          <input
+            required
+            placeholder="Nova categoria (ex.: Peças Moto, Freela TI)"
+            value={newCatName}
+            onChange={(e) => setNewCatName(e.target.value)}
+            className={`${inputClass} flex-1`}
+          />
+          <select
+            value={newCatKind}
+            onChange={(e) => setNewCatKind(e.target.value as 'income' | 'expense' | 'both')}
+            className={inputClass}
+          >
+            <option value="expense">Despesa</option>
+            <option value="income">Receita</option>
+            <option value="both">Ambos</option>
+          </select>
+          <input
+            type="color"
+            value={newCatColor}
+            onChange={(e) => setNewCatColor(e.target.value)}
+            className="h-9 w-12 cursor-pointer rounded-lg border border-slate-300 bg-transparent p-1 dark:border-slate-700"
+            aria-label="Cor da categoria"
+          />
+          <button
+            type="submit"
+            className="rounded-lg bg-brand-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-brand-700"
+          >
+            + Categoria
+          </button>
+        </form>
+      </section>
 
       {/* CSV / OFX Import Modal */}
       <Modal

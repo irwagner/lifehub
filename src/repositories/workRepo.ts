@@ -242,6 +242,13 @@ export async function createWorkSession(
   return rows[0];
 }
 
+export async function getLastRecordedOdometer(db: SqlExecutor): Promise<number | null> {
+  const rows = await db.select<{ km_end: number }>(
+    'SELECT km_end FROM work_sessions WHERE km_end IS NOT NULL ORDER BY date DESC, created_at DESC LIMIT 1',
+  );
+  return rows[0]?.km_end ?? null;
+}
+
 export async function deleteWorkSession(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM work_sessions WHERE id = ?', [id]);
 }

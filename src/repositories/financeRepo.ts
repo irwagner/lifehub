@@ -103,6 +103,15 @@ export async function createCategory(
   return rows[0];
 }
 
+export async function deleteCategory(db: SqlExecutor, id: string): Promise<void> {
+  const rows = await db.select<Category>('SELECT is_default FROM categories WHERE id = ?', [id]);
+  if (rows.length === 0) return;
+  if (rows[0].is_default === 1) {
+    throw new Error('Categorias padrão do sistema não podem ser excluídas.');
+  }
+  await db.execute('DELETE FROM categories WHERE id = ?', [id]);
+}
+
 export interface TransactionFilters {
   month?: string; // YYYY-MM
   type?: TransactionType;
