@@ -1,4 +1,5 @@
 import type { SqlExecutor } from '../db/types';
+import { isChildWeekend } from '../services/recurrence';
 import {
   buildWeekEventsFromTemplate,
   type ScheduleTemplateId,
@@ -106,6 +107,92 @@ export async function updateCalendarEventTiming(
       [start_at, end_at, now, id],
     );
   }
+}
+
+export async function updateCalendarEvent(
+  db: SqlExecutor,
+  id: string,
+  rawInput: {
+    title: string;
+    category: EventCategory;
+    start_at: string;
+    end_at: string;
+    all_day?: number;
+    location?: string;
+    notes?: string;
+  },
+): Promise<CalendarEvent> {
+  const input = createCalendarEventSchema.parse(rawInput);
+  const now = new Date().toISOString();
+  const color = EVENT_CATEGORY_META[input.category].color;
+
+  await db.execute(
+    `UPDATE calendar_events
+     SET title = ?, category = ?, start_at = ?, end_at = ?, all_day = ?, color = ?, location = ?, notes = ?, updated_at = ?
+     WHERE id = ?`,
+    [
+      input.title,
+      input.category,
+      input.start_at,
+      input.end_at,
+      input.all_day,
+      color,
+      input.location,
+      input.notes,
+      now,
+      id,
+    ],
+  );
+
+  const rows = await db.select<CalendarEvent>('SELECT * FROM calendar_events WHERE id = ?', [id]);
+  return rows[0];
+}
+
+export async function createRecurringWeeklyEvents(
+  db: SqlExecutor,
+  rawInput: {
+    title: string;
+    category: EventCategory;
+    date: string;
+    start_time: string;
+    end_time: string;
+    weeks: number;
+    location?: string;
+    notes?: string;
+    skipChildWeekends?: boolean;
+  },
+  settings?: Settings,
+): Promise<{ created: CalendarEvent[]; skippedChildWeekends: number }> {
+  const weeks = Math.min(26, Math.max(1, Math.round(rawInput.weeks)));
+  const groupRule = weeks > 1 ? `WEEKLY:${weeks}` : null;
+  const created: CalendarEvent[] = [];
+  let skippedChildWeekends = 0;
+
+  for (let i = 0; i < weeks; i++) {
+    const targetDate = addDaysISO(rawInput.date, i * 7);
+    if (
+      rawInput.skipChildWeekends &&
+      rawInput.category === 'trabalho' &&
+      settings &&
+      isChildWeekend(targetDate, settings.child_weekend_mode, settings.child_weekend_anchor)
+    ) {
+      skippedChildWeekends++;
+      continue;
+    }
+
+    const evt = await createCalendarEvent(db, {
+      title: rawInput.title,
+      category: rawInput.category,
+      start_at: `${targetDate}T${rawInput.start_time}:00`,
+      end_at: `${targetDate}T${rawInput.end_time}:00`,
+      location: rawInput.location ?? '',
+      notes: rawInput.notes ?? '',
+      recurrence_rule: groupRule,
+    });
+    created.push(evt);
+  }
+
+  return { created, skippedChildWeekends };
 }
 
 export async function deleteCalendarEvent(db: SqlExecutor, id: string): Promise<void> {

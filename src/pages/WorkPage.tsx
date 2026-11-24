@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Bike, Calculator, Check, Plus, Trash2 } from 'lucide-react';
+import { Bike, Calculator, Check, Download, Plus, Trash2 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
 import { useApp } from '../context/AppContext';
 import {
@@ -19,6 +19,7 @@ import {
   simulateWorkScenario,
   type WorkPeriodSummary,
 } from '../services/calculations';
+import { buildWorkSessionsCsv, downloadTextFile } from '../services/reports';
 import {
   PLATFORM_LABELS,
   type Vehicle,
@@ -170,13 +171,27 @@ export const WorkPage: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => openQuickAction('work_session')}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700"
-        >
-          <Plus className="h-4 w-4" /> Registrar Jornada
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={sessions.length === 0}
+            onClick={() => {
+              const csv = buildWorkSessionsCsv(sessions);
+              downloadTextFile(csv, `lifehub-jornadas-${todayISO()}.csv`);
+              notify('Relatório CSV de jornadas exportado.');
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:border-brand-500 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <Download className="h-4 w-4" /> Exportar CSV
+          </button>
+          <button
+            type="button"
+            onClick={() => openQuickAction('work_session')}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+          >
+            <Plus className="h-4 w-4" /> Registrar Jornada
+          </button>
+        </div>
       </div>
 
       {/* Period KPIs */}

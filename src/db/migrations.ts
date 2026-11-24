@@ -6,7 +6,7 @@ export interface Migration {
   statements: string[];
 }
 
-export const CURRENT_SCHEMA_VERSION = 2;
+export const CURRENT_SCHEMA_VERSION = 3;
 
 export const MIGRATIONS: Migration[] = [
   {
@@ -307,6 +307,33 @@ export const MIGRATIONS: Migration[] = [
         FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE CASCADE
       )`,
       `CREATE INDEX IF NOT EXISTS idx_budgets_month ON budgets(month)`,
+    ],
+  },
+  {
+    version: 3,
+    name: '003_projects_portfolio_and_study_checklists',
+    statements: [
+      `ALTER TABLE study_tracks ADD COLUMN checklist_json TEXT NOT NULL DEFAULT '[]'`,
+      `CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'portfolio_ti' CHECK (category IN ('portfolio_ti', 'sistema', 'negocio', 'pessoal')),
+        status TEXT NOT NULL DEFAULT 'planning' CHECK (status IN ('planning', 'active', 'completed', 'paused')),
+        repo_url TEXT NOT NULL DEFAULT '',
+        deliverable TEXT NOT NULL DEFAULT '',
+        notes TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )`,
+      `CREATE TABLE IF NOT EXISTS project_tasks (
+        id TEXT PRIMARY KEY,
+        project_id TEXT NOT NULL,
+        title TEXT NOT NULL,
+        done INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+      )`,
+      `CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id)`,
     ],
   },
 ];

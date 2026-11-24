@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { createCalendarEvent, createTask } from '../repositories/calendarRepo';
+import {
+  createCalendarEvent,
+  createRecurringWeeklyEvents,
+  createTask,
+} from '../repositories/calendarRepo';
 import { createTransaction, listAccounts, listCategories } from '../repositories/financeRepo';
 import { createIdea } from '../repositories/ideasRepo';
 import { createWorkSession, listVehicles } from '../repositories/workRepo';
@@ -59,6 +63,7 @@ export const QuickActionsModal: React.FC = () => {
   const [evDate, setEvDate] = useState(todayISO());
   const [evStart, setEvStart] = useState('09:00');
   const [evEnd, setEvEnd] = useState('10:00');
+  const [evRepeatWeeks, setEvRepeatWeeks] = useState('1');
   const [evNotes, setEvNotes] = useState('');
 
   // Task state
@@ -170,17 +175,43 @@ export const QuickActionsModal: React.FC = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await createCalendarEvent(db, {
-        title: evTitle,
-        category: evCategory,
-        start_at: `${evDate}T${evStart}:00`,
-        end_at: `${evDate}T${evEnd}:00`,
-        notes: evNotes,
-      });
+      const weeks = Math.max(1, Number(evRepeatWeeks) || 1);
+      if (weeks > 1) {
+        const res = await createRecurringWeeklyEvents(
+          db,
+          {
+            title: evTitle,
+            category: evCategory,
+            date: evDate,
+            start_time: evStart,
+            end_time: evEnd,
+            weeks,
+            notes: evNotes,
+            skipChildWeekends: evCategory === 'trabalho',
+          },
+          settings,
+        );
+        notify(
+          `${res.created.length} evento(s) recorrente(s) salvo(s)${
+            res.skippedChildWeekends > 0
+              ? ` (${res.skippedChildWeekends} fim(ns) de semana com filho preservado(s))`
+              : ''
+          }.`,
+        );
+      } else {
+        await createCalendarEvent(db, {
+          title: evTitle,
+          category: evCategory,
+          start_at: `${evDate}T${evStart}:00`,
+          end_at: `${evDate}T${evEnd}:00`,
+          notes: evNotes,
+        });
+        notify('Compromisso salvo no calendário.');
+      }
       setEvTitle('');
+      setEvRepeatWeeks('1');
       setEvNotes('');
       bumpDataVersion();
-      notify('Compromisso salvo no calendário.');
       close();
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao salvar compromisso.', 'error');
@@ -617,7 +648,7 @@ export const QuickActionsModal: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="mb-1 block text-xs font-medium">Início</label>
               <input
@@ -635,6 +666,17 @@ export const QuickActionsModal: React.FC = () => {
                 type="time"
                 value={evEnd}
                 onChange={(e) => setEvEnd(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Repetir (semanas)</label>
+              <input
+                type="number"
+                min="1"
+                max="26"
+                value={evRepeatWeeks}
+                onChange={(e) => setEvRepeatWeeks(e.target.value)}
                 className={inputClass}
               />
             </div>

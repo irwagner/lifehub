@@ -56,6 +56,18 @@ export async function updateIdeaStatus(
   ]);
 }
 
+export async function updateIdeaChecklist(
+  db: SqlExecutor,
+  id: string,
+  checklist: Array<{ id: string; label: string; done: boolean }>,
+): Promise<void> {
+  await db.execute('UPDATE ideas SET checklist_json = ?, updated_at = ? WHERE id = ?', [
+    JSON.stringify(checklist),
+    new Date().toISOString(),
+    id,
+  ]);
+}
+
 export async function deleteIdea(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM ideas WHERE id = ?', [id]);
 }

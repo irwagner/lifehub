@@ -260,6 +260,7 @@ export interface StudyTrack {
   name: string;
   status: 'planned' | 'active' | 'completed';
   target_hours: number;
+  checklist_json: string;
   notes: string;
   created_at: string;
 }
@@ -309,6 +310,29 @@ export interface IdeaItem {
   checklist_json: string;
   created_at: string;
   updated_at: string;
+}
+
+export type ProjectCategory = 'portfolio_ti' | 'sistema' | 'negocio' | 'pessoal';
+export type ProjectStatus = 'planning' | 'active' | 'completed' | 'paused';
+
+export interface ProjectItem {
+  id: string;
+  title: string;
+  category: ProjectCategory;
+  status: ProjectStatus;
+  repo_url: string;
+  deliverable: string;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectTask {
+  id: string;
+  project_id: string;
+  title: string;
+  done: number;
+  created_at: string;
 }
 
 export interface WeeklyReview {

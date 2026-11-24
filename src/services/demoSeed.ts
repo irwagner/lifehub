@@ -5,6 +5,7 @@ import { createFamilyPlan } from '../repositories/familyRepo';
 import { createGoal, createTransaction } from '../repositories/financeRepo';
 import { logHabitSession } from '../repositories/habitsRepo';
 import { createIdea } from '../repositories/ideasRepo';
+import { createProject } from '../repositories/projectsRepo';
 import { getSettings, updateSettings } from '../repositories/settingsRepo';
 import { createVehicle, createVehicleExpense, createWorkSession } from '../repositories/workRepo';
 import { addDaysISO, startOfWeekISO, todayISO } from '../utils/format';
@@ -309,5 +310,19 @@ export async function loadDemoData(
     status: 'doing',
     impact: 5,
     effort: 3,
+  });
+
+  await createProject(db, {
+    title: 'Toolkit PowerShell — Suporte Windows & Redes (Demo)',
+    category: 'portfolio_ti',
+    status: 'active',
+    repo_url: 'https://github.com/exemplo/suporte-windows-powershell',
+    deliverable: 'README documentado + 4 scripts testados com logs',
+    notes: 'Projeto prático para apresentar em entrevistas de suporte/infraestrutura.',
+    initialTasks: [
+      'Script de diagnóstico DNS/DHCP/Gateway',
+      'Script de inventário de hardware e disco',
+      'Publicar documentação com capturas de execução',
+    ],
   });
 }

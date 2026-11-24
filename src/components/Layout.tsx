@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Bike,
   Briefcase,
@@ -37,6 +37,41 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     openQuickAction,
     toasts,
   } = useApp();
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (!e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.tagName === 'SELECT' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === 't') {
+        e.preventDefault();
+        openQuickAction('transaction');
+      } else if (key === 'j') {
+        e.preventDefault();
+        openQuickAction('work_session');
+      } else if (key === 'c') {
+        e.preventDefault();
+        openQuickAction('event');
+      } else if (key === 'k') {
+        e.preventDefault();
+        openQuickAction('task');
+      } else if (key === 'i') {
+        e.preventDefault();
+        openQuickAction('idea');
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [openQuickAction]);
 
   return (
     <div className="flex min-h-screen bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
@@ -115,6 +150,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <button
               type="button"
               onClick={() => openQuickAction('transaction')}
+              title="Atalho: Alt+T"
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 transition hover:border-brand-500 hover:text-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-brand-400"
             >
               <Plus className="h-3.5 w-3.5" /> Transação
@@ -122,6 +158,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <button
               type="button"
               onClick={() => openQuickAction('work_session')}
+              title="Atalho: Alt+J"
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 transition hover:border-brand-500 hover:text-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-brand-400"
             >
               <Plus className="h-3.5 w-3.5" /> Jornada Uber/99
@@ -129,6 +166,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <button
               type="button"
               onClick={() => openQuickAction('event')}
+              title="Atalho: Alt+C"
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 transition hover:border-brand-500 hover:text-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-brand-400"
             >
               <Plus className="h-3.5 w-3.5" /> Compromisso
@@ -136,6 +174,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <button
               type="button"
               onClick={() => openQuickAction('task')}
+              title="Atalho: Alt+K"
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 transition hover:border-brand-500 hover:text-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-brand-400"
             >
               <Plus className="h-3.5 w-3.5" /> Tarefa
@@ -143,6 +182,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <button
               type="button"
               onClick={() => openQuickAction('idea')}
+              title="Atalho: Alt+I"
               className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-800 transition hover:border-brand-500 hover:text-brand-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100 dark:hover:border-brand-400"
             >
               <Plus className="h-3.5 w-3.5" /> Ideia

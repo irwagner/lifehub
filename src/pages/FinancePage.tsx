@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle2,
   Clock,
+  Download,
   FileUp,
   Plus,
   RefreshCw,
@@ -40,6 +41,7 @@ import {
   parseStatementFile,
   type ParsedStatementItem,
 } from '../services/importParser';
+import { buildTransactionsCsv, downloadTextFile } from '../services/reports';
 import type {
   AccountType,
   Category,
@@ -291,6 +293,18 @@ export const FinancePage: React.FC = () => {
             onChange={(e) => setMonth(e.target.value)}
             className={inputClass}
           />
+          <button
+            type="button"
+            onClick={() => {
+              const csv = buildTransactionsCsv(transactions, accounts, categories);
+              downloadTextFile(csv, `lifehub-financeiro-${month}.csv`);
+              notify(`Relatório CSV de ${month} exportado.`);
+            }}
+            disabled={transactions.length === 0}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:border-brand-500 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <Download className="h-4 w-4" /> Exportar CSV
+          </button>
           <button
             type="button"
             onClick={() => setImportOpen(true)}

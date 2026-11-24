@@ -5,6 +5,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
+  Compass,
   Heart,
   Users,
   Wallet,
@@ -398,6 +399,38 @@ export const DashboardPage: React.FC = () => {
           )}
         </section>
       </div>
+      {/* Explainable Recommendations (Rule-based, zero black-box AI) */}
+      {snapshot.recommendations.length > 0 && (
+        <section className={cardClass}>
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Compass className="h-4 w-4 text-brand-500" />
+              <h3 className="font-semibold">Decisões Explicáveis (baseadas em seus dados reais)</h3>
+            </div>
+            <span className="text-[11px] text-slate-500">Sem IA obrigatória</span>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {snapshot.recommendations.slice(0, 6).map((rec) => (
+              <div
+                key={rec.id}
+                className={`rounded-xl border p-3.5 text-xs ${
+                  rec.tone === 'positive'
+                    ? 'border-emerald-500/30 bg-emerald-500/5'
+                    : rec.tone === 'attention'
+                      ? 'border-amber-500/40 bg-amber-500/10'
+                      : 'border-slate-200 bg-slate-50/70 dark:border-slate-800 dark:bg-slate-950/60'
+                }`}
+              >
+                <p className="font-semibold">{rec.title}</p>
+                <p className="mt-1 text-slate-600 dark:text-slate-300">{rec.explanation}</p>
+                <p className="mt-2 font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                  Base: {rec.basis}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 };

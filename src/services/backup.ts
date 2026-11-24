@@ -16,6 +16,7 @@ export const BACKUP_TABLES = [
   'family_plans',
   'job_applications',
   'ideas',
+  'projects',
   'weekly_reviews',
   'recurring_rules',
   'budgets',
@@ -24,6 +25,7 @@ export const BACKUP_TABLES = [
   'work_sessions',
   'habit_logs',
   'study_sessions',
+  'project_tasks',
 ] as const;
 
 export type BackupTableName = (typeof BACKUP_TABLES)[number];

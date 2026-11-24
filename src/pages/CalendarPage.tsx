@@ -6,6 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import ptBrLocale from '@fullcalendar/core/locales/pt-br';
 import { CheckCircle2, Circle, Trash2, Wand2 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
+import { Modal } from '../components/Modal';
 import { useApp } from '../context/AppContext';
 import {
   applyScheduleTemplateToWeek,
@@ -14,13 +15,19 @@ import {
   listCalendarEvents,
   listTasks,
   toggleTaskStatus,
+  updateCalendarEvent,
   updateCalendarEventTiming,
 } from '../repositories/calendarRepo';
 import {
   SCHEDULE_TEMPLATES,
   type ScheduleTemplateId,
 } from '../services/scheduleTemplates';
-import type { CalendarEvent, TaskItem } from '../types/domain';
+import {
+  EVENT_CATEGORY_META,
+  type CalendarEvent,
+  type EventCategory,
+  type TaskItem,
+} from '../types/domain';
 import { formatDateBR, todayISO } from '../utils/format';
 
 function toLocalISOString(date: Date): string {
@@ -40,6 +47,16 @@ export const CalendarPage: React.FC = () => {
   const [selectedTemplate, setSelectedTemplate] = useState<ScheduleTemplateId>('apps_5d');
   const [taskFilter, setTaskFilter] = useState<'all' | 'todo' | 'done'>('todo');
   const [applying, setApplying] = useState(false);
+
+  // Event edit modal state
+  const [editingEvent, setEditingEvent] = useState<CalendarEvent | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editCategory, setEditCategory] = useState<EventCategory>('geral');
+  const [editDate, setEditDate] = useState('');
+  const [editStart, setEditStart] = useState('09:00');
+  const [editEnd, setEditEnd] = useState('10:00');
+  const [editLocation, setEditLocation] = useState('');
+  const [editNotes, setEditNotes] = useState('');
 
   useEffect(() => {
     if (!db) return;
@@ -105,11 +122,43 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
-  const handleEventClick = async (info: { event: { id: string; title: string } }) => {
-    if (!db) return;
-    const confirmed = window.confirm(`Excluir o compromisso "${info.event.title}"?`);
-    if (!confirmed) return;
-    await deleteCalendarEvent(db, info.event.id);
+  const handleEventClick = (info: { event: { id: string } }) => {
+    const found = events.find((e) => e.id === info.event.id);
+    if (!found) return;
+    setEditingEvent(found);
+    setEditTitle(found.title);
+    setEditCategory(found.category);
+    setEditDate(found.start_at.slice(0, 10));
+    setEditStart(found.start_at.slice(11, 16) || '09:00');
+    setEditEnd(found.end_at.slice(11, 16) || '10:00');
+    setEditLocation(found.location);
+    setEditNotes(found.notes);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !editingEvent) return;
+    try {
+      await updateCalendarEvent(db, editingEvent.id, {
+        title: editTitle,
+        category: editCategory,
+        start_at: `${editDate}T${editStart}:00`,
+        end_at: `${editDate}T${editEnd}:00`,
+        location: editLocation,
+        notes: editNotes,
+      });
+      setEditingEvent(null);
+      bumpDataVersion();
+      notify('Compromisso atualizado.');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao atualizar evento.', 'error');
+    }
+  };
+
+  const handleDeleteEditing = async () => {
+    if (!db || !editingEvent) return;
+    await deleteCalendarEvent(db, editingEvent.id);
+    setEditingEvent(null);
     bumpDataVersion();
     notify('Compromisso removido.');
   };
@@ -127,13 +176,16 @@ export const CalendarPage: React.FC = () => {
     notify('Tarefa excluída.');
   };
 
+  const inputClass =
+    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100';
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold">Calendário & Tarefas</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Arraste ou redimensione eventos para reagendar. Clique num evento para remover.
+            Arraste ou redimensione para reagendar. Clique em qualquer evento para editar ou excluir.
           </p>
         </div>
 
@@ -282,6 +334,114 @@ export const CalendarPage: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Event Edit Modal */}
+      <Modal
+        open={Boolean(editingEvent)}
+        title="Editar Compromisso"
+        onClose={() => setEditingEvent(null)}
+      >
+        <form onSubmit={handleSaveEdit} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium">Título</label>
+            <input
+              required
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Categoria</label>
+              <select
+                value={editCategory}
+                onChange={(e) => setEditCategory(e.target.value as EventCategory)}
+                className={inputClass}
+              >
+                {Object.entries(EVENT_CATEGORY_META).map(([key, meta]) => (
+                  <option key={key} value={key}>
+                    {meta.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Data</label>
+              <input
+                required
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Início</label>
+              <input
+                required
+                type="time"
+                value={editStart}
+                onChange={(e) => setEditStart(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Fim</label>
+              <input
+                required
+                type="time"
+                value={editEnd}
+                onChange={(e) => setEditEnd(e.target.value)}
+                className={inputClass}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Local (opcional)</label>
+            <input
+              value={editLocation}
+              onChange={(e) => setEditLocation(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs font-medium">Observações</label>
+            <textarea
+              rows={2}
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="flex items-center justify-between pt-2">
+            <button
+              type="button"
+              onClick={handleDeleteEditing}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-rose-500/40 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-500 hover:bg-rose-500/20"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Excluir
+            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingEvent(null)}
+                className="rounded-lg px-4 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                className="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+              >
+                Salvar Alterações
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };

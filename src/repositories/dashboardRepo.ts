@@ -1,8 +1,14 @@
 import type { SqlExecutor } from '../db/types';
 import {
   generateUpcomingChildWeekends,
+  isChildWeekend,
+  normalizeToSaturday,
   type ChildWeekendWindow,
 } from '../services/recurrence';
+import {
+  generateExplainableRecommendations,
+  type ExplainableRecommendation,
+} from '../services/insights';
 import {
   buildDiscreteReminders,
   type DiscreteReminder,
@@ -20,6 +26,7 @@ import { listCalendarEvents, listTasks } from './calendarRepo';
 import {
   getMonthlyFinanceSummary,
   listAccounts,
+  listBudgetsForMonth,
   listUpcomingBills,
   type AccountWithBalance,
   type MonthlyFinanceSummary,
@@ -47,6 +54,8 @@ export interface DashboardSnapshot {
   activeApplications: JobApplication[];
   upcomingInterviews: JobApplication[];
   reminders: DiscreteReminder[];
+  recommendations: ExplainableRecommendation[];
+  hasChildWeekendThisWeek: boolean;
 }
 
 export async function loadDashboardSnapshot(
@@ -60,6 +69,7 @@ export async function loadDashboardSnapshot(
     accounts,
     monthlyFinance,
     upcomingBills,
+    budgets,
     workStats,
     todayEvents,
     todoTasks,
@@ -70,6 +80,7 @@ export async function loadDashboardSnapshot(
     listAccounts(db),
     getMonthlyFinanceSummary(db, month),
     listUpcomingBills(db, referenceDateISO, 5),
+    listBudgetsForMonth(db, month),
     getWorkDashboardStats(db, settings, referenceDateISO),
     listCalendarEvents(db, {
       startISO: `${referenceDateISO}T00:00:00`,
@@ -103,6 +114,28 @@ export async function loadDashboardSnapshot(
     pendingTasks: todoTasks,
   });
 
+  const hasChildWeekendThisWeek = isChildWeekend(
+    normalizeToSaturday(referenceDateISO),
+    settings.child_weekend_mode,
+    settings.child_weekend_anchor,
+  );
+
+  const workoutsThisWeek = habits
+    .filter((h) => h.category === 'academia' || h.category === 'corrida')
+    .reduce((acc, h) => acc + h.completedThisWeek, 0);
+
+  const recommendations = generateExplainableRecommendations({
+    settings,
+    workWeek: workStats.currentWeek,
+    workLast30Days: workStats.last30Days,
+    monthlyRealizedNet: monthlyFinance.realizedNet,
+    budgets,
+    workoutsThisWeek,
+    weeklyStudyHours,
+    activeApplicationsCount: activeApplications.length,
+    hasChildWeekendThisWeek,
+  });
+
   return {
     today: referenceDateISO,
     month,
@@ -121,5 +154,7 @@ export async function loadDashboardSnapshot(
     activeApplications,
     upcomingInterviews,
     reminders,
+    recommendations,
+    hasChildWeekendThisWeek,
   };
 }

@@ -1,5 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, Briefcase, Pause, Play, RotateCcw, Timer, Trash2 } from 'lucide-react';
+import {
+  BookOpen,
+  Briefcase,
+  CheckSquare,
+  FolderGit2,
+  Pause,
+  Play,
+  Plus,
+  RotateCcw,
+  Square,
+  Timer,
+  Trash2,
+} from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
   createJobApplication,
@@ -11,11 +23,27 @@ import {
   listStudySessions,
   listStudyTracks,
   updateJobApplicationStatus,
+  updateStudyTrackChecklist,
   updateStudyTrackStatus,
   type StudyTrackWithStats,
 } from '../repositories/careerRepo';
-import type { JobApplication, JobApplicationStatus, StudySession } from '../types/domain';
-import { formatDateBR, formatNumber, todayISO } from '../utils/format';
+import {
+  addProjectTask,
+  createProject,
+  deleteProject,
+  deleteProjectTask,
+  listProjectsWithTasks,
+  toggleProjectTask,
+  updateProjectStatus,
+  type ProjectWithTasks,
+} from '../repositories/projectsRepo';
+import type {
+  JobApplication,
+  JobApplicationStatus,
+  ProjectStatus,
+  StudySession,
+} from '../types/domain';
+import { createId, formatDateBR, formatNumber, todayISO } from '../utils/format';
 
 const JOB_STATUS_LABELS: Record<JobApplicationStatus, string> = {
   saved: 'Salva',
@@ -26,11 +54,19 @@ const JOB_STATUS_LABELS: Record<JobApplicationStatus, string> = {
   rejected: 'Encerrada',
 };
 
+const PROJECT_STATUS_LABELS: Record<ProjectStatus, string> = {
+  planning: 'Planejando',
+  active: 'Em andamento',
+  completed: 'Entregue',
+  paused: 'Pausado',
+};
+
 export const CareerPage: React.FC = () => {
   const { db, settings, dataVersion, bumpDataVersion, notify } = useApp();
   const [tracks, setTracks] = useState<StudyTrackWithStats[]>([]);
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [jobs, setJobs] = useState<JobApplication[]>([]);
+  const [portfolioProjects, setPortfolioProjects] = useState<ProjectWithTasks[]>([]);
   const [weeklyHours, setWeeklyHours] = useState(0);
 
   // Study session form
@@ -42,6 +78,18 @@ export const CareerPage: React.FC = () => {
   // Optional study stopwatch
   const [timerRunning, setTimerRunning] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  // Job application form
+  const [company, setCompany] = useState('');
+  const [role, setRole] = useState('');
+  const [salaryInfo, setSalaryInfo] = useState('');
+  const [nextStep, setNextStep] = useState('');
+  const [jobLink, setJobLink] = useState('');
+
+  // Portfolio project form
+  const [projTitle, setProjTitle] = useState('');
+  const [projRepo, setProjRepo] = useState('');
+  const [projDeliverable, setProjDeliverable] = useState('');
 
   useEffect(() => {
     if (!timerRunning) return;
@@ -62,28 +110,23 @@ export const CareerPage: React.FC = () => {
     notify(`Tempo do cronômetro aplicado (${mins} min). Informe o tema e clique em Salvar Estudo.`);
   };
 
-  // Job application form
-  const [company, setCompany] = useState('');
-  const [role, setRole] = useState('');
-  const [salaryInfo, setSalaryInfo] = useState('');
-  const [nextStep, setNextStep] = useState('');
-  const [jobLink, setJobLink] = useState('');
-
   useEffect(() => {
     if (!db) return;
     let active = true;
     (async () => {
-      const [tr, ss, jb, wh] = await Promise.all([
+      const [tr, ss, jb, wh, prjs] = await Promise.all([
         listStudyTracks(db),
         listStudySessions(db),
         listJobApplications(db),
         getWeeklyStudyHours(db, todayISO()),
+        listProjectsWithTasks(db, 'portfolio_ti'),
       ]);
       if (active) {
         setTracks(tr);
         setSessions(ss);
         setJobs(jb);
         setWeeklyHours(wh);
+        setPortfolioProjects(prjs);
         if (tr[0] && !trackId) setTrackId(tr[0].id);
       }
     })();
@@ -112,6 +155,35 @@ export const CareerPage: React.FC = () => {
     }
   };
 
+  const handleAddTrackExercise = async (track: StudyTrackWithStats) => {
+    if (!db) return;
+    const label = window.prompt(`Novo exercício prático para "${track.name}":`);
+    if (!label?.trim()) return;
+    const current: Array<{ id: string; label: string; done: boolean }> = JSON.parse(
+      track.checklist_json || '[]',
+    );
+    await updateStudyTrackChecklist(db, track.id, [
+      ...current,
+      { id: createId('ex'), label: label.trim(), done: false },
+    ]);
+    bumpDataVersion();
+  };
+
+  const handleToggleTrackExercise = async (
+    track: StudyTrackWithStats,
+    exerciseId: string,
+  ) => {
+    if (!db) return;
+    const current: Array<{ id: string; label: string; done: boolean }> = JSON.parse(
+      track.checklist_json || '[]',
+    );
+    const updated = current.map((it) =>
+      it.id === exerciseId ? { ...it, done: !it.done } : it,
+    );
+    await updateStudyTrackChecklist(db, track.id, updated);
+    bumpDataVersion();
+  };
+
   const handleAddJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db) return;
@@ -137,6 +209,27 @@ export const CareerPage: React.FC = () => {
     }
   };
 
+  const handleAddPortfolioProject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db) return;
+    try {
+      await createProject(db, {
+        title: projTitle,
+        category: 'portfolio_ti',
+        status: 'active',
+        repo_url: projRepo,
+        deliverable: projDeliverable,
+      });
+      setProjTitle('');
+      setProjRepo('');
+      setProjDeliverable('');
+      bumpDataVersion();
+      notify('Projeto de portfólio adicionado.');
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao criar projeto.', 'error');
+    }
+  };
+
   const cardClass =
     'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
   const inputClass =
@@ -144,29 +237,30 @@ export const CareerPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold">Estudos & Carreira em TI</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
-            Meta semanal de estudos: {formatNumber(weeklyHours, 1)}h /{' '}
-            {settings?.study_weekly_goal_hours ?? 6}h · Suporte, Redes, Infraestrutura e Segurança.
-          </p>
-        </div>
+      <div>
+        <h2 className="text-2xl font-bold">Estudos & Carreira em TI</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Meta semanal de estudos: {formatNumber(weeklyHours, 1)}h /{' '}
+          {settings?.study_weekly_goal_hours ?? 6}h · Suporte, Redes, Infraestrutura, Segurança e Portfólio.
+        </p>
       </div>
 
-      {/* Study Tracks */}
+      {/* Study Tracks with practical exercises checklist */}
       <section className={cardClass}>
         <div className="mb-3 flex items-center gap-2">
           <BookOpen className="h-4 w-4 text-sky-500" />
-          <h3 className="font-semibold">Trilhas de Estudo</h3>
+          <h3 className="font-semibold">Trilhas de Estudo & Exercícios Práticos</h3>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {tracks.map((t) => {
             const pct = Math.min(100, (t.loggedHours / Math.max(1, t.target_hours)) * 100);
+            const exercises: Array<{ id: string; label: string; done: boolean }> = JSON.parse(
+              t.checklist_json || '[]',
+            );
             return (
               <div
                 key={t.id}
-                className="rounded-xl border border-slate-200 p-3 dark:border-slate-800"
+                className="flex flex-col rounded-xl border border-slate-200 p-3 dark:border-slate-800"
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold">{t.name}</p>
@@ -188,12 +282,43 @@ export const CareerPage: React.FC = () => {
                     <option value="completed">Concluída</option>
                   </select>
                 </div>
-                <p className="mt-2 text-xs text-slate-500">
+                <p className="mt-1.5 text-xs text-slate-500">
                   {formatNumber(t.loggedHours, 1)}h / {t.target_hours}h
                 </p>
                 <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
                   <div className="h-full rounded-full bg-sky-500" style={{ width: `${pct}%` }} />
                 </div>
+
+                {exercises.length > 0 && (
+                  <ul className="mt-2.5 space-y-1">
+                    {exercises.map((ex) => (
+                      <li key={ex.id}>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleTrackExercise(t, ex.id)}
+                          className="flex items-center gap-1.5 text-left text-[11px] text-slate-600 dark:text-slate-300"
+                        >
+                          {ex.done ? (
+                            <CheckSquare className="h-3 w-3 shrink-0 text-emerald-500" />
+                          ) : (
+                            <Square className="h-3 w-3 shrink-0 text-slate-400" />
+                          )}
+                          <span className={ex.done ? 'line-through opacity-60' : ''}>
+                            {ex.label}
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleAddTrackExercise(t)}
+                  className="mt-2.5 inline-flex items-center gap-1 self-start text-[11px] font-medium text-sky-500 hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Exercício prático
+                </button>
               </div>
             );
           })}
@@ -201,7 +326,7 @@ export const CareerPage: React.FC = () => {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Study Sessions */}
+        {/* Study Sessions + Stopwatch */}
         <section className={cardClass}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold">Registrar Sessão de Estudo</h3>
@@ -238,6 +363,7 @@ export const CareerPage: React.FC = () => {
               )}
             </div>
           </div>
+
           <form onSubmit={handleLogStudy} className="space-y-3">
             <div className="grid grid-cols-3 gap-2">
               <select
@@ -420,6 +546,151 @@ export const CareerPage: React.FC = () => {
           </ul>
         </section>
       </div>
+
+      {/* Portfolio TI (Projects, Repositories & Deliverables) */}
+      <section className={cardClass}>
+        <div className="mb-3 flex items-center gap-2">
+          <FolderGit2 className="h-4 w-4 text-emerald-500" />
+          <h3 className="font-semibold">Portfólio TI (Projetos, Repositórios e Entregas)</h3>
+        </div>
+
+        <form onSubmit={handleAddPortfolioProject} className="mb-4 grid gap-2 sm:grid-cols-4">
+          <input
+            required
+            placeholder="Projeto (ex.: Scripts PowerShell Suporte)"
+            value={projTitle}
+            onChange={(e) => setProjTitle(e.target.value)}
+            className={inputClass}
+          />
+          <input
+            placeholder="Repositório / GitHub (opcional)"
+            value={projRepo}
+            onChange={(e) => setProjRepo(e.target.value)}
+            className={inputClass}
+          />
+          <input
+            placeholder="Entrega principal (ex.: README + scripts)"
+            value={projDeliverable}
+            onChange={(e) => setProjDeliverable(e.target.value)}
+            className={inputClass}
+          />
+          <button
+            type="submit"
+            className="rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+          >
+            + Projeto de Portfólio
+          </button>
+        </form>
+
+        {portfolioProjects.length === 0 ? (
+          <p className="text-xs text-slate-500">
+            Nenhum projeto de portfólio cadastrado ainda. Registre laboratórios, scripts e entregas técnicas para mostrar em entrevistas.
+          </p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {portfolioProjects.map((proj) => (
+              <div
+                key={proj.id}
+                className="rounded-xl border border-slate-200 p-4 text-xs dark:border-slate-800"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold">{proj.title}</p>
+                    {proj.deliverable && (
+                      <p className="mt-0.5 text-slate-500">Entrega: {proj.deliverable}</p>
+                    )}
+                    {proj.repo_url && (
+                      <p className="mt-0.5 font-mono text-[11px] text-sky-400 break-all">
+                        {proj.repo_url}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={proj.status}
+                      onChange={async (e) => {
+                        if (!db) return;
+                        await updateProjectStatus(db, proj.id, e.target.value as ProjectStatus);
+                        bumpDataVersion();
+                      }}
+                      className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-[11px] dark:border-slate-700"
+                    >
+                      {Object.entries(PROJECT_STATUS_LABELS).map(([k, label]) => (
+                        <option key={k} value={k}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!db) return;
+                        await deleteProject(db, proj.id);
+                        bumpDataVersion();
+                      }}
+                      className="text-slate-400 hover:text-rose-500"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {proj.tasks.length > 0 && (
+                  <ul className="mt-3 space-y-1.5">
+                    {proj.tasks.map((t) => (
+                      <li key={t.id} className="flex items-center justify-between gap-2">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!db) return;
+                            await toggleProjectTask(db, t.id);
+                            bumpDataVersion();
+                          }}
+                          className="flex items-center gap-1.5 text-left text-slate-600 dark:text-slate-300"
+                        >
+                          {t.done === 1 ? (
+                            <CheckSquare className="h-3.5 w-3.5 text-emerald-500" />
+                          ) : (
+                            <Square className="h-3.5 w-3.5 text-slate-400" />
+                          )}
+                          <span className={t.done === 1 ? 'line-through opacity-60' : ''}>
+                            {t.title}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (!db) return;
+                            await deleteProjectTask(db, t.id);
+                            bumpDataVersion();
+                          }}
+                          className="text-slate-400 hover:text-rose-500"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!db) return;
+                    const label = window.prompt(`Nova etapa de entrega para "${proj.title}":`);
+                    if (!label?.trim()) return;
+                    await addProjectTask(db, proj.id, label.trim());
+                    bumpDataVersion();
+                  }}
+                  className="mt-3 inline-flex items-center gap-1 text-[11px] font-medium text-brand-500 hover:underline"
+                >
+                  <Plus className="h-3 w-3" /> Adicionar etapa
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

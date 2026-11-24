@@ -71,6 +71,17 @@ export async function updateStudyTrackStatus(
   await db.execute('UPDATE study_tracks SET status = ? WHERE id = ?', [status, id]);
 }
 
+export async function updateStudyTrackChecklist(
+  db: SqlExecutor,
+  id: string,
+  items: Array<{ id: string; label: string; done: boolean }>,
+): Promise<void> {
+  await db.execute('UPDATE study_tracks SET checklist_json = ? WHERE id = ?', [
+    JSON.stringify(items),
+    id,
+  ]);
+}
+
 export async function getWeeklyStudyHours(
   db: SqlExecutor,
   referenceDateISO: string,
