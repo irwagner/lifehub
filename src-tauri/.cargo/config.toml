@@ -1,0 +1,7 @@
+[http]
+multiplexing = false
+timeout = 60
+check-revoke = false
+
+[net]
+retry = 5
