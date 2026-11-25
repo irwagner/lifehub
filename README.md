@@ -1,9 +1,18 @@
 # LifeHub — Central de Vida
 
-Aplicativo desktop **local-first para Windows** (Tauri 2 + React + TypeScript + Vite + Tailwind CSS + SQLite), projetado para centralizar finanças pessoais, trabalho por aplicativos (Uber Moto e 99Moto — **iFood fora do escopo**), rotina CLT/Aplicativos/TI, calendário, tarefas, saúde, família, estudos/carreira TI, ideias e revisão semanal.
+Aplicativo desktop **local-first para Windows** (Tauri 2 + React + TypeScript + Vite + Tailwind CSS + SQLite) com **App Mobile PWA (iPhone & Android)** e **sincronização gratuita opcional na Cloudflare com criptografia ponta a ponta AES-256-GCM**.
+
+## Baixar e Abrir com 1 Clique (Windows — sem instalar Node ou Rust)
+Acesse **[Releases (v0.1.0)](https://github.com/irwagner/lifehub/releases/tag/v0.1.0)** e baixe:
+- **`LifeHub.exe` (Portátil)**: compilado com CRT estático (`+crt-static`) — **é só baixar, dar duplo clique e usar** em qualquer Windows 10/11 (sem instalar dependências).
+- **`LifeHub-Instalador-Windows.exe` (Instalador 3,4 MB)**: cria atalho na Área de Trabalho e no Menu Iniciar e instala o WebView2 automaticamente caso falte em Windows 10 antigo.
+
+## App Celular (iPhone & Android)
+- **Link PWA:** `https://lifehub-sync.irwagneremanoel.workers.dev`
+- **Sincronização gratuita (Cloudflare Free Tier):** abra **Configurações → App Celular + Sync Cloudflare Free** no Desktop, gere sua Chave Secreta, sincronize e copie o link de pareamento para o celular.
 
 ## Princípios implementados
-- **Offline-first & Privacidade**: dados gravados apenas localmente em SQLite; nenhuma credencial de terceiros, nenhum scraping, nenhuma sincronização em nuvem nesta fase.
+- **Offline-first & Privacidade**: dados gravados localmente em SQLite; sincronização com celular 100% opt-in e criptografada ponta a ponta (Zero-Knowledge AES-256-GCM).
 - **Sem dados inventados em produção**: na primeira execução, o banco inicia limpo (apenas configurações estruturais, categorias padrão, hábitos base e trilhas de TI). Existe um botão explícito e opcional para carregar **Dados de Demonstração**.
 - **Flexibilidade de rotina**: suporte real aos modos **Trabalho CLT**, **Trabalho por Aplicativos** e **Emprego de TI**, com templates semanais e alternância sem perda de histórico.
 - **Financeiro verdadeiro**: separação clara entre faturamento bruto, combustível, pedágio/estacionamento, manutenção estimada por km, depreciação (campo separado), parcela fixa da moto e lucro líquido.

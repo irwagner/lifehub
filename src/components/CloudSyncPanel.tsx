@@ -26,7 +26,9 @@ export const CloudSyncPanel: React.FC = () => {
   const [config, setConfig] = useState<CloudSyncConfig>(() =>
     loadCloudSyncConfig('Windows Desktop'),
   );
-  const [endpointUrl, setEndpointUrl] = useState(config.endpointUrl);
+  const [endpointUrl, setEndpointUrl] = useState(
+    config.endpointUrl || 'https://lifehub-sync.irwagneremanoel.workers.dev',
+  );
   const [passphrase, setPassphrase] = useState(config.passphrase);
   const [deviceName, setDeviceName] = useState(config.deviceName || 'Windows Desktop');
   const [showKey, setShowKey] = useState(false);

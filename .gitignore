@@ -4,6 +4,7 @@
 node_modules/
 dist/
 dist-mobile/
+release/
 .wrangler/
 bin/
 obj/
