@@ -1,7 +1,7 @@
 {
   "name": "lifehub",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "LifeHub — Central de Vida (Desktop local-first para Windows com Tauri 2, React, TypeScript e SQLite)",
   "type": "module",
   "scripts": {
@@ -29,6 +29,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sql.js": "^1.12.0",
+    "uqr": "^0.1.3",
     "zod": "^3.24.1"
   },
   "devDependencies": {

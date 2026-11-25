@@ -382,7 +382,11 @@ export function saveCloudSyncConfig(config: CloudSyncConfig): void {
  */
 export function buildMobilePairingUrl(endpointUrl: string, passphrase: string): string {
   const base = normalizeEndpointUrl(endpointUrl);
-  const payload = JSON.stringify({ u: base, k: passphrase.trim() });
+  const cleanPassphrase = passphrase.trim();
+  if (cleanPassphrase.length < 8) {
+    throw new Error('A chave secreta deve ter ao menos 8 caracteres para gerar o link ou QR Code.');
+  }
+  const payload = JSON.stringify({ u: base, k: cleanPassphrase });
   const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(payload))));
   return `${base}/#pair=${encoded}`;
 }

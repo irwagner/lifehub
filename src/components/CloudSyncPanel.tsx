@@ -5,12 +5,14 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  QrCode,
   RefreshCw,
   ShieldCheck,
   Smartphone,
   Wifi,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { PairingQrCode } from './PairingQrCode';
 import {
   buildMobilePairingUrl,
   generateSyncPassphrase,
@@ -32,6 +34,7 @@ export const CloudSyncPanel: React.FC = () => {
   const [passphrase, setPassphrase] = useState(config.passphrase);
   const [deviceName, setDeviceName] = useState(config.deviceName || 'Windows Desktop');
   const [showKey, setShowKey] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [busy, setBusy] = useState(false);
 
   if (!db) return null;
@@ -118,7 +121,7 @@ export const CloudSyncPanel: React.FC = () => {
               App Celular (iPhone & Android) + Sync Cloudflare Free
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Sincronização opcional 100% gratuita via Cloudflare Workers + KV com criptografia ponta a ponta AES-256-GCM.
+              Sincronização opcional 100% gratuita via Cloudflare Workers + Durable Objects (Free Tier) com criptografia ponta a ponta AES-256-GCM.
             </p>
           </div>
         </div>
@@ -207,12 +210,33 @@ export const CloudSyncPanel: React.FC = () => {
         <button
           type="button"
           disabled={busy}
+          onClick={() => setShowQr((v) => !v)}
+          className="lh-btn-secondary"
+        >
+          <QrCode className="h-3.5 w-3.5" />
+          {showQr ? 'Ocultar QR Code' : 'Mostrar QR Code (iPhone / Android)'}
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
           onClick={handleCopyPairingLink}
           className="lh-btn-secondary"
         >
-          <Copy className="h-3.5 w-3.5" /> Copiar Link para iPhone / Android
+          <Copy className="h-3.5 w-3.5" /> Copiar Link
         </button>
       </div>
+
+      {showQr && (
+        <PairingQrCode
+          endpointUrl={endpointUrl}
+          passphrase={passphrase}
+          hasSyncedOnce={config.lastRevision > 0}
+          onGenerateKey={handleGenerateKey}
+          onCopyLink={handleCopyPairingLink}
+          onClose={() => setShowQr(false)}
+        />
+      )}
 
       {config.lastSyncedAt && (
         <p className="text-xs text-slate-500 dark:text-slate-400">

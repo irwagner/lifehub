@@ -7,6 +7,7 @@ import {
   Circle,
   Cloud,
   CloudOff,
+  Copy,
   Eye,
   EyeOff,
   Heart,
@@ -123,6 +124,7 @@ export const MobileApp: React.FC = () => {
   );
   const [syncing, setSyncing] = useState(false);
   const [showKey, setShowKey] = useState(false);
+  const [justPairedBanner, setJustPairedBanner] = useState(false);
   const [syncUrlInput, setSyncUrlInput] = useState(() =>
     loadCloudSyncConfig(detectMobileDeviceName()).endpointUrl ||
     (window.location.origin.startsWith('http') && !window.location.hostname.includes('localhost')
@@ -270,7 +272,13 @@ export const MobileApp: React.FC = () => {
         setSyncConfig(nextCfg);
         setSyncUrlInput(paired.endpointUrl);
         setSyncKeyInput(paired.passphrase);
-        showToast('Link de pareamento detectado! Sincronizando...');
+        const isStandalonePwa =
+          window.matchMedia?.('(display-mode: standalone)').matches ||
+          Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
+        if (!isStandalonePwa) {
+          setJustPairedBanner(true);
+        }
+        showToast('QR Code / link detectado! Sincronizando...');
         await runSync(database, nextCfg);
       }
     })();
@@ -586,6 +594,44 @@ export const MobileApp: React.FC = () => {
 
       {/* Main Content */}
       <main className="mx-auto max-w-lg space-y-4 px-4 pt-4 pb-28">
+        {justPairedBanner && (
+          <section className="rounded-2xl border border-indigo-500/35 bg-indigo-600/10 p-4 text-xs shadow-sm dark:bg-indigo-500/15">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 font-bold text-indigo-700 dark:text-indigo-300">
+                <Smartphone className="h-4 w-4 shrink-0" />
+                <span>Pareado! Instale na Tela de Início</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setJustPairedBanner(false)}
+                aria-label="Fechar aviso"
+                className="rounded-lg p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <p className="mt-1.5 leading-relaxed text-slate-700 dark:text-slate-200">
+              No <strong>iPhone (Safari)</strong>, toque em <strong>Compartilhar ↑</strong> →{' '}
+              <strong>Adicionar à Tela de Início</strong>. Se abrir pelo ícone da Tela de Início sem os dados, cole a chave abaixo na aba <strong>Sync</strong>.
+            </p>
+            {syncKeyInput.trim().length >= 8 && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(syncKeyInput.trim());
+                    showToast('Chave Secreta copiada!');
+                  } catch {
+                    showToast('Copie a chave manualmente na aba Sync.', 'err');
+                  }
+                }}
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm active:scale-95"
+              >
+                <Copy className="h-3.5 w-3.5" /> Copiar Chave Secreta
+              </button>
+            )}
+          </section>
+        )}
         {/* TAB 1: HOJE */}
         {tab === 'today' && (
           <>
@@ -1019,9 +1065,27 @@ export const MobileApp: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-xs font-semibold">
-                    Chave Secreta do Cofre (mesma do Desktop)
-                  </label>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className="block text-xs font-semibold">
+                      Chave Secreta do Cofre (mesma do Desktop)
+                    </label>
+                    {syncKeyInput.trim().length >= 8 && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await navigator.clipboard.writeText(syncKeyInput.trim());
+                            showToast('Chave Secreta copiada!');
+                          } catch {
+                            showToast('Não foi possível copiar automaticamente.', 'err');
+                          }
+                        }}
+                        className="inline-flex items-center gap-1 text-[11px] font-semibold text-indigo-500"
+                      >
+                        <Copy className="h-3 w-3" /> Copiar
+                      </button>
+                    )}
+                  </div>
                   <div className="relative">
                     <input
                       required
