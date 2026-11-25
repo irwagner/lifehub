@@ -1,274 +1,93 @@
-/**
- * LifeHub Zero-Knowledge Sync Worker (Cloudflare Free Tier: Workers + KV + Static Assets).
- * Stores ONLY client-encrypted AES-256-GCM envelopes — plaintext financial data never reaches Cloudflare.
- */
+import { DurableObject } from 'cloudflare:workers';
+import { handleSyncRequest, type AssetsBindingLike } from './handler';
 
-export interface KVNamespaceLike {
-  get(key: string, type?: 'text'): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
-  delete(key: string): Promise<void>;
+interface VaultStub {
+  getRecord(): Promise<string | null>;
+  putRecord(value: string): Promise<void>;
+  deleteRecord(): Promise<void>;
 }
 
-export interface AssetsBindingLike {
-  fetch(request: Request): Promise<Response>;
+interface VaultNamespaceLike {
+  idFromName(name: string): unknown;
+  get(id: unknown): VaultStub;
 }
 
-export interface SyncWorkerEnv {
-  LIFEHUB_VAULTS: KVNamespaceLike;
+export interface Env {
+  VAULT_DO: VaultNamespaceLike;
   ASSETS?: AssetsBindingLike;
 }
 
-interface StoredVaultRecord {
-  authHash: string;
-  revision: number;
-  updatedAt: string;
-  envelope: Record<string, unknown>;
+interface SqlCursorLike {
+  toArray(): Array<{ payload: string }>;
 }
 
-const VAULT_ID_REGEX = /^[a-f0-9]{64}$/;
-const TOKEN_REGEX = /^[a-f0-9]{64}$/;
-const MAX_PAYLOAD_BYTES = 4 * 1024 * 1024; // 4 MiB hard cap against memory exhaustion
-
-const CORS_HEADERS: Record<string, string> = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, X-Vault-Token, X-Expected-Revision',
-  'Access-Control-Max-Age': '86400',
-};
-
-function jsonResponse(payload: unknown, status = 200): Response {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: {
-      'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'no-store',
-      ...CORS_HEADERS,
-    },
-  });
+interface SqlStorageLike {
+  exec(query: string, ...bindings: unknown[]): SqlCursorLike;
 }
 
-async function sha256Bytes(input: string): Promise<Uint8Array> {
-  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(input));
-  return new Uint8Array(digest);
+interface DurableObjectStateLike {
+  blockConcurrencyWhile<T>(callback: () => Promise<T>): Promise<T>;
+  storage: {
+    sql: SqlStorageLike;
+  };
 }
 
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-}
+/**
+ * Per-vault SQLite-backed Durable Object (Cloudflare Free Tier).
+ * Provides strong consistency across Windows Desktop, iPhone, and Android with zero KV lag.
+ */
+export class VaultDurableObject extends DurableObject<Env> {
+  private readonly sql: SqlStorageLike;
 
-function hexToBytes(hex: string): Uint8Array {
-  const out = new Uint8Array(hex.length / 2);
-  for (let i = 0; i < out.length; i++) {
-    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
-  }
-  return out;
-}
-
-function timingSafeHexEqual(aHex: string, bHex: string): boolean {
-  if (aHex.length !== bHex.length) return false;
-  const a = hexToBytes(aHex);
-  const b = hexToBytes(bHex);
-  // Constant-time comparison (compatible with both Cloudflare Workers and standard WebCrypto)
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) {
-    diff |= a[i] ^ b[i];
-  }
-  return diff === 0;
-}
-
-async function readBoundedText(request: Request, maxBytes: number): Promise<string | null> {
-  const contentLength = request.headers.get('content-length');
-  if (contentLength && Number(contentLength) > maxBytes) {
-    return null;
-  }
-  if (!request.body) return '';
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let total = 0;
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (!value) continue;
-    total += value.byteLength;
-    if (total > maxBytes) {
-      await reader.cancel();
-      return null;
-    }
-    chunks.push(value);
-  }
-
-  const combined = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    combined.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return new TextDecoder().decode(combined);
-}
-
-function isValidEnvelope(raw: unknown): raw is Record<string, unknown> & {
-  v: number;
-  alg: string;
-  ciphertext: string;
-  iv: string;
-  salt: string;
-  revision: number;
-  updatedAt: string;
-} {
-  if (!raw || typeof raw !== 'object') return false;
-  const obj = raw as Record<string, unknown>;
-  return (
-    obj.v === 1 &&
-    obj.alg === 'AES-256-GCM' &&
-    typeof obj.ciphertext === 'string' &&
-    obj.ciphertext.length >= 16 &&
-    typeof obj.iv === 'string' &&
-    typeof obj.salt === 'string' &&
-    typeof obj.revision === 'number' &&
-    Number.isInteger(obj.revision) &&
-    obj.revision >= 1 &&
-    typeof obj.updatedAt === 'string'
-  );
-}
-
-export async function handleSyncRequest(request: Request, env: SyncWorkerEnv): Promise<Response> {
-  const url = new URL(request.url);
-
-  if (request.method === 'OPTIONS' && url.pathname.startsWith('/api/')) {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
-
-  if (url.pathname === '/api/health' && request.method === 'GET') {
-    return jsonResponse({
-      ok: true,
-      service: 'lifehub-sync',
-      e2ee: 'AES-256-GCM',
-      freeTier: 'cloudflare-workers-kv',
+  constructor(ctx: DurableObjectStateLike, env: Env) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    super(ctx as any, env);
+    this.sql = ctx.storage.sql;
+    ctx.blockConcurrencyWhile(async () => {
+      this.sql.exec(`
+        CREATE TABLE IF NOT EXISTS vault_state (
+          id INTEGER PRIMARY KEY CHECK (id = 1),
+          payload TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      `);
     });
   }
 
-  const vaultMatch = url.pathname.match(/^\/api\/vault\/([a-f0-9]{64})$/);
-  if (vaultMatch) {
-    const vaultId = vaultMatch[1];
-    if (!VAULT_ID_REGEX.test(vaultId)) {
-      return jsonResponse({ error: 'Identificador de cofre inválido.' }, 400);
-    }
-
-    const token = (request.headers.get('X-Vault-Token') ?? '').trim().toLowerCase();
-    if (!TOKEN_REGEX.test(token)) {
-      return jsonResponse({ error: 'Token de autenticação do cofre ausente ou inválido.' }, 401);
-    }
-
-    const tokenHash = bytesToHex(await sha256Bytes(`lifehub:kv-auth:${token}`));
-    const kvKey = `vault:${vaultId}`;
-
-    try {
-      if (request.method === 'GET') {
-        const raw = await env.LIFEHUB_VAULTS.get(kvKey, 'text');
-        if (!raw) {
-          return jsonResponse({ error: 'Cofre ainda não inicializado.' }, 404);
-        }
-        const stored = JSON.parse(raw) as StoredVaultRecord;
-        if (!timingSafeHexEqual(stored.authHash, tokenHash)) {
-          return jsonResponse({ error: 'Chave secreta inválida para este cofre.' }, 403);
-        }
-        return jsonResponse(stored.envelope, 200);
-      }
-
-      if (request.method === 'PUT') {
-        const rawBody = await readBoundedText(request, MAX_PAYLOAD_BYTES);
-        if (rawBody === null) {
-          return jsonResponse({ error: 'Payload excede o limite de 4 MB.' }, 413);
-        }
-
-        let parsedBody: unknown;
-        try {
-          parsedBody = JSON.parse(rawBody);
-        } catch {
-          return jsonResponse({ error: 'JSON inválido.' }, 400);
-        }
-
-        if (!isValidEnvelope(parsedBody)) {
-          return jsonResponse({ error: 'Envelope criptografado inválido.' }, 400);
-        }
-
-        const existingRaw = await env.LIFEHUB_VAULTS.get(kvKey, 'text');
-        const expectedHeader = request.headers.get('X-Expected-Revision');
-        const expectedRev = expectedHeader !== null ? Number(expectedHeader) : null;
-
-        if (existingRaw) {
-          const existing = JSON.parse(existingRaw) as StoredVaultRecord;
-          if (!timingSafeHexEqual(existing.authHash, tokenHash)) {
-            return jsonResponse({ error: 'Chave secreta inválida para atualizar este cofre.' }, 403);
-          }
-          if (expectedRev !== null && expectedRev !== existing.revision) {
-            return jsonResponse(
-              {
-                error: 'Conflito de revisão: outro dispositivo atualizou o cofre primeiro.',
-                currentRevision: existing.revision,
-              },
-              409,
-            );
-          }
-        }
-
-        const record: StoredVaultRecord = {
-          authHash: tokenHash,
-          revision: parsedBody.revision,
-          updatedAt: parsedBody.updatedAt,
-          envelope: parsedBody,
-        };
-
-        await env.LIFEHUB_VAULTS.put(kvKey, JSON.stringify(record));
-        return jsonResponse(
-          {
-            ok: true,
-            revision: record.revision,
-            updatedAt: record.updatedAt,
-          },
-          200,
-        );
-      }
-
-      if (request.method === 'DELETE') {
-        const existingRaw = await env.LIFEHUB_VAULTS.get(kvKey, 'text');
-        if (!existingRaw) {
-          return jsonResponse({ ok: true, deleted: false }, 200);
-        }
-        const existing = JSON.parse(existingRaw) as StoredVaultRecord;
-        if (!timingSafeHexEqual(existing.authHash, tokenHash)) {
-          return jsonResponse({ error: 'Chave secreta inválida para apagar este cofre.' }, 403);
-        }
-        await env.LIFEHUB_VAULTS.delete(kvKey);
-        return jsonResponse({ ok: true, deleted: true }, 200);
-      }
-
-      return jsonResponse({ error: 'Método não permitido.' }, 405);
-    } catch (err) {
-      return jsonResponse(
-        {
-          error: 'Erro interno no servidor de sincronização.',
-          detail: err instanceof Error ? err.message : 'unknown',
-        },
-        500,
-      );
-    }
+  async getRecord(): Promise<string | null> {
+    const rows = this.sql.exec('SELECT payload FROM vault_state WHERE id = 1').toArray();
+    return rows[0]?.payload ?? null;
   }
 
-  // Static PWA assets (LifeHub Mobile for iPhone & Android)
-  if (env.ASSETS) {
-    return env.ASSETS.fetch(request);
+  async putRecord(value: string): Promise<void> {
+    this.sql.exec(
+      `INSERT INTO vault_state (id, payload, updated_at)
+       VALUES (1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET payload = excluded.payload, updated_at = excluded.updated_at`,
+      value,
+      new Date().toISOString(),
+    );
   }
 
-  return jsonResponse({ error: 'Rota não encontrada.' }, 404);
+  async deleteRecord(): Promise<void> {
+    this.sql.exec('DELETE FROM vault_state WHERE id = 1');
+  }
 }
 
 export default {
-  async fetch(request: Request, env: SyncWorkerEnv): Promise<Response> {
-    return handleSyncRequest(request, env);
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const getStub = (vaultId: string): VaultStub => {
+      const id = env.VAULT_DO.idFromName(vaultId);
+      return env.VAULT_DO.get(id);
+    };
+
+    return handleSyncRequest(request, {
+      assets: env.ASSETS,
+      store: {
+        get: (vaultId) => getStub(vaultId).getRecord(),
+        put: (vaultId, value) => getStub(vaultId).putRecord(value),
+        delete: (vaultId) => getStub(vaultId).deleteRecord(),
+      },
+    });
   },
 };

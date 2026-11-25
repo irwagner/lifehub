@@ -1,16 +1,15 @@
 # LifeHub Sync + App Mobile (Cloudflare Free Tier)
 
-Este pacote hospeda **gratuitamente** na Cloudflare (Workers + KV + Assets):
+Este pacote hospeda **gratuitamente** na Cloudflare (**Workers + Durable Objects SQLite + Static Assets**):
 1. O **LifeHub Mobile** (PWA instalável no **iPhone** e **Android** com funcionamento 100% offline).
-2. A **API de Sincronização Zero-Knowledge (AES-256-GCM)** que conecta seu celular ao **LifeHub Desktop Windows**.
+2. A **API de Sincronização Zero-Knowledge (AES-256-GCM)** com consistência forte via SQLite por cofre, conectando seu celular ao **LifeHub Desktop Windows**.
 
 ## Custos
 - **R$ 0 / mês** no plano gratuito da Cloudflare:
-  - 100.000 requisições/dia no Workers
-  - 100.000 leituras/dia + 1.000 escritas/dia + 1 GB no KV (um cofre LifeHub criptografado ocupa ~20 KB)
+  - 100.000 requisições/dia no Workers e Durable Objects SQLite (5 GB grátis)
   - Hospedagem estática do app mobile inclusa no mesmo endereço `https://lifehub-sync.<seu-subdominio>.workers.dev`
 
-## Como publicar em 3 passos (uma única vez)
+## Como publicar (1 comando após autenticar)
 
 Na raiz do projeto LifeHub:
 
@@ -18,22 +17,10 @@ Na raiz do projeto LifeHub:
 # 1. Gerar o build do App Mobile (pasta dist-mobile/)
 npm run build:mobile
 
-# 2. Entrar na pasta do Worker e instalar o Wrangler
+# 2. Entrar na pasta do Worker e publicar (cria o Durable Object SQLite automaticamente)
 cd cloudflare-sync
 npm install
-npx wrangler login
-
-# 3. Criar o namespace KV gratuito (copie o "id" exibido e cole em wrangler.jsonc)
-npm run kv:create
-
-# 4. Publicar Worker + App Mobile no seu endereço gratuito *.workers.dev
 npm run deploy
 ```
 
-## Como conectar Desktop + iPhone / Android
-1. No **LifeHub Desktop**, vá em **Configurações → Sincronização Celular (Cloudflare Free)**.
-2. Cole a URL gerada (ex.: `https://lifehub-sync.sua-conta.workers.dev`), clique em **Gerar Chave Secreta** e em **Sincronizar Agora**.
-3. Clique em **Copiar Link de Pareamento** e envie para seu celular (WhatsApp/Telegram para você mesmo).
-4. Abra o link no **Safari (iPhone)** ou **Chrome (Android)**: o app já abre pareado!
-   - **iPhone:** toque em **Compartilhar → Adicionar à Tela de Início**.
-   - **Android:** toque em **Menu (⋮) → Instalar aplicativo**.
+> Autenticação: use `npx wrangler login` ou defina `CLOUDFLARE_API_TOKEN` (com permissão **Account → Workers Scripts → Edit**) e `CLOUDFLARE_ACCOUNT_ID` em `cloudflare-sync/.env`.

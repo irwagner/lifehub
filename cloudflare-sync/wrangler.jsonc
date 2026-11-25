@@ -8,19 +8,26 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
-  // Serve o app mobile PWA (iPhone + Android) no mesmo domínio gratuito *.workers.dev
+  // Serve o app mobile PWA (iPhone + Android) no mesmo endereço gratuito *.workers.dev
   "assets": {
     "directory": "../dist-mobile",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },
-  // Plano Free Cloudflare KV: 100k leituras/dia, 1k escritas/dia, 1 GB grátis.
-  // Rode: npx wrangler kv namespace create LIFEHUB_VAULTS e cole o id gerado abaixo.
-  "kv_namespaces": [
+  // Durable Object com SQLite gratuito (Cloudflare Free Tier: 100k req/dia, 5 GB, consistência forte)
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "VAULT_DO",
+        "class_name": "VaultDurableObject"
+      }
+    ]
+  },
+  "migrations": [
     {
-      "binding": "LIFEHUB_VAULTS",
-      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
+      "tag": "v1",
+      "new_sqlite_classes": ["VaultDurableObject"]
     }
   ]
 }

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   handleSyncRequest,
-  type KVNamespaceLike,
-  type SyncWorkerEnv,
-} from '../../cloudflare-sync/src/index';
+  type VaultStoreLike,
+} from '../../cloudflare-sync/src/handler';
 import { createInMemoryTestDatabase } from '../db/client';
 import { createTask, listTasks } from '../repositories/calendarRepo';
 import { createTransaction, listTransactions } from '../repositories/financeRepo';
@@ -20,7 +19,7 @@ import {
   testCloudSyncConnection,
 } from '../services/cloudSync';
 
-function createMockKV(): KVNamespaceLike & { store: Map<string, string> } {
+function createMockStore(): VaultStoreLike & { store: Map<string, string> } {
   const store = new Map<string, string>();
   return {
     store,
@@ -36,10 +35,10 @@ function createMockKV(): KVNamespaceLike & { store: Map<string, string> } {
   };
 }
 
-function createWorkerFetch(env: SyncWorkerEnv): typeof fetch {
+function createWorkerFetch(store: VaultStoreLike): typeof fetch {
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
     const req = input instanceof Request ? input : new Request(String(input), init);
-    return handleSyncRequest(req, env);
+    return handleSyncRequest(req, { store });
   }) as typeof fetch;
 }
 
@@ -94,8 +93,8 @@ describe('App Mobile + Cloudflare Sync Zero-Knowledge (E2EE)', () => {
   });
 
   it('sincroniza bidirecionalmente Desktop ↔ Celular pelo Worker Cloudflare sem perder dados offline nem a skin local', async () => {
-    const kv = createMockKV();
-    const workerFetch = createWorkerFetch({ LIFEHUB_VAULTS: kv });
+    const kv = createMockStore();
+    const workerFetch = createWorkerFetch(kv);
     const endpointUrl = 'https://lifehub-sync.demo.workers.dev';
     const passphrase = generateSyncPassphrase();
 
