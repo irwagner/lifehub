@@ -6,7 +6,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:mobile": "vite --config vite.mobile.config.ts",
     "build": "tsc && vite build",
+    "build:mobile": "tsc && vite build --config vite.mobile.config.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

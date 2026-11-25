@@ -21,6 +21,7 @@ import {
 import { useApp, type NavSection, type QuickActionType } from '../context/AppContext';
 import { getSkinDefinition } from '../services/skins';
 import { ROUTINE_MODE_LABELS } from '../types/domain';
+import { CloudSyncQuickButton } from './CloudSyncQuickButton';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { RemindersMenu } from './RemindersMenu';
 import { SkinSwitcher } from './SkinSwitcher';
@@ -209,6 +210,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           Ctrl K
         </kbd>
       </button>
+
+      <CloudSyncQuickButton />
 
       <SkinSwitcher />
 

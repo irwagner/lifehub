@@ -1,0 +1,20 @@
+{
+  "name": "LifeHub — Central de Vida",
+  "short_name": "LifeHub",
+  "description": "Seu painel pessoal offline para rotina, finanças, jornadas Uber/99 e tarefas — sincronizado com E2EE no Cloudflare.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1120",
+  "theme_color": "#0b1120",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

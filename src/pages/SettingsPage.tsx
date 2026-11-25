@@ -12,6 +12,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { CloudSyncPanel } from '../components/CloudSyncPanel';
 import { useApp } from '../context/AppContext';
 import { isTauriRuntime } from '../db/client';
 import { runMigrations } from '../db/migrations';
@@ -620,6 +621,9 @@ export const SettingsPage: React.FC = () => {
         </button>
       </form>
 
+      {/* Mobile PWA + Cloudflare Free E2EE Sync */}
+      <CloudSyncPanel />
+
       {/* Backup & Restore */}
       <section className={cardClass}>
         <div className="mb-3 flex items-center gap-2">
@@ -732,9 +736,6 @@ export const SettingsPage: React.FC = () => {
       <section className={cardClass}>
         <h3 className="mb-2 font-semibold">Funcionalidades Futuras (Planejadas — fora do escopo atual)</h3>
         <ul className="list-disc space-y-1.5 pl-5 text-xs text-slate-500 dark:text-slate-400">
-          <li>
-            <strong>Sincronização opcional com smartphone:</strong> prevista para etapa futura com criptografia ponta a ponta e consentimento explícito.
-          </li>
           <li>
             <strong>Integração Google Calendar (OAuth):</strong> sincronização bidirecional somente mediante autorização do usuário.
           </li>
