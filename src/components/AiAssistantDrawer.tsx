@@ -80,6 +80,15 @@ export const AiAssistantDrawer: React.FC<{
     setConfig(next);
   };
 
+  const toggleAutoExecute = () => {
+    const next: GeminiAiConfig = {
+      ...config,
+      autoExecuteActions: !config.autoExecuteActions,
+    };
+    saveGeminiAiConfig(next);
+    setConfig(next);
+  };
+
   const sendMessage = async (textToSend: string) => {
     if (!db || !textToSend.trim() || loading) return;
     const userMsg: AiChatMessage = {
@@ -94,13 +103,36 @@ export const AiAssistantDrawer: React.FC<{
     setLoading(true);
     try {
       const reply = await askLifeHubAssistant(db, config, messages, userMsg.text);
+      const executedIds: string[] = [];
+      const savedSummaries: string[] = [];
+
+      if (config.autoExecuteActions && settings && reply.actions.length > 0) {
+        for (const act of reply.actions) {
+          try {
+            const msgDone = await executeProposedAiAction(db, settings, act);
+            executedIds.push(act.id);
+            savedSummaries.push(msgDone);
+          } catch (actErr) {
+            notify(
+              actErr instanceof Error ? actErr.message : 'Não foi possível salvar uma ação automaticamente.',
+              'error',
+            );
+          }
+        }
+        if (executedIds.length > 0) {
+          bumpDataVersion();
+          notify(savedSummaries[0] ?? 'Lançamento salvo automaticamente no LifeHub!');
+        }
+      }
+
       const aiMsg: AiChatMessage = {
         id: `a_${Date.now()}`,
         role: 'assistant',
         text: reply.text,
         modelUsed: reply.modelUsed,
         actions: reply.actions,
-        executedActionIds: [],
+        executedActionIds: executedIds,
+        autoExecuted: executedIds.length > 0,
         createdAt: new Date().toISOString(),
       };
       setMessages([...nextHistory, aiMsg]);
@@ -158,7 +190,11 @@ export const AiAssistantDrawer: React.FC<{
             <div>
               <h2 className="text-sm font-bold leading-tight">Assistente IA · Gemini</h2>
               <p className="text-[10.5px] opacity-70">
-                {config.apiKey ? `${config.model} · fallback automático` : 'Configure sua chave abaixo'}
+                {config.apiKey
+                  ? config.model === 'auto'
+                    ? 'Melhores modelos primeiro · fallback auto'
+                    : `${config.model} · fallback automático`
+                  : 'Configure sua chave abaixo'}
               </p>
             </div>
           </div>
@@ -185,24 +221,35 @@ export const AiAssistantDrawer: React.FC<{
           </div>
         </div>
 
-        {/* Privacy bar */}
+        {/* Privacy & Auto-Save bar */}
         <div
-          className="flex items-center justify-between border-b px-4 py-2 text-[11px]"
+          className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-[11px]"
           style={{ borderColor: 'var(--lh-card-border)' }}
         >
           <span className="inline-flex items-center gap-1 opacity-75">
             <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-            Contexto local sob demanda
+            Local-first
           </span>
-          <label className="flex cursor-pointer items-center gap-1.5 font-medium">
-            <input
-              type="checkbox"
-              checked={config.shareFinancialContext}
-              onChange={toggleFinancialContext}
-              className="h-3.5 w-3.5 rounded"
-            />
-            Enviar valores R$
-          </label>
+          <div className="flex items-center gap-3">
+            <label className="flex cursor-pointer items-center gap-1.5 font-medium" title="Salva transações, tarefas e jornadas automaticamente no SQLite">
+              <input
+                type="checkbox"
+                checked={config.autoExecuteActions}
+                onChange={toggleAutoExecute}
+                className="h-3.5 w-3.5 rounded"
+              />
+              Salvar direto
+            </label>
+            <label className="flex cursor-pointer items-center gap-1.5 font-medium">
+              <input
+                type="checkbox"
+                checked={config.shareFinancialContext}
+                onChange={toggleFinancialContext}
+                className="h-3.5 w-3.5 rounded"
+              />
+              Enviar R$
+            </label>
+          </div>
         </div>
 
         {/* Body */}

@@ -8,6 +8,7 @@ import { listWorkSessions } from '../repositories/workRepo';
 import {
   askLifeHubAssistant,
   buildCompactLifeHubContext,
+  buildModelChain,
   executeProposedAiAction,
   extractProposedActions,
   type GeminiAiConfig,
@@ -36,6 +37,52 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     ]);
   });
 
+  it('aceita receita natural com valor em formato brasileiro e bloco json fallback (ex.: primeira parcela hoje)', async () => {
+    const db = await createInMemoryTestDatabase();
+    const settings = await getSettings(db);
+
+    const raw = `Anotei sua primeira parcela no financeiro!
+\`\`\`json
+{
+  "actions": [
+    {
+      "type": "create_transaction",
+      "summary": "Receita: Primeira parcela R$ 1.250,50",
+      "payload": {
+        "txType": "receita",
+        "description": "Primeira parcela",
+        "amount": "R$ 1.250,50",
+        "date": "25/11/2026",
+        "source_type": "salario",
+        "category_id": "cat_inexistente",
+        "status": "realized"
+      }
+    }
+  ]
+}
+\`\`\``;
+
+    const { cleanText, actions } = extractProposedActions(raw);
+    expect(cleanText).toContain('primeira parcela');
+    expect(cleanText).not.toContain('create_transaction');
+    expect(actions).toHaveLength(1);
+    expect(actions[0].type).toBe('create_transaction');
+    if (actions[0].type === 'create_transaction') {
+      expect(actions[0].payload.txType).toBe('income');
+      expect(actions[0].payload.amount).toBe(1250.5);
+      expect(actions[0].payload.date).toBe('2026-11-25');
+    }
+
+    const doneMsg = await executeProposedAiAction(db, settings, actions[0]);
+    expect(doneMsg).toContain('Primeira parcela');
+    const txs = await listTransactions(db);
+    expect(txs).toHaveLength(1);
+    expect(txs[0].type).toBe('income');
+    expect(txs[0].amount).toBe(1250.5);
+
+    await db.close();
+  });
+
   it('executa ações aprovadas no SQLite real (transação, jornada+financeiro, tarefa, evento e ideia)', async () => {
     const db = await createInMemoryTestDatabase();
     const settings = await getSettings(db);
@@ -54,7 +101,6 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     }
 
     expect(await listWorkSessions(db)).toHaveLength(1);
-    // syncFinance=true creates both gross income + fuel expense transactions
     expect(await listTransactions(db)).toHaveLength(2);
     expect((await listTasks(db)).some((t) => t.title === 'Revisar CV TI')).toBe(true);
     expect(
@@ -70,8 +116,13 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     await db.close();
   });
 
-  it('oculta valores em R$ no contexto quando shareFinancialContext está desativado e faz fallback automático em HTTP 429', async () => {
+  it('tenta os melhores modelos primeiro (auto) e faz fallback automático para os mais leves em 429/404', async () => {
     const db = await createInMemoryTestDatabase();
+
+    const chain = buildModelChain('auto');
+    expect(chain[0]).toBe('gemini-4-hydrogen');
+    expect(chain[1]).toBe('gemini-3.8-flash');
+    expect(chain[chain.length - 1]).toBe('gemma-4-31b-it');
 
     const hiddenCtx = await buildCompactLifeHubContext(db, false);
     expect(hiddenCtx).toContain('[OCULTO]');
@@ -81,7 +132,7 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     const mockFetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       calledUrls.push(url);
-      if (url.includes('gemini-3.5-flash-lite:')) {
+      if (url.includes('gemini-4-hydrogen:')) {
         return new Response(
           JSON.stringify({ error: { message: 'Quota exceeded' } }),
           { status: 429, headers: { 'Content-Type': 'application/json' } },
@@ -92,7 +143,7 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
           candidates: [
             {
               content: {
-                parts: [{ text: 'Tudo certo! Usei o modelo reserva.' }],
+                parts: [{ text: 'Tudo certo! Usei o segundo melhor modelo.' }],
               },
             },
           ],
@@ -103,14 +154,17 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
 
     const cfg: GeminiAiConfig = {
       apiKey: 'test-key-local',
-      model: 'gemini-3.5-flash-lite',
+      model: 'auto',
       shareFinancialContext: false,
+      autoExecuteActions: true,
     };
 
     const reply = await askLifeHubAssistant(db, cfg, [], 'Qual o foco de hoje?', mockFetch);
-    expect(reply.modelUsed).toBe('gemini-3.1-flash-lite');
-    expect(reply.text).toContain('modelo reserva');
+    expect(reply.modelUsed).toBe('gemini-3.8-flash');
+    expect(reply.text).toContain('segundo melhor');
     expect(calledUrls).toHaveLength(2);
+    expect(calledUrls[0]).toContain('gemini-4-hydrogen:');
+    expect(calledUrls[1]).toContain('gemini-3.8-flash:');
 
     await db.close();
   });

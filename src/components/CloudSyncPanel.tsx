@@ -34,7 +34,7 @@ export const CloudSyncPanel: React.FC = () => {
   const [passphrase, setPassphrase] = useState(config.passphrase);
   const [deviceName, setDeviceName] = useState(config.deviceName || 'Windows Desktop');
   const [showKey, setShowKey] = useState(false);
-  const [showQr, setShowQr] = useState(false);
+  const [showQr, setShowQr] = useState(true);
   const [busy, setBusy] = useState(false);
 
   if (!db) return null;

@@ -15,7 +15,7 @@ function getSqlJs(): Promise<SqlJsStatic> {
       useOldExtensionFunctions: false,
       locateFile: (file: string) => {
         if (isBrowser()) {
-          return `/${file}`;
+          return '/sql-wasm.wasm';
         }
         return `node_modules/sql.js/dist/${file}`;
       },

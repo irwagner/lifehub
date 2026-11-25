@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useApp, type NavSection, type QuickActionType } from '../context/AppContext';
 import { getSkinDefinition } from '../services/skins';
+import { CURRENT_APP_VERSION } from '../services/updater';
 import { ROUTINE_MODE_LABELS } from '../types/domain';
 import { AiAssistantDrawer } from './AiAssistantDrawer';
 import { CloudSyncQuickButton } from './CloudSyncQuickButton';
@@ -181,13 +182,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       </div>
       {!compact && (
         <div>
-          <h1
-            className={`text-base font-bold tracking-tight ${
-              isDualTone ? 'text-white' : 'text-slate-900 dark:text-white'
-            }`}
-          >
-            LifeHub
-          </h1>
+          <div className="flex items-center gap-1.5">
+            <h1
+              className={`text-base font-bold tracking-tight ${
+                isDualTone ? 'text-white' : 'text-slate-900 dark:text-white'
+              }`}
+            >
+              LifeHub
+            </h1>
+            <span className="rounded-md bg-brand-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-brand-500">
+              v{CURRENT_APP_VERSION}
+            </span>
+          </div>
           <p
             className={`text-[11px] font-medium ${
               isDualTone ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'

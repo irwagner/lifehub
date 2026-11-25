@@ -8,13 +8,30 @@ import { createWorkSession } from '../repositories/workRepo';
 import type { EventCategory, Settings, WorkPlatform } from '../types/domain';
 import { formatBRL, formatNumber, todayISO } from '../utils/format';
 
+/**
+ * Ordered strictly from BEST / MOST CAPABLE -> LIGHTEST / FALLBACK.
+ * When `auto` is selected (default), the app starts at the top and falls back
+ * down the chain automatically on quota (429), unavailable (404), or overload (503).
+ */
+export const ORDERED_GEMINI_FALLBACK_CHAIN = [
+  'gemini-4-hydrogen',
+  'gemini-3.8-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemma-4-31b-it',
+] as const;
+
+export type ConcreteGeminiModelId = (typeof ORDERED_GEMINI_FALLBACK_CHAIN)[number];
+
 export const GEMINI_MODELS = [
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Padrão · 500/dia)' },
-  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (500/dia)' },
-  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (20/dia · Mais potente)' },
-  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (20/dia)' },
-  { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen (20/dia)' },
-  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B (14.400/dia · Reserva)' },
+  { id: 'auto', label: 'Automático (Melhores primeiro → Fallback)' },
+  { id: 'gemini-4-hydrogen', label: '1º · Gemini 4 Hydrogen (Topo · 20/dia)' },
+  { id: 'gemini-3.8-flash', label: '2º · Gemini 3.8 Flash (Alta inteligência · 20/dia)' },
+  { id: 'gemini-3.6-flash', label: '3º · Gemini 3.6 Flash (Avançado · 20/dia)' },
+  { id: 'gemini-3.5-flash-lite', label: '4º · Gemini 3.5 Flash Lite (Rápido · 500/dia)' },
+  { id: 'gemini-3.1-flash-lite', label: '5º · Gemini 3.1 Flash Lite (Econômico · 500/dia)' },
+  { id: 'gemma-4-31b-it', label: '6º · Gemma 4 31B (Reserva · 14.400/dia)' },
 ] as const;
 
 export type GeminiModelId = (typeof GEMINI_MODELS)[number]['id'];
@@ -23,6 +40,8 @@ export interface GeminiAiConfig {
   apiKey: string;
   model: GeminiModelId;
   shareFinancialContext: boolean;
+  autoExecuteActions: boolean;
+  configVersion?: number;
 }
 
 export interface AiChatMessage {
@@ -32,25 +51,80 @@ export interface AiChatMessage {
   modelUsed?: string;
   actions?: ProposedAiAction[];
   executedActionIds?: string[];
+  autoExecuted?: boolean;
   createdAt: string;
 }
 
 const AI_CONFIG_STORAGE_KEY = 'lifehub_gemini_ai_config_v1';
+const CURRENT_AI_CONFIG_VERSION = 2;
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
 const hhmm = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function parseFlexibleNumber(val: unknown): unknown {
+  if (typeof val === 'number') return val;
+  if (typeof val !== 'string') return val;
+  const cleaned = val
+    .replace(/R\$/gi, '')
+    .replace(/\s+/g, '')
+    .trim();
+  if (!cleaned) return Number.NaN;
+  // Handle Brazilian formatting like "1.500,50" or "48,90"
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    return Number(cleaned.replace(/\./g, '').replace(',', '.'));
+  }
+  if (cleaned.includes(',')) {
+    return Number(cleaned.replace(',', '.'));
+  }
+  return Number(cleaned);
+}
+
+function normalizeOptionalIsoDate(val: unknown): string | undefined {
+  if (typeof val !== 'string') return undefined;
+  const trimmed = val.trim();
+  if (isoDate.test(trimmed)) return trimmed;
+  // Convert DD/MM/YYYY -> YYYY-MM-DD
+  const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (brMatch) {
+    return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
+  }
+  return undefined;
+}
+
+function normalizeTxType(val: unknown): unknown {
+  if (typeof val !== 'string') return val;
+  const lower = val.trim().toLowerCase();
+  if (['income', 'receita', 'entrada', 'ganho', 'credito', 'crédito'].includes(lower)) {
+    return 'income';
+  }
+  if (['expense', 'despesa', 'gasto', 'saida', 'saída', 'debito', 'débito'].includes(lower)) {
+    return 'expense';
+  }
+  return lower;
+}
+
+const flexiblePositiveNumber = z.preprocess(parseFlexibleNumber, z.number().positive());
+const flexibleNonNegativeNumber = z.preprocess(parseFlexibleNumber, z.number().min(0));
+const optionalNormalizedDate = z.preprocess(
+  (v) => (v === null || v === '' ? undefined : normalizeOptionalIsoDate(v)),
+  z.string().regex(isoDate).optional(),
+);
+const nullableNormalizedDate = z.preprocess(
+  (v) => (v === null || v === '' ? null : normalizeOptionalIsoDate(v) ?? null),
+  z.string().regex(isoDate).nullable().optional(),
+);
 
 const proposedActionSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('create_transaction'),
     summary: z.string().min(1).max(160),
     payload: z.object({
-      txType: z.enum(['income', 'expense']),
+      txType: z.preprocess(normalizeTxType, z.enum(['income', 'expense'])),
       description: z.string().min(1).max(140),
-      amount: z.number().positive(),
-      date: z.string().regex(isoDate).optional(),
-      category_id: z.string().optional(),
+      amount: flexiblePositiveNumber,
+      date: optionalNormalizedDate,
+      category_id: z.string().nullable().optional(),
       source_type: z.enum(['salario', 'aplicativos', 'servicos_ti', 'outros']).optional(),
       status: z.enum(['realized', 'planned']).optional(),
     }),
@@ -61,13 +135,13 @@ const proposedActionSchema = z.discriminatedUnion('type', [
     payload: z.object({
       // Explicitamente sem iFood conforme regras do projeto
       platform: z.enum(['uber_moto', '99_moto', 'ambos']),
-      date: z.string().regex(isoDate).optional(),
+      date: optionalNormalizedDate,
       start_time: z.string().regex(hhmm).optional(),
       end_time: z.string().regex(hhmm).optional(),
-      gross_amount: z.number().min(0),
-      km_total: z.number().min(0),
-      fuel_cost: z.number().min(0).optional(),
-      tolls_parking: z.number().min(0).optional(),
+      gross_amount: flexibleNonNegativeNumber,
+      km_total: flexibleNonNegativeNumber,
+      fuel_cost: flexibleNonNegativeNumber.optional(),
+      tolls_parking: flexibleNonNegativeNumber.optional(),
       syncFinance: z.boolean().optional(),
       notes: z.string().max(400).optional(),
     }),
@@ -78,7 +152,7 @@ const proposedActionSchema = z.discriminatedUnion('type', [
     payload: z.object({
       title: z.string().min(1).max(140),
       priority: z.enum(['low', 'medium', 'high']).optional(),
-      due_date: z.string().regex(isoDate).nullable().optional(),
+      due_date: nullableNormalizedDate,
       category: z.string().max(40).optional(),
     }),
   }),
@@ -101,7 +175,7 @@ const proposedActionSchema = z.discriminatedUnion('type', [
           'geral',
         ])
         .optional(),
-      date: z.string().regex(isoDate).optional(),
+      date: optionalNormalizedDate,
       start_time: z.string().regex(hhmm),
       end_time: z.string().regex(hhmm),
       notes: z.string().max(400).optional(),
@@ -114,26 +188,44 @@ const proposedActionSchema = z.discriminatedUnion('type', [
       title: z.string().min(1).max(140),
       description: z.string().max(600).optional(),
       tags: z.string().max(120).optional(),
-      impact: z.number().int().min(1).max(5).optional(),
-      effort: z.number().int().min(1).max(5).optional(),
+      impact: z.preprocess(parseFlexibleNumber, z.number().int().min(1).max(5)).optional(),
+      effort: z.preprocess(parseFlexibleNumber, z.number().int().min(1).max(5)).optional(),
     }),
   }),
 ]);
 
 export type ProposedAiAction = z.infer<typeof proposedActionSchema> & { id: string };
 
+export function buildModelChain(preferred: GeminiModelId): ConcreteGeminiModelId[] {
+  if (preferred === 'auto') {
+    return [...ORDERED_GEMINI_FALLBACK_CHAIN];
+  }
+  return [
+    preferred,
+    ...ORDERED_GEMINI_FALLBACK_CHAIN.filter((id) => id !== preferred),
+  ];
+}
+
 export function loadGeminiAiConfig(): GeminiAiConfig {
   try {
     const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<GeminiAiConfig>;
-      const validModel = GEMINI_MODELS.some((m) => m.id === parsed.model)
-        ? (parsed.model as GeminiModelId)
-        : 'gemini-3.5-flash-lite';
+      // Migrate v1 default ('gemini-3.5-flash-lite') to 'auto' (best-first order)
+      const isLegacyDefault =
+        (parsed.configVersion ?? 1) < CURRENT_AI_CONFIG_VERSION &&
+        parsed.model === 'gemini-3.5-flash-lite';
+      const validModel: GeminiModelId = isLegacyDefault
+        ? 'auto'
+        : GEMINI_MODELS.some((m) => m.id === parsed.model)
+          ? (parsed.model as GeminiModelId)
+          : 'auto';
       return {
         apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
         model: validModel,
         shareFinancialContext: parsed.shareFinancialContext !== false,
+        autoExecuteActions: parsed.autoExecuteActions !== false,
+        configVersion: CURRENT_AI_CONFIG_VERSION,
       };
     }
   } catch {
@@ -141,14 +233,19 @@ export function loadGeminiAiConfig(): GeminiAiConfig {
   }
   return {
     apiKey: '',
-    model: 'gemini-3.5-flash-lite',
+    model: 'auto',
     shareFinancialContext: true,
+    autoExecuteActions: true,
+    configVersion: CURRENT_AI_CONFIG_VERSION,
   };
 }
 
 export function saveGeminiAiConfig(cfg: GeminiAiConfig): void {
   try {
-    localStorage.setItem(AI_CONFIG_STORAGE_KEY, JSON.stringify(cfg));
+    localStorage.setItem(
+      AI_CONFIG_STORAGE_KEY,
+      JSON.stringify({ ...cfg, configVersion: CURRENT_AI_CONFIG_VERSION }),
+    );
   } catch {
     // ignore storage errors
   }
@@ -202,34 +299,74 @@ export async function buildCompactLifeHubContext(
   ].join('\n');
 }
 
+function tryParseActionsFromJsonString(rawJson: string): ProposedAiAction[] {
+  const sanitized = rawJson.trim().replace(/,\s*([}\]])/g, '$1');
+  const parsedJson = JSON.parse(sanitized) as unknown;
+  const candidateList = Array.isArray(parsedJson)
+    ? parsedJson
+    : parsedJson &&
+        typeof parsedJson === 'object' &&
+        'actions' in parsedJson &&
+        Array.isArray((parsedJson as { actions?: unknown }).actions)
+      ? (parsedJson as { actions: unknown[] }).actions
+      : [parsedJson];
+
+  const found: ProposedAiAction[] = [];
+  for (let i = 0; i < candidateList.length; i++) {
+    const check = proposedActionSchema.safeParse(candidateList[i]);
+    if (check.success) {
+      found.push({
+        ...check.data,
+        id: `act_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
+      });
+    }
+  }
+  return found;
+}
+
 export function extractProposedActions(rawText: string): {
   cleanText: string;
   actions: ProposedAiAction[];
 } {
   const actions: ProposedAiAction[] = [];
-  const blockRegex = /```lifehub_actions?\s*([\s\S]*?)```/gi;
+  // Primary: ```lifehub_actions or ```lifehub_action
+  const primaryRegex = /```lifehub_actions?\s*([\s\S]*?)```/gi;
+  let workingText = rawText.replace(primaryRegex, (_full, inner: string) => {
+    try {
+      actions.push(...tryParseActionsFromJsonString(inner));
+    } catch {
+      // ignore malformed block
+    }
+    return '';
+  });
 
-  const cleanText = rawText
-    .replace(blockRegex, (_full, inner: string) => {
+  // Fallback: if LLM wrote ```json containing LifeHub action objects
+  if (actions.length === 0) {
+    const jsonFenceRegex = /```json\s*([\s\S]*?)```/gi;
+    workingText = workingText.replace(jsonFenceRegex, (full, inner: string) => {
+      if (
+        !inner.includes('create_transaction') &&
+        !inner.includes('create_work_session') &&
+        !inner.includes('create_task') &&
+        !inner.includes('create_event') &&
+        !inner.includes('create_idea')
+      ) {
+        return full;
+      }
       try {
-        const parsedJson = JSON.parse(inner.trim());
-        const list = Array.isArray(parsedJson) ? parsedJson : [parsedJson];
-        for (let i = 0; i < list.length; i++) {
-          const check = proposedActionSchema.safeParse(list[i]);
-          if (check.success) {
-            actions.push({
-              ...check.data,
-              id: `act_${Date.now()}_${i}_${Math.random().toString(36).slice(2, 6)}`,
-            });
-          }
+        const parsed = tryParseActionsFromJsonString(inner);
+        if (parsed.length > 0) {
+          actions.push(...parsed);
+          return '';
         }
       } catch {
-        // ignore malformed block
+        // leave untouched
       }
-      return '';
-    })
-    .trim();
+      return full;
+    });
+  }
 
+  const cleanText = workingText.trim();
   return { cleanText: cleanText || rawText.trim(), actions };
 }
 
@@ -239,16 +376,26 @@ Regras obrigatórias:
 - Responda em português do Brasil, de forma prática, direta e em parágrafos curtos ou listas.
 - NUNCA mencione nem sugira iFood (apenas Uber Moto e 99Moto para aplicativos).
 - Respeite sempre os fins de semana com o filho e o equilíbrio entre trabalho, saúde e estudos de TI.
-- Quando o usuário pedir para REGISTRAR/CRIAR/LANÇAR uma transação, jornada Uber/99, tarefa, compromisso ou ideia, responda brevemente confirmando o que entendeu e inclua ao final UM bloco \`\`\`lifehub_actions com um array JSON válido seguindo EXATAMENTE um dos formatos abaixo (sem comentários no JSON):
+- REGRA DE LANÇAMENTO AUTOMÁTICO: SEMPRE que o usuário relatar qualquer ganho, recebimento, parcela, salário, gasto, despesa, corrida/jornada Uber/99, nova tarefa, compromisso ou ideia — MESMO em frase natural/informal sem dizer explicitamente "registre" (exemplos: "ganhei 1200 da primeira parcela hj", "recebi 350 de freela", "paguei 85 de internet", "gastei 35 de gasolina", "rodei 80km e fiz 190", "tenho médico amanhã às 15h") — você DEVE incluir ao final UM bloco \`\`\`lifehub_actions com um array JSON válido para lançar no banco do usuário!
+- Use SEMPRE número puro em JSON para valores monetários (ex: 1200 ou 48.5, sem "R$").
+- Quando o usuário disser "hoje" ou "hj", use exatamente a Data de hoje informada no contexto abaixo (formato YYYY-MM-DD).
+- Para ganhos/recebimentos/salário/13º/parcela recebida, use "txType":"income" e "status":"realized" (use "source_type":"salario" para salário/13º/parcela CLT, "aplicativos" para Uber/99, "servicos_ti" para freela TI, ou "outros").
 
-Formatos permitidos:
-1) {"type":"create_transaction","summary":"Despesa: Mercado R$ 48,00","payload":{"txType":"expense","description":"Mercado","amount":48,"date":"YYYY-MM-DD","category_id":"cat_alimentacao","source_type":"outros","status":"realized"}}
-2) {"type":"create_work_session","summary":"Uber Moto: R$ 210 bruto · 95 km · Comb. R$ 35","payload":{"platform":"uber_moto","date":"YYYY-MM-DD","start_time":"07:00","end_time":"12:30","gross_amount":210,"km_total":95,"fuel_cost":35,"syncFinance":true,"notes":""}}
-3) {"type":"create_task","summary":"Tarefa: Revisar currículo TI","payload":{"title":"Revisar currículo TI","priority":"high","due_date":"YYYY-MM-DD","category":"carreira"}}
-4) {"type":"create_event","summary":"Evento: Estudar Redes 19:00-20:30","payload":{"title":"Estudar Redes","category":"estudos","date":"YYYY-MM-DD","start_time":"19:00","end_time":"20:30"}}
-5) {"type":"create_idea","summary":"Ideia: Script backup automático","payload":{"title":"Script backup automático","description":"","tags":"ti,automacao","impact":4,"effort":2}}
+Formatos permitidos no bloco \`\`\`lifehub_actions:
+1) Receita (ex. ganhei 1200 da primeira parcela hj):
+{"type":"create_transaction","summary":"Receita: Primeira parcela R$ 1.200,00","payload":{"txType":"income","description":"Primeira parcela","amount":1200,"date":"YYYY-MM-DD","category_id":"cat_salario","source_type":"salario","status":"realized"}}
+2) Despesa:
+{"type":"create_transaction","summary":"Despesa: Mercado R$ 48,00","payload":{"txType":"expense","description":"Mercado","amount":48,"date":"YYYY-MM-DD","category_id":"cat_alimentacao","source_type":"outros","status":"realized"}}
+3) Jornada Uber/99:
+{"type":"create_work_session","summary":"Uber Moto: R$ 210 bruto · 95 km · Comb. R$ 35","payload":{"platform":"uber_moto","date":"YYYY-MM-DD","start_time":"07:00","end_time":"12:30","gross_amount":210,"km_total":95,"fuel_cost":35,"syncFinance":true,"notes":""}}
+4) Tarefa:
+{"type":"create_task","summary":"Tarefa: Revisar currículo TI","payload":{"title":"Revisar currículo TI","priority":"high","due_date":"YYYY-MM-DD","category":"carreira"}}
+5) Evento:
+{"type":"create_event","summary":"Evento: Estudar Redes 19:00-20:30","payload":{"title":"Estudar Redes","category":"estudos","date":"YYYY-MM-DD","start_time":"19:00","end_time":"20:30"}}
+6) Ideia:
+{"type":"create_idea","summary":"Ideia: Script backup automático","payload":{"title":"Script backup automático","description":"","tags":"ti,automacao","impact":4,"effort":2}}
 
-Só inclua o bloco \`\`\`lifehub_actions quando o usuário claramente pedir para registrar/criar/agendar algo.
+Não inclua \`\`\`lifehub_actions quando o usuário estiver apenas fazendo uma pergunta, pedindo resumo ou análise sem relatar um novo lançamento.
 
 Contexto atual do banco local do usuário:
 ${contextSummary}`;
@@ -269,7 +416,7 @@ async function callGeminiModel(
       systemInstruction: { parts: [{ text: systemInstruction }] },
       contents,
       generationConfig: {
-        temperature: 0.4,
+        temperature: 0.35,
         maxOutputTokens: 1200,
       },
     }),
@@ -303,17 +450,14 @@ async function callGeminiModel(
 
 export async function testGeminiConnection(
   apiKey: string,
-  preferredModel: GeminiModelId = 'gemini-3.5-flash-lite',
+  preferredModel: GeminiModelId = 'auto',
   fetchFn: typeof fetch = fetch,
-): Promise<{ ok: true; modelUsed: string; reply: string }> {
+): Promise<{ ok: true; modelUsed: ConcreteGeminiModelId; reply: string }> {
   const cleanKey = apiKey.trim();
   if (!cleanKey) {
     throw new Error('Informe sua chave API do Google AI Studio.');
   }
-  const chain: GeminiModelId[] = [
-    preferredModel,
-    ...GEMINI_MODELS.map((m) => m.id).filter((id) => id !== preferredModel),
-  ];
+  const chain = buildModelChain(preferredModel);
 
   let lastErr = '';
   for (const modelId of chain) {
@@ -341,7 +485,7 @@ export async function askLifeHubAssistant(
   history: AiChatMessage[],
   userPrompt: string,
   fetchFn: typeof fetch = fetch,
-): Promise<{ text: string; actions: ProposedAiAction[]; modelUsed: string }> {
+): Promise<{ text: string; actions: ProposedAiAction[]; modelUsed: ConcreteGeminiModelId }> {
   const cleanKey = config.apiKey.trim();
   if (!cleanKey) {
     throw new Error('Configure sua chave API Gemini nas Configurações ou no painel da IA.');
@@ -356,10 +500,7 @@ export async function askLifeHubAssistant(
   }));
   const contents = [...recentHistory, { role: 'user' as const, parts: [{ text: userPrompt.trim() }] }];
 
-  const chain: GeminiModelId[] = [
-    config.model,
-    ...GEMINI_MODELS.map((m) => m.id).filter((id) => id !== config.model),
-  ];
+  const chain = buildModelChain(config.model);
 
   let lastErr = '';
   for (const modelId of chain) {
@@ -369,7 +510,7 @@ export async function askLifeHubAssistant(
       return { text: cleanText, actions, modelUsed: modelId };
     }
     lastErr = res.message;
-    // Automatic fallback on rate-limit (429), model unavailable (404), or transient overload (503)
+    // Automatic fallback from best -> lighter models on rate-limit (429), unavailable (404), or overload (503)
     if (res.status !== 429 && res.status !== 404 && res.status !== 503) {
       throw new Error(`Erro Gemini API: ${res.message}`);
     }
@@ -388,11 +529,17 @@ export async function executeProposedAiAction(
   const today = todayISO();
 
   if (action.type === 'create_transaction') {
-    const accounts = await listAccounts(db);
+    const [accounts, categories] = await Promise.all([listAccounts(db), listCategories(db)]);
     const targetAcc = accounts[0]?.id ?? 'acc_principal';
+    const requestedCatId = action.payload.category_id ?? null;
+    const validCatId =
+      requestedCatId && categories.some((c) => c.id === requestedCatId)
+        ? requestedCatId
+        : categories.find((c) => c.kind === action.payload.txType)?.id ?? null;
+
     const created = await createTransaction(db, {
       account_id: targetAcc,
-      category_id: action.payload.category_id ?? null,
+      category_id: validCatId,
       type: action.payload.txType,
       source_type: action.payload.source_type ?? 'outros',
       description: action.payload.description,
@@ -401,7 +548,7 @@ export async function executeProposedAiAction(
       status: action.payload.status ?? 'realized',
     });
     const first = created[0];
-    return `Transação salva: ${first?.description ?? action.payload.description} (${formatBRL(first?.amount ?? action.payload.amount)}).`;
+    return `Transação salva no Financeiro: ${first?.description ?? action.payload.description} (${formatBRL(first?.amount ?? action.payload.amount)}).`;
   }
 
   if (action.type === 'create_work_session') {

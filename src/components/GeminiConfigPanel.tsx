@@ -16,6 +16,7 @@ export const GeminiConfigPanel: React.FC = () => {
   const [apiKey, setApiKey] = useState(config.apiKey);
   const [model, setModel] = useState<GeminiModelId>(config.model);
   const [shareFinancialContext, setShareFinancialContext] = useState(config.shareFinancialContext);
+  const [autoExecuteActions, setAutoExecuteActions] = useState(config.autoExecuteActions);
   const [showKey, setShowKey] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -25,6 +26,7 @@ export const GeminiConfigPanel: React.FC = () => {
       apiKey: apiKey.trim(),
       model,
       shareFinancialContext,
+      autoExecuteActions,
     };
     saveGeminiAiConfig(next);
     setConfig(next);
@@ -37,13 +39,13 @@ export const GeminiConfigPanel: React.FC = () => {
       const res = await testGeminiConnection(apiKey, model);
       const next: GeminiAiConfig = {
         apiKey: apiKey.trim(),
-        model: res.modelUsed as GeminiModelId,
+        model,
         shareFinancialContext,
+        autoExecuteActions,
       };
       saveGeminiAiConfig(next);
       setConfig(next);
-      setModel(next.model);
-      notify(`Gemini conectado com sucesso (${res.modelUsed})!`);
+      notify(`Gemini conectado com sucesso (respondeu: ${res.modelUsed})!`);
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao testar Gemini.', 'error');
     } finally {
@@ -117,15 +119,27 @@ export const GeminiConfigPanel: React.FC = () => {
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
-          <input
-            type="checkbox"
-            checked={shareFinancialContext}
-            onChange={(e) => setShareFinancialContext(e.target.checked)}
-            className="h-4 w-4 rounded"
-          />
-          Incluir resumo de valores financeiros (R$) nas consultas ao Assistente IA (desmarque para ocultar valores em R$).
-        </label>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={autoExecuteActions}
+              onChange={(e) => setAutoExecuteActions(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            Salvar automaticamente lançamentos entendidos pela IA (ex.: &ldquo;ganhei 1200 da primeira parcela hoje&rdquo; já entra direto no Financeiro).
+          </label>
+
+          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+            <input
+              type="checkbox"
+              checked={shareFinancialContext}
+              onChange={(e) => setShareFinancialContext(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            Incluir resumo de valores financeiros (R$) nas consultas ao Assistente IA (desmarque para ocultar valores em R$).
+          </label>
+        </div>
 
         <div className="flex flex-wrap gap-2">
           <button type="submit" disabled={busy} className="lh-btn-primary">

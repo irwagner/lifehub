@@ -4,6 +4,7 @@ import { Copy, Minus, Square, X } from 'lucide-react';
 import { useApp, type NavSection } from '../context/AppContext';
 import { isTauriRuntime } from '../db/client';
 import { getSkinDefinition } from '../services/skins';
+import { CURRENT_APP_VERSION } from '../services/updater';
 import type { UiSkin } from '../types/domain';
 
 type ChromeStyle = 'macos-dots' | 'retro-3d' | 'poster-bold' | 'cyber-tech' | 'windows-clean';
@@ -343,6 +344,9 @@ export const WindowTitleBar: React.FC = () => {
           L
         </span>
         <span className="opacity-90">LifeHub</span>
+        <span className="rounded bg-brand-500/15 px-1.5 py-0.5 font-mono text-[9.5px] font-bold text-brand-500">
+          v{CURRENT_APP_VERSION}
+        </span>
         <span className="opacity-35">·</span>
         <span className="font-medium opacity-70">{sectionLabel}</span>
         <span className="hidden opacity-30 sm:inline">·</span>

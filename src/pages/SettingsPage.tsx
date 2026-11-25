@@ -33,6 +33,7 @@ import {
   type SkinDefinition,
   type SkinGroup,
 } from '../services/skins';
+import { CURRENT_APP_VERSION } from '../services/updater';
 import type { ChildWeekendMode, RoutineMode, ThemeMode, WorkDaysPerWeek } from '../types/domain';
 import { todayISO } from '../utils/format';
 
@@ -415,15 +416,57 @@ export const SettingsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h2 className="lh-page-title">Configurações, Skins, Rotina & Backup</h2>
-        <p className="lh-page-subtitle">
-          Troque visual, estrutura de navegação e layout do dashboard ao vivo entre {UI_SKINS.length} skins ({CONCEPT_SKINS.length} ideias Dribbble/Figma/Behance + {REFERENCE_SKINS.length} referências locais + {CLASSIC_SKINS.length} clássicas).
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="lh-page-title">Configurações, Celular, Atualizações & Skins</h2>
+            <span className="rounded-full bg-brand-500/15 px-2.5 py-0.5 font-mono text-xs font-bold text-brand-500">
+              v{CURRENT_APP_VERSION}
+            </span>
+          </div>
+          <p className="lh-page-subtitle">
+            Atualize pelo GitHub, pareie seu iPhone/Android via QR Code, configure a IA Gemini e troque entre {UI_SKINS.length} skins ao vivo.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-1.5">
+          {[
+            { id: 'sec-updates', label: 'GitHub Updates' },
+            { id: 'sec-mobile-qr', label: 'Celular & QR Code' },
+            { id: 'sec-ai', label: 'IA Gemini' },
+            { id: 'sec-skins', label: `${UI_SKINS.length} Skins` },
+            { id: 'sec-prefs', label: 'Rotina & Metas' },
+            { id: 'sec-backup', label: 'Backup' },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => document.getElementById(tab.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="lh-control-btn px-2.5 py-1 text-[11px] font-semibold"
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* GitHub Releases Auto-Updater — Top visibility */}
+      <div id="sec-updates">
+        <AutoUpdatePanel />
+      </div>
+
+      {/* Mobile PWA + Cloudflare Free E2EE Sync + Offline QR Code */}
+      <div id="sec-mobile-qr">
+        <CloudSyncPanel />
+      </div>
+
+      {/* Optional Gemini AI Assistant */}
+      <div id="sec-ai">
+        <GeminiConfigPanel />
       </div>
 
       {/* Live Skin Gallery */}
-      <section className={cardClass}>
+      <section id="sec-skins" className={cardClass}>
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-brand-500" />
@@ -460,7 +503,7 @@ export const SettingsPage: React.FC = () => {
       </section>
 
       {/* Main preferences */}
-      <form onSubmit={handleSave} className={`${cardClass} space-y-5`}>
+      <form id="sec-prefs" onSubmit={handleSave} className={`${cardClass} space-y-5`}>
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Preferências Gerais e Modo de Trabalho</h3>
           <button
@@ -623,17 +666,8 @@ export const SettingsPage: React.FC = () => {
         </button>
       </form>
 
-      {/* Mobile PWA + Cloudflare Free E2EE Sync */}
-      <CloudSyncPanel />
-
-      {/* Optional Gemini AI Assistant */}
-      <GeminiConfigPanel />
-
-      {/* GitHub Releases Auto-Updater */}
-      <AutoUpdatePanel />
-
       {/* Backup & Restore */}
-      <section className={cardClass}>
+      <section id="sec-backup" className={cardClass}>
         <div className="mb-3 flex items-center gap-2">
           <Database className="h-4 w-4 text-emerald-500" />
           <h3 className="font-semibold">Backup, Restauração & Dados Locais</h3>

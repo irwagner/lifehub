@@ -61,6 +61,7 @@ import {
   type GeminiAiConfig,
   type ProposedAiAction,
 } from '../services/geminiAi';
+import { CURRENT_APP_VERSION } from '../services/updater';
 import {
   EVENT_CATEGORY_META,
   PLATFORM_LABELS,
@@ -478,6 +479,22 @@ export const MobileApp: React.FC = () => {
     setAiLoading(true);
     try {
       const reply = await askLifeHubAssistant(db, aiConfig, aiMessages, userMsg.text);
+      const executedIds: string[] = [];
+      let savedNotice = '';
+      if (aiConfig.autoExecuteActions && snapshot && reply.actions.length > 0) {
+        for (const act of reply.actions) {
+          try {
+            savedNotice = await executeProposedAiAction(db, snapshot.settings, act);
+            executedIds.push(act.id);
+          } catch (actErr) {
+            showToast(actErr instanceof Error ? actErr.message : 'Erro ao salvar ação.', 'err');
+          }
+        }
+        if (executedIds.length > 0) {
+          await refreshData(db);
+          showToast(savedNotice || 'Lançamento salvo automaticamente!');
+        }
+      }
       setAiMessages([
         ...nextHist,
         {
@@ -486,7 +503,8 @@ export const MobileApp: React.FC = () => {
           text: reply.text,
           modelUsed: reply.modelUsed,
           actions: reply.actions,
-          executedActionIds: [],
+          executedActionIds: executedIds,
+          autoExecuted: executedIds.length > 0,
           createdAt: new Date().toISOString(),
         },
       ]);
@@ -549,7 +567,7 @@ export const MobileApp: React.FC = () => {
         <div className="mx-auto flex max-w-lg items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-              LifeHub · {formatDateBR(snapshot.today)}
+              LifeHub v{CURRENT_APP_VERSION} · {formatDateBR(snapshot.today)}
             </p>
             <h1 className="truncate text-lg font-bold tracking-tight">{tabTitles[tab]}</h1>
           </div>
