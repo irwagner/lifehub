@@ -52,6 +52,7 @@ export interface GeminiAiConfig {
   shareFinancialContext: boolean;
   autoExecuteActions: boolean;
   configVersion?: number;
+  updatedAt?: string;
 }
 
 export interface AiMemoryItem {
@@ -313,6 +314,7 @@ export function loadGeminiAiConfig(): GeminiAiConfig {
         shareFinancialContext: parsed.shareFinancialContext !== false,
         autoExecuteActions: parsed.autoExecuteActions !== false,
         configVersion: CURRENT_AI_CONFIG_VERSION,
+        updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : undefined,
       };
     }
   } catch {
@@ -331,7 +333,11 @@ export function saveGeminiAiConfig(cfg: GeminiAiConfig): void {
   try {
     localStorage.setItem(
       AI_CONFIG_STORAGE_KEY,
-      JSON.stringify({ ...cfg, configVersion: CURRENT_AI_CONFIG_VERSION }),
+      JSON.stringify({
+        ...cfg,
+        configVersion: CURRENT_AI_CONFIG_VERSION,
+        updatedAt: cfg.updatedAt ?? new Date().toISOString(),
+      }),
     );
   } catch {
     // ignore storage errors
@@ -409,6 +415,24 @@ export function addAiMemoryFact(rawFact: string): AiMemoryItem {
     // ignore
   }
   return nextItem;
+}
+
+export function saveAiMemoryList(items: AiMemoryItem[]): void {
+  const dedup = new Map<string, AiMemoryItem>();
+  for (const item of items) {
+    const clean = item.fact.trim().slice(0, 200);
+    if (!clean) continue;
+    const key = clean.toLowerCase();
+    if (!dedup.has(key)) {
+      dedup.set(key, { ...item, fact: clean });
+    }
+  }
+  const bounded = Array.from(dedup.values()).slice(-MAX_STORED_MEMORIES);
+  try {
+    localStorage.setItem(AI_MEMORY_STORAGE_KEY, JSON.stringify(bounded));
+  } catch {
+    // ignore
+  }
 }
 
 export function removeAiMemoryFact(id: string): AiMemoryItem[] {

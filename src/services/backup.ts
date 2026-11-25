@@ -30,19 +30,63 @@ export const BACKUP_TABLES = [
 
 export type BackupTableName = (typeof BACKUP_TABLES)[number];
 
+export interface SyncedGeminiExtension {
+  apiKey: string;
+  model: string;
+  shareFinancialContext: boolean;
+  autoExecuteActions: boolean;
+  updatedAt: string;
+}
+
+export interface SyncedAiMemoryItem {
+  id: string;
+  fact: string;
+  createdAt: string;
+}
+
+export interface SyncedClientExtensions {
+  geminiAi?: SyncedGeminiExtension;
+  aiMemory?: SyncedAiMemoryItem[];
+}
+
 export interface LifeHubBackup {
   app: 'LifeHub';
   schemaVersion: number;
   exportedAt: string;
   tableCounts: Record<BackupTableName, number>;
   tables: Record<BackupTableName, Array<Record<string, SqlValue>>>;
+  clientExtensions?: SyncedClientExtensions;
 }
+
+const clientExtensionsSchema = z
+  .object({
+    geminiAi: z
+      .object({
+        apiKey: z.string(),
+        model: z.string(),
+        shareFinancialContext: z.boolean(),
+        autoExecuteActions: z.boolean(),
+        updatedAt: z.string(),
+      })
+      .optional(),
+    aiMemory: z
+      .array(
+        z.object({
+          id: z.string(),
+          fact: z.string(),
+          createdAt: z.string(),
+        }),
+      )
+      .optional(),
+  })
+  .optional();
 
 const backupSchema = z.object({
   app: z.literal('LifeHub'),
   schemaVersion: z.number().int().min(1).max(CURRENT_SCHEMA_VERSION),
   exportedAt: z.string().min(10),
   tables: z.record(z.array(z.record(z.union([z.string(), z.number(), z.null()])))),
+  clientExtensions: clientExtensionsSchema,
 });
 
 export async function exportBackupJson(db: SqlExecutor): Promise<LifeHubBackup> {
@@ -94,6 +138,7 @@ export function validateBackupPayload(raw: unknown): LifeHubBackup {
     exportedAt: parsed.exportedAt,
     tableCounts,
     tables,
+    ...(parsed.clientExtensions ? { clientExtensions: parsed.clientExtensions } : {}),
   };
 }
 

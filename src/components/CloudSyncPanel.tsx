@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Cloud,
   Copy,
@@ -22,21 +22,44 @@ import {
   testCloudSyncConnection,
   type CloudSyncConfig,
 } from '../services/cloudSync';
+import { loadGeminiAiConfig } from '../services/geminiAi';
+
+const DEFAULT_SYNC_URL = 'https://lifehub-sync.irwagneremanoel.workers.dev';
+
+function loadOrBootstrapSyncConfig(): CloudSyncConfig {
+  const loaded = loadCloudSyncConfig('Windows Desktop');
+  const nextUrl = loaded.endpointUrl.trim() || DEFAULT_SYNC_URL;
+  const hasValidKey = loaded.passphrase.trim().length >= 8;
+  if (hasValidKey && loaded.endpointUrl.trim()) {
+    return loaded;
+  }
+  const bootstrapped: CloudSyncConfig = {
+    ...loaded,
+    enabled: true,
+    autoSync: loaded.autoSync !== false,
+    endpointUrl: nextUrl,
+    passphrase: hasValidKey ? loaded.passphrase.trim() : generateSyncPassphrase(),
+    deviceName: loaded.deviceName || 'Windows Desktop',
+  };
+  saveCloudSyncConfig(bootstrapped);
+  return bootstrapped;
+}
 
 export const CloudSyncPanel: React.FC = () => {
-  const { db, reloadSettings, bumpDataVersion, notify } = useApp();
-  const [config, setConfig] = useState<CloudSyncConfig>(() =>
-    loadCloudSyncConfig('Windows Desktop'),
-  );
-  const [endpointUrl, setEndpointUrl] = useState(
-    config.endpointUrl || 'https://lifehub-sync.irwagneremanoel.workers.dev',
-  );
+  const { db, dataVersion, reloadSettings, bumpDataVersion, notify } = useApp();
+  const [config, setConfig] = useState<CloudSyncConfig>(() => loadOrBootstrapSyncConfig());
+  const [endpointUrl, setEndpointUrl] = useState(config.endpointUrl || DEFAULT_SYNC_URL);
   const [passphrase, setPassphrase] = useState(config.passphrase);
   const [deviceName, setDeviceName] = useState(config.deviceName || 'Windows Desktop');
   const [autoSync, setAutoSync] = useState(config.autoSync !== false);
   const [showKey, setShowKey] = useState(false);
   const [showQr, setShowQr] = useState(true);
   const [busy, setBusy] = useState(false);
+
+  const geminiApiKey = useMemo(() => {
+    void dataVersion;
+    return loadGeminiAiConfig().apiKey.trim();
+  }, [dataVersion]);
 
   if (!db) return null;
 
@@ -59,7 +82,8 @@ export const CloudSyncPanel: React.FC = () => {
     const generated = generateSyncPassphrase();
     setPassphrase(generated);
     setShowKey(true);
-    notify('Nova Chave Secreta gerada. Salve/sincronize e use a mesma no celular.');
+    persistForm({ passphrase: generated, enabled: true });
+    notify('Nova Chave Secreta gerada e aplicada ao QR Code!');
   };
 
   const handleTestConnection = async () => {
@@ -100,9 +124,14 @@ export const CloudSyncPanel: React.FC = () => {
 
   const handleCopyPairingLink = async () => {
     try {
-      const url = buildMobilePairingUrl(endpointUrl, passphrase);
+      persistForm();
+      const url = buildMobilePairingUrl(endpointUrl, passphrase, { geminiApiKey });
       await navigator.clipboard.writeText(url);
-      notify('Link de pareamento copiado! Abra no Safari (iPhone) ou Chrome (Android).');
+      notify(
+        geminiApiKey
+          ? 'Link de pareamento (com Sync + chave IA) copiado! Abra no Safari ou Chrome.'
+          : 'Link de pareamento copiado! Abra no Safari (iPhone) ou Chrome (Android).',
+      );
     } catch (err) {
       notify(
         err instanceof Error ? err.message : 'Preencha URL e Chave Secreta antes de copiar o link.',
@@ -255,6 +284,7 @@ export const CloudSyncPanel: React.FC = () => {
         <PairingQrCode
           endpointUrl={endpointUrl}
           passphrase={passphrase}
+          geminiApiKey={geminiApiKey}
           hasSyncedOnce={config.lastRevision > 0}
           onGenerateKey={handleGenerateKey}
           onCopyLink={handleCopyPairingLink}

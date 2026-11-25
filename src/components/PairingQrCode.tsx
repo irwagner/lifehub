@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { encode } from 'uqr';
 import {
   CheckCircle2,
@@ -8,6 +8,7 @@ import {
   QrCode,
   ShieldAlert,
   Smartphone,
+  Sparkles,
   X,
 } from 'lucide-react';
 import { buildMobilePairingUrl, normalizeEndpointUrl } from '../services/cloudSync';
@@ -62,6 +63,7 @@ export function buildQrSvgPath(content: string, border = 3): QrMatrixSvg {
 interface PairingQrCodeProps {
   endpointUrl: string;
   passphrase: string;
+  geminiApiKey?: string;
   hasSyncedOnce: boolean;
   onGenerateKey: () => void;
   onCopyLink: () => void;
@@ -71,13 +73,21 @@ interface PairingQrCodeProps {
 export const PairingQrCode: React.FC<PairingQrCodeProps> = ({
   endpointUrl,
   passphrase,
+  geminiApiKey,
   hasSyncedOnce,
   onGenerateKey,
   onCopyLink,
   onClose,
 }) => {
   const hasValidKey = passphrase.trim().length >= 8;
+  const hasAiKey = Boolean(geminiApiKey?.trim());
   const [mode, setMode] = useState<'pair' | 'app'>(hasValidKey ? 'pair' : 'app');
+
+  useEffect(() => {
+    if (hasValidKey) {
+      setMode('pair');
+    }
+  }, [hasValidKey]);
 
   const activeMode: 'pair' | 'app' = mode === 'pair' && !hasValidKey ? 'app' : mode;
 
@@ -85,7 +95,7 @@ export const PairingQrCode: React.FC<PairingQrCodeProps> = ({
     try {
       const targetUrl =
         activeMode === 'pair'
-          ? buildMobilePairingUrl(endpointUrl, passphrase)
+          ? buildMobilePairingUrl(endpointUrl, passphrase, { geminiApiKey })
           : normalizeEndpointUrl(endpointUrl);
       const svg = buildQrSvgPath(targetUrl, 3);
       return { ok: true as const, svg, targetUrl };
@@ -95,7 +105,7 @@ export const PairingQrCode: React.FC<PairingQrCodeProps> = ({
         error: err instanceof Error ? err.message : 'Não foi possível gerar o QR Code.',
       };
     }
-  }, [activeMode, endpointUrl, passphrase]);
+  }, [activeMode, endpointUrl, passphrase, geminiApiKey]);
 
   return (
     <div className="rounded-2xl border border-brand-500/30 bg-slate-900/[0.03] p-4 dark:bg-white/[0.03]">
@@ -190,6 +200,19 @@ export const PairingQrCode: React.FC<PairingQrCodeProps> = ({
             <CheckCircle2 className="h-3 w-3 text-emerald-500" />
             Gerado 100% offline neste PC
           </span>
+          {activeMode === 'pair' && (
+            <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-300">
+              {hasAiKey ? (
+                <>
+                  <Sparkles className="h-2.5 w-2.5" /> Chave Sync + Chave IA incluídas
+                </>
+              ) : (
+                <>
+                  <Lock className="h-2.5 w-2.5" /> Chave Sync E2EE incluída
+                </>
+              )}
+            </span>
+          )}
         </div>
 
         {/* Step-by-step Instructions for iOS & Android */}

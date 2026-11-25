@@ -79,10 +79,15 @@ export const AiAssistantDrawer: React.FC<{
 
   const handleSaveInlineKey = (e: React.FormEvent) => {
     e.preventDefault();
-    const next: GeminiAiConfig = { ...config, apiKey: keyDraft.trim() };
+    const next: GeminiAiConfig = {
+      ...config,
+      apiKey: keyDraft.trim(),
+      updatedAt: new Date().toISOString(),
+    };
     saveGeminiAiConfig(next);
     setConfig(next);
-    notify('Chave Gemini salva localmente!');
+    bumpDataVersion();
+    notify('Chave Gemini salva e sincronizada no cofre E2EE!');
   };
 
   const toggleFinancialContext = () => {

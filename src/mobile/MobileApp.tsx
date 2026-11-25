@@ -241,6 +241,9 @@ export const MobileApp: React.FC = () => {
         };
         saveCloudSyncConfig(updatedCfg);
         setSyncConfig(updatedCfg);
+        const syncedAi = loadGeminiAiConfig();
+        setAiConfig(syncedAi);
+        setAiKeyInput(syncedAi.apiKey);
         await refreshData(database);
         showToast(
           res.remoteHadData
@@ -281,6 +284,16 @@ export const MobileApp: React.FC = () => {
         setSyncConfig(nextCfg);
         setSyncUrlInput(paired.endpointUrl);
         setSyncKeyInput(paired.passphrase);
+        if (paired.geminiApiKey) {
+          const nextAi: GeminiAiConfig = {
+            ...loadGeminiAiConfig(),
+            apiKey: paired.geminiApiKey,
+            updatedAt: new Date().toISOString(),
+          };
+          saveGeminiAiConfig(nextAi);
+          setAiConfig(nextAi);
+          setAiKeyInput(nextAi.apiKey);
+        }
         const isStandalonePwa =
           window.matchMedia?.('(display-mode: standalone)').matches ||
           Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
@@ -309,6 +322,9 @@ export const MobileApp: React.FC = () => {
       },
       onSynced: async (res, updatedCfg) => {
         setSyncConfig(updatedCfg);
+        const syncedAi = loadGeminiAiConfig();
+        setAiConfig(syncedAi);
+        setAiKeyInput(syncedAi.apiKey);
         if (res.remoteHadData) {
           await refreshData(db);
         }
@@ -537,10 +553,15 @@ export const MobileApp: React.FC = () => {
 
   const handleSaveMobileAiKey = (e: React.FormEvent) => {
     e.preventDefault();
-    const next: GeminiAiConfig = { ...aiConfig, apiKey: aiKeyInput.trim() };
+    const next: GeminiAiConfig = {
+      ...aiConfig,
+      apiKey: aiKeyInput.trim(),
+      updatedAt: new Date().toISOString(),
+    };
     saveGeminiAiConfig(next);
     setAiConfig(next);
-    showToast('Chave Gemini salva neste celular!');
+    scheduleAutoSync();
+    showToast('Chave Gemini salva e sincronizada!');
   };
 
   const handleSendMobileAi = async (textToSend: string) => {

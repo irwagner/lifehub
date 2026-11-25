@@ -7,7 +7,16 @@ import {
   validateBackupPayload,
   type BackupTableName,
   type LifeHubBackup,
+  type SyncedClientExtensions,
 } from './backup';
+import {
+  GEMINI_MODELS,
+  loadAiMemory,
+  loadGeminiAiConfig,
+  saveAiMemoryList,
+  saveGeminiAiConfig,
+  type GeminiModelId,
+} from './geminiAi';
 
 export interface CloudSyncConfig {
   enabled: boolean;
@@ -318,12 +327,50 @@ export function mergeBackups(local: LifeHubBackup, remote: LifeHubBackup): LifeH
     tableCounts[table] = rows.length;
   }
 
+  const mergedClientExtensions = mergeClientExtensions(
+    local.clientExtensions,
+    remote.clientExtensions,
+  );
+
   return {
     app: 'LifeHub',
     schemaVersion: Math.max(local.schemaVersion, remote.schemaVersion),
     exportedAt: new Date().toISOString(),
     tableCounts,
     tables: mergedTables,
+    ...(mergedClientExtensions ? { clientExtensions: mergedClientExtensions } : {}),
+  };
+}
+
+function mergeClientExtensions(
+  local?: SyncedClientExtensions,
+  remote?: SyncedClientExtensions,
+): SyncedClientExtensions | undefined {
+  if (!local && !remote) return undefined;
+
+  let mergedGemini = local?.geminiAi;
+  const rGem = remote?.geminiAi;
+  if (!mergedGemini?.apiKey?.trim() && rGem?.apiKey?.trim()) {
+    mergedGemini = rGem;
+  } else if (mergedGemini?.apiKey?.trim() && rGem?.apiKey?.trim()) {
+    if ((rGem.updatedAt || '') > (mergedGemini.updatedAt || '')) {
+      mergedGemini = rGem;
+    }
+  }
+
+  const memMap = new Map<string, { id: string; fact: string; createdAt: string }>();
+  for (const item of [...(local?.aiMemory ?? []), ...(remote?.aiMemory ?? [])]) {
+    const key = item.fact.trim().toLowerCase();
+    if (key && !memMap.has(key)) {
+      memMap.set(key, item);
+    }
+  }
+  const mergedMemory = Array.from(memMap.values()).slice(-15);
+
+  if (!mergedGemini && mergedMemory.length === 0) return undefined;
+  return {
+    ...(mergedGemini ? { geminiAi: mergedGemini } : {}),
+    ...(mergedMemory.length > 0 ? { aiMemory: mergedMemory } : {}),
   };
 }
 
@@ -388,28 +435,43 @@ export function saveCloudSyncConfig(config: CloudSyncConfig): void {
 
 /**
  * Builds a pairing URL for the mobile PWA (fragment `#pair=...` is never sent in HTTP requests).
+ * Optionally carries the user's Gemini API key locally inside the fragment for instant 1-scan setup.
  */
-export function buildMobilePairingUrl(endpointUrl: string, passphrase: string): string {
+export function buildMobilePairingUrl(
+  endpointUrl: string,
+  passphrase: string,
+  options?: { geminiApiKey?: string },
+): string {
   const base = normalizeEndpointUrl(endpointUrl);
   const cleanPassphrase = passphrase.trim();
   if (cleanPassphrase.length < 8) {
     throw new Error('A chave secreta deve ter ao menos 8 caracteres para gerar o link ou QR Code.');
   }
-  const payload = JSON.stringify({ u: base, k: cleanPassphrase });
+  const cleanAiKey = options?.geminiApiKey?.trim();
+  const payloadObj: { u: string; k: string; a?: string } = {
+    u: base,
+    k: cleanPassphrase,
+    ...(cleanAiKey ? { a: cleanAiKey } : {}),
+  };
+  const payload = JSON.stringify(payloadObj);
   const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(payload))));
   return `${base}/#pair=${encoded}`;
 }
 
-export function parseMobilePairingHash(hash: string): { endpointUrl: string; passphrase: string } | null {
+export function parseMobilePairingHash(
+  hash: string,
+): { endpointUrl: string; passphrase: string; geminiApiKey?: string } | null {
   const match = hash.match(/pair=([^&]+)/);
   if (!match) return null;
   try {
     const decoded = decodeURIComponent(escape(atob(decodeURIComponent(match[1]))));
-    const parsed = JSON.parse(decoded) as { u?: string; k?: string };
+    const parsed = JSON.parse(decoded) as { u?: string; k?: string; a?: string };
     if (typeof parsed.u === 'string' && typeof parsed.k === 'string' && parsed.k.length >= 8) {
+      const cleanAi = typeof parsed.a === 'string' && parsed.a.trim().length > 0 ? parsed.a.trim() : undefined;
       return {
         endpointUrl: normalizeEndpointUrl(parsed.u),
         passphrase: parsed.k.trim(),
+        ...(cleanAi ? { geminiApiKey: cleanAi } : {}),
       };
     }
   } catch {
@@ -442,8 +504,50 @@ function totalRowsInBackup(backup: LifeHubBackup): number {
   return Object.values(backup.tableCounts).reduce((acc, n) => acc + n, 0);
 }
 
+function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
+  const aiCfg = loadGeminiAiConfig();
+  const memories = loadAiMemory();
+  const hasAiKey = aiCfg.apiKey.trim().length > 0;
+  if (!hasAiKey && memories.length === 0) return undefined;
+  return {
+    ...(hasAiKey
+      ? {
+          geminiAi: {
+            apiKey: aiCfg.apiKey.trim(),
+            model: aiCfg.model,
+            shareFinancialContext: aiCfg.shareFinancialContext,
+            autoExecuteActions: aiCfg.autoExecuteActions,
+            updatedAt: aiCfg.updatedAt ?? new Date().toISOString(),
+          },
+        }
+      : {}),
+    ...(memories.length > 0 ? { aiMemory: memories } : {}),
+  };
+}
+
+function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
+  if (!ext) return;
+  if (ext.geminiAi?.apiKey?.trim()) {
+    const current = loadGeminiAiConfig();
+    const validModel: GeminiModelId = GEMINI_MODELS.some((m) => m.id === ext.geminiAi?.model)
+      ? (ext.geminiAi.model as GeminiModelId)
+      : current.model;
+    saveGeminiAiConfig({
+      apiKey: ext.geminiAi.apiKey.trim(),
+      model: validModel,
+      shareFinancialContext: ext.geminiAi.shareFinancialContext,
+      autoExecuteActions: ext.geminiAi.autoExecuteActions,
+      updatedAt: ext.geminiAi.updatedAt,
+    });
+  }
+  if (ext.aiMemory && ext.aiMemory.length > 0) {
+    saveAiMemoryList(ext.aiMemory);
+  }
+}
+
 /**
  * Full E2EE bidirectional sync: Pull -> Decrypt -> Merge -> Apply Locally -> Encrypt -> Push.
+ * Also syncs Gemini AI key and lightweight AI memory strictly inside the AES-256-GCM payload.
  */
 export async function syncDatabaseWithCloud(
   db: SqlExecutor,
@@ -453,6 +557,10 @@ export async function syncDatabaseWithCloud(
   const base = normalizeEndpointUrl(config.endpointUrl);
   const { vaultId, authToken } = await deriveVaultCredentials(config.passphrase);
   const localBackup = await exportBackupJson(db);
+  const localExtensions = collectLocalClientExtensions();
+  if (localExtensions) {
+    localBackup.clientExtensions = localExtensions;
+  }
   const localRowCount = totalRowsInBackup(localBackup);
 
   const vaultUrl = `${base}/api/vault/${vaultId}`;
@@ -481,6 +589,7 @@ export async function syncDatabaseWithCloud(
     nextRevision = envelope.revision + 1;
     mergedBackup = mergeBackups(localBackup, remoteBackup);
     await restoreBackupJson(db, mergedBackup);
+    applyMergedClientExtensions(mergedBackup.clientExtensions);
   } else if (getRes.status !== 404) {
     throw new Error(`Falha ao consultar cofre remoto (HTTP ${getRes.status}).`);
   }

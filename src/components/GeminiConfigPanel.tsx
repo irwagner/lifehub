@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Eye, EyeOff, ShieldCheck, Sparkles, Wifi } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -11,7 +11,7 @@ import {
 } from '../services/geminiAi';
 
 export const GeminiConfigPanel: React.FC = () => {
-  const { notify } = useApp();
+  const { dataVersion, bumpDataVersion, notify } = useApp();
   const [config, setConfig] = useState<GeminiAiConfig>(() => loadGeminiAiConfig());
   const [apiKey, setApiKey] = useState(config.apiKey);
   const [model, setModel] = useState<GeminiModelId>(config.model);
@@ -20,6 +20,14 @@ export const GeminiConfigPanel: React.FC = () => {
   const [showKey, setShowKey] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  useEffect(() => {
+    const fresh = loadGeminiAiConfig();
+    setConfig(fresh);
+    if (fresh.apiKey && !apiKey) {
+      setApiKey(fresh.apiKey);
+    }
+  }, [dataVersion]);
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     const next: GeminiAiConfig = {
@@ -27,10 +35,12 @@ export const GeminiConfigPanel: React.FC = () => {
       model,
       shareFinancialContext,
       autoExecuteActions,
+      updatedAt: new Date().toISOString(),
     };
     saveGeminiAiConfig(next);
     setConfig(next);
-    notify('Configuração da IA Gemini salva localmente neste dispositivo.');
+    bumpDataVersion();
+    notify('Configuração da IA Gemini salva e sincronizada no cofre E2EE!');
   };
 
   const handleTest = async () => {
@@ -42,9 +52,11 @@ export const GeminiConfigPanel: React.FC = () => {
         model,
         shareFinancialContext,
         autoExecuteActions,
+        updatedAt: new Date().toISOString(),
       };
       saveGeminiAiConfig(next);
       setConfig(next);
+      bumpDataVersion();
       notify(`Gemini conectado com sucesso (respondeu: ${res.modelUsed})!`);
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao testar Gemini.', 'error');
