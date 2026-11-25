@@ -30,6 +30,15 @@ export const settingsUpdateSchema = z.object({
       'cyber_neon',
       'nordic_frost',
       'retro_classic',
+      'ref_agenda_verde',
+      'ref_trabalho_salvia',
+      'ref_linhas_dia',
+      'ref_relogio_noturno',
+      'ref_essencial',
+      'ref_agenda_azul',
+      'ref_jornada_menta',
+      'ref_caderno_oliva',
+      'ref_foto_laranja',
     ])
     .optional(),
 });

@@ -3,8 +3,9 @@
 @tailwind utilities;
 
 /* ==========================================================================
-   LifeHub Skin Engine — 6 Live-Switchable Design Styles
-   Default ("orbital") preserves the current design untouched.
+   LifeHub Skin Engine — 15 Live-Switchable Design Styles
+   - 9 Reference Skins based on referencias-de-design/
+   - 6 Preserved Classic Skins (Default: "orbital")
    ========================================================================== */
 
 :root,
@@ -19,8 +20,10 @@ html[data-skin='orbital'] {
   --lh-brand-700: 67 56 202;
 
   --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --lh-heading-font: var(--lh-font);
   --lh-radius-card: 1rem;
   --lh-radius-control: 0.75rem;
+  --lh-btn-primary-fg: #ffffff;
 
   /* Light defaults */
   --lh-canvas: #f4f6fb;
@@ -29,6 +32,7 @@ html[data-skin='orbital'] {
   --lh-topbar: rgba(255, 255, 255, 0.82);
   --lh-card: #ffffff;
   --lh-card-border: rgba(226, 232, 240, 0.85);
+  --lh-card-border-width: 1px;
   --lh-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
 }
 
@@ -44,6 +48,379 @@ html.dark[data-skin='orbital'] {
   --lh-card-border: rgba(255, 255, 255, 0.075);
   --lh-card-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.65);
 }
+
+/* ==========================================================================
+   REFERENCE SKINS (baseadas em referencias-de-design/)
+   ========================================================================== */
+
+/* 01 · Agenda Verde Editorial (01-agenda-verde/hoje.png & calendario.png) */
+html[data-skin='ref_agenda_verde'] {
+  --lh-brand-50: 237 245 240;
+  --lh-brand-100: 214 233 222;
+  --lh-brand-200: 173 209 189;
+  --lh-brand-300: 117 177 146;
+  --lh-brand-400: 55 130 96;
+  --lh-brand-500: 31 81 59;
+  --lh-brand-600: 24 67 48;
+  --lh-brand-700: 18 52 37;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: 'Georgia', 'Palatino Linotype', 'Times New Roman', serif;
+  --lh-radius-card: 0.75rem;
+  --lh-radius-control: 0.6rem;
+  --lh-btn-primary-fg: #f7faf7;
+
+  --lh-canvas: #f6f5f0;
+  --lh-canvas-img: none;
+  --lh-sidebar: #f2f1eb;
+  --lh-topbar: rgba(246, 245, 240, 0.94);
+  --lh-card: #fcfbf7;
+  --lh-card-border: #dad8ce;
+  --lh-card-shadow: none;
+}
+html.dark[data-skin='ref_agenda_verde'] {
+  --lh-brand-400: 147 210 138;
+  --lh-brand-500: 116 189 108;
+  --lh-brand-600: 84 156 80;
+  --lh-brand-700: 57 117 57;
+  --lh-btn-primary-fg: #0b1612;
+
+  --lh-canvas: #0c1714;
+  --lh-canvas-img: none;
+  --lh-sidebar: #091210;
+  --lh-topbar: rgba(12, 23, 20, 0.94);
+  --lh-card: #12201c;
+  --lh-card-border: rgba(154, 189, 165, 0.16);
+  --lh-card-shadow: none;
+}
+
+/* 01B · Trabalho Sálvia Noite (01-agenda-verde/trabalho.png) */
+html[data-skin='ref_trabalho_salvia'] {
+  --lh-brand-50: 238 248 236;
+  --lh-brand-100: 216 239 212;
+  --lh-brand-200: 177 222 170;
+  --lh-brand-300: 133 201 122;
+  --lh-brand-400: 111 184 99;
+  --lh-brand-500: 61 124 71;
+  --lh-brand-600: 47 101 56;
+  --lh-brand-700: 34 78 42;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: 'Georgia', 'Palatino Linotype', 'Times New Roman', serif;
+  --lh-radius-card: 0.7rem;
+  --lh-radius-control: 0.6rem;
+  --lh-btn-primary-fg: #f8fbf8;
+
+  --lh-canvas: #eef3ee;
+  --lh-canvas-img: none;
+  --lh-sidebar: #e4ece4;
+  --lh-topbar: rgba(238, 243, 238, 0.94);
+  --lh-card: #f8faf8;
+  --lh-card-border: #ccd9cd;
+  --lh-card-shadow: none;
+}
+html.dark[data-skin='ref_trabalho_salvia'] {
+  --lh-brand-400: 151 217 140;
+  --lh-brand-500: 133 201 122;
+  --lh-brand-600: 108 178 98;
+  --lh-brand-700: 61 92 69;
+  --lh-btn-primary-fg: #0a1612;
+
+  --lh-canvas: #0c1714;
+  --lh-canvas-img: linear-gradient(180deg, rgba(133, 201, 122, 0.03) 0%, transparent 45%);
+  --lh-sidebar: #091210;
+  --lh-topbar: rgba(12, 23, 20, 0.92);
+  --lh-card: #111f1b;
+  --lh-card-border: rgba(185, 214, 190, 0.14);
+  --lh-card-shadow: none;
+}
+
+/* 02A · Linhas do Dia — Mapa Metrô Poster (02-mapa-e-relogio/linhas-do-dia.png) */
+html[data-skin='ref_linhas_dia'] {
+  --lh-brand-50: 255 243 237;
+  --lh-brand-100: 255 227 214;
+  --lh-brand-200: 254 195 168;
+  --lh-brand-300: 252 152 108;
+  --lh-brand-400: 247 109 53;
+  --lh-brand-500: 242 84 27;
+  --lh-brand-600: 219 67 16;
+  --lh-brand-700: 184 53 12;
+
+  --lh-font: 'Segoe UI', 'Helvetica Neue', 'Arial', sans-serif;
+  --lh-heading-font: 'Segoe UI Black', 'Arial Black', 'Impact', sans-serif;
+  --lh-radius-card: 0.75rem;
+  --lh-radius-control: 9999px;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #fbf3dc;
+  --lh-canvas-img: none;
+  --lh-sidebar: #f5ebd0;
+  --lh-topbar: #fbf3dc;
+  --lh-card: #fffaf0;
+  --lh-card-border: #141414;
+  --lh-card-border-width: 2px;
+  --lh-card-shadow: 3px 3px 0px #141414;
+}
+html.dark[data-skin='ref_linhas_dia'] {
+  --lh-canvas: #161411;
+  --lh-canvas-img: none;
+  --lh-sidebar: #1d1a16;
+  --lh-topbar: #161411;
+  --lh-card: #221e19;
+  --lh-card-border: #f2d9a0;
+  --lh-card-border-width: 2px;
+  --lh-card-shadow: 3px 3px 0px #000000;
+}
+
+/* 02B · Tempo Livre — Relógio Noturno (02-mapa-e-relogio/tempo-livre.png) */
+html[data-skin='ref_relogio_noturno'] {
+  --lh-brand-50: 254 252 232;
+  --lh-brand-100: 254 249 195;
+  --lh-brand-200: 253 240 138;
+  --lh-brand-300: 249 229 107;
+  --lh-brand-400: 245 224 96;
+  --lh-brand-500: 36 45 96;
+  --lh-brand-600: 24 31 74;
+  --lh-brand-700: 16 21 54;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', sans-serif;
+  --lh-heading-font: 'Georgia', 'Playfair Display', 'Times New Roman', serif;
+  --lh-radius-card: 0.65rem;
+  --lh-radius-control: 0.45rem;
+  --lh-btn-primary-fg: #f8f5e6;
+
+  --lh-canvas: #f5f2e8;
+  --lh-canvas-img: none;
+  --lh-sidebar: #ece8da;
+  --lh-topbar: rgba(245, 242, 232, 0.94);
+  --lh-card: #faf8f1;
+  --lh-card-border: rgba(26, 31, 66, 0.22);
+  --lh-card-shadow: none;
+}
+html.dark[data-skin='ref_relogio_noturno'] {
+  --lh-brand-400: 249 235 129;
+  --lh-brand-500: 245 224 96;
+  --lh-brand-600: 230 205 64;
+  --lh-brand-700: 196 172 44;
+  --lh-btn-primary-fg: #0e1021;
+
+  --lh-canvas: #0e1021;
+  --lh-canvas-img: radial-gradient(circle at 75% 15%, rgba(153, 163, 230, 0.1), transparent 55%);
+  --lh-sidebar: #0b0d1b;
+  --lh-topbar: rgba(14, 16, 33, 0.92);
+  --lh-card: #14172d;
+  --lh-card-border: rgba(244, 240, 225, 0.2);
+  --lh-card-shadow: none;
+}
+
+/* 03 · Agenda Essencial Terracota (03-agenda-essencial/lifehub-desktop.png) */
+html[data-skin='ref_essencial'] {
+  --lh-brand-50: 251 243 241;
+  --lh-brand-100: 242 229 226;
+  --lh-brand-200: 229 200 194;
+  --lh-brand-300: 207 156 146;
+  --lh-brand-400: 181 96 82;
+  --lh-brand-500: 157 59 43;
+  --lh-brand-600: 136 48 34;
+  --lh-brand-700: 112 38 26;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: var(--lh-font);
+  --lh-radius-card: 0.85rem;
+  --lh-radius-control: 0.65rem;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #ffffff;
+  --lh-canvas-img: none;
+  --lh-sidebar: #f5f3ef;
+  --lh-topbar: rgba(255, 255, 255, 0.94);
+  --lh-card: #ffffff;
+  --lh-card-border: #eae7e1;
+  --lh-card-shadow: 0 1px 2px rgba(28, 25, 23, 0.03);
+}
+html.dark[data-skin='ref_essencial'] {
+  --lh-brand-400: 217 119 101;
+  --lh-brand-500: 196 86 67;
+  --lh-brand-600: 168 67 50;
+  --lh-brand-700: 138 52 38;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #161413;
+  --lh-canvas-img: none;
+  --lh-sidebar: #1d1a18;
+  --lh-topbar: rgba(22, 20, 19, 0.94);
+  --lh-card: #1e1b19;
+  --lh-card-border: rgba(245, 243, 239, 0.09);
+  --lh-card-shadow: none;
+}
+
+/* 04A · Agenda Azul Clean (04-agenda-jornada-caderno/agenda-desktop.png) */
+html[data-skin='ref_agenda_azul'] {
+  --lh-brand-50: 239 246 255;
+  --lh-brand-100: 221 232 246;
+  --lh-brand-200: 186 211 239;
+  --lh-brand-300: 132 177 226;
+  --lh-brand-400: 76 135 201;
+  --lh-brand-500: 37 99 166;
+  --lh-brand-600: 30 82 140;
+  --lh-brand-700: 23 65 112;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: var(--lh-font);
+  --lh-radius-card: 0.9rem;
+  --lh-radius-control: 0.65rem;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #ffffff;
+  --lh-canvas-img: none;
+  --lh-sidebar: #eef3f8;
+  --lh-topbar: rgba(255, 255, 255, 0.95);
+  --lh-card: #ffffff;
+  --lh-card-border: #dce5f0;
+  --lh-card-shadow: 0 2px 8px -4px rgba(30, 58, 95, 0.08);
+}
+html.dark[data-skin='ref_agenda_azul'] {
+  --lh-brand-400: 109 163 224;
+  --lh-brand-500: 59 125 198;
+  --lh-brand-600: 44 102 168;
+  --lh-brand-700: 33 80 135;
+
+  --lh-canvas: #0f1722;
+  --lh-canvas-img: none;
+  --lh-sidebar: #141f2e;
+  --lh-topbar: rgba(15, 23, 34, 0.92);
+  --lh-card: #162233;
+  --lh-card-border: rgba(148, 184, 224, 0.14);
+  --lh-card-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.55);
+}
+
+/* 04B · Jornada Noturna Menta (04-agenda-jornada-caderno/jornada-desktop.png) */
+html[data-skin='ref_jornada_menta'] {
+  --lh-brand-50: 237 247 241;
+  --lh-brand-100: 215 236 224;
+  --lh-brand-200: 183 217 198;
+  --lh-brand-300: 141 195 166;
+  --lh-brand-400: 93 160 126;
+  --lh-brand-500: 55 117 89;
+  --lh-brand-600: 42 94 71;
+  --lh-brand-700: 31 73 55;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: var(--lh-font);
+  --lh-radius-card: 0.9rem;
+  --lh-radius-control: 0.6rem;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #f2f5f4;
+  --lh-canvas-img: none;
+  --lh-sidebar: #e9efec;
+  --lh-topbar: rgba(242, 245, 244, 0.94);
+  --lh-card: #ffffff;
+  --lh-card-border: #d5e0db;
+  --lh-card-shadow: 0 1px 4px rgba(16, 32, 26, 0.05);
+}
+html.dark[data-skin='ref_jornada_menta'] {
+  --lh-brand-300: 202 229 214;
+  --lh-brand-400: 183 217 198;
+  --lh-brand-500: 162 204 181;
+  --lh-brand-600: 136 184 158;
+  --lh-brand-700: 47 78 69;
+  --lh-btn-primary-fg: #10201a;
+
+  --lh-canvas: #15191d;
+  --lh-canvas-img: none;
+  --lh-sidebar: #181d21;
+  --lh-topbar: rgba(21, 25, 29, 0.94);
+  --lh-card: #1e2428;
+  --lh-card-border: rgba(183, 217, 198, 0.13);
+  --lh-card-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.65);
+}
+
+/* 04C · Caderno Papel Oliva (04-agenda-jornada-caderno/caderno-desktop.png) */
+html[data-skin='ref_caderno_oliva'] {
+  --lh-brand-50: 242 245 240;
+  --lh-brand-100: 226 232 222;
+  --lh-brand-200: 197 208 191;
+  --lh-brand-300: 158 175 151;
+  --lh-brand-400: 112 133 106;
+  --lh-brand-500: 75 93 71;
+  --lh-brand-600: 61 77 58;
+  --lh-brand-700: 48 61 45;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: 'Georgia', 'Palatino Linotype', 'Times New Roman', serif;
+  --lh-radius-card: 0.75rem;
+  --lh-radius-control: 0.55rem;
+  --lh-btn-primary-fg: #fbfaf6;
+
+  --lh-canvas: #f4f2ec;
+  --lh-canvas-img: none;
+  --lh-sidebar: #efede6;
+  --lh-topbar: rgba(244, 242, 236, 0.95);
+  --lh-card: #fdfcf9;
+  --lh-card-border: #e1ddd2;
+  --lh-card-shadow: 0 2px 10px -4px rgba(58, 52, 40, 0.08);
+}
+html.dark[data-skin='ref_caderno_oliva'] {
+  --lh-brand-400: 156 181 149;
+  --lh-brand-500: 125 152 119;
+  --lh-brand-600: 98 122 93;
+  --lh-brand-700: 75 93 71;
+  --lh-btn-primary-fg: #111610;
+
+  --lh-canvas: #191a17;
+  --lh-canvas-img: none;
+  --lh-sidebar: #1f201c;
+  --lh-topbar: rgba(25, 26, 23, 0.94);
+  --lh-card: #22241f;
+  --lh-card-border: rgba(225, 221, 210, 0.12);
+  --lh-card-shadow: none;
+}
+
+/* 05 · Fotografia & Laranja (05-fotografia-e-laranja/hoje.png & jornadas.png) */
+html[data-skin='ref_foto_laranja'] {
+  --lh-brand-50: 255 244 238;
+  --lh-brand-100: 255 232 221;
+  --lh-brand-200: 254 205 182;
+  --lh-brand-300: 252 164 125;
+  --lh-brand-400: 247 121 69;
+  --lh-brand-500: 239 90 36;
+  --lh-brand-600: 217 72 22;
+  --lh-brand-700: 180 57 17;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, sans-serif;
+  --lh-heading-font: 'Segoe UI Variable Display', 'Inter', 'Segoe UI', sans-serif;
+  --lh-radius-card: 1rem;
+  --lh-radius-control: 0.7rem;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #ffffff;
+  --lh-canvas-img: none;
+  --lh-sidebar: #fcfcfb;
+  --lh-topbar: rgba(255, 255, 255, 0.96);
+  --lh-card: #f4f3f0;
+  --lh-card-border: #e6e4df;
+  --lh-card-shadow: none;
+}
+html.dark[data-skin='ref_foto_laranja'] {
+  --lh-brand-400: 251 131 82;
+  --lh-brand-500: 239 90 36;
+  --lh-brand-600: 217 72 22;
+  --lh-brand-700: 180 57 17;
+  --lh-btn-primary-fg: #ffffff;
+
+  --lh-canvas: #111111;
+  --lh-canvas-img: none;
+  --lh-sidebar: #161616;
+  --lh-topbar: rgba(17, 17, 17, 0.94);
+  --lh-card: #1c1c1c;
+  --lh-card-border: rgba(255, 255, 255, 0.09);
+  --lh-card-shadow: none;
+}
+
+/* ==========================================================================
+   CLASSIC PRESERVED SKINS (Esmeralda Noir, Carbono, Cyber, Nórdico, Retrô)
+   ========================================================================== */
 
 /* Skin 2: Esmeralda Noir (Executivo / Financeiro) */
 html[data-skin='emerald_noir'] {
@@ -119,6 +496,7 @@ html[data-skin='cyber_neon'] {
   --lh-brand-700: 14 116 144;
 
   --lh-font: 'Cascadia Code', 'JetBrains Mono', 'Segoe UI', monospace;
+  --lh-heading-font: var(--lh-font);
   --lh-radius-card: 0.75rem;
   --lh-radius-control: 0.55rem;
   --lh-canvas: #f2f5ff;
@@ -181,6 +559,7 @@ html[data-skin='retro_classic'] {
   --lh-brand-700: 21 128 61;
 
   --lh-font: 'Tahoma', 'MS Sans Serif', 'Segoe UI', sans-serif;
+  --lh-heading-font: var(--lh-font);
   --lh-radius-card: 2px;
   --lh-radius-control: 2px;
   --lh-canvas: #c9c6be;
@@ -265,7 +644,7 @@ html.dark[data-skin='retro_classic'] {
 
   .lh-card {
     background-color: var(--lh-card);
-    border: 1px solid var(--lh-card-border);
+    border: var(--lh-card-border-width, 1px) solid var(--lh-card-border);
     border-radius: var(--lh-radius-card);
     box-shadow: var(--lh-card-shadow);
     padding: 1.25rem;
@@ -276,7 +655,7 @@ html.dark[data-skin='retro_classic'] {
     @apply lh-card;
   }
   .lh-card-hover:hover {
-    border-color: rgb(var(--lh-brand-500) / 0.45);
+    border-color: rgb(var(--lh-brand-500) / 0.55);
   }
 
   .lh-input {
@@ -286,7 +665,8 @@ html.dark[data-skin='retro_classic'] {
 
   .lh-btn-primary {
     border-radius: var(--lh-radius-control);
-    @apply inline-flex items-center justify-center gap-1.5 bg-gradient-to-b from-brand-500 to-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:from-brand-400 hover:to-brand-600 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45;
+    color: var(--lh-btn-primary-fg, #ffffff);
+    @apply inline-flex items-center justify-center gap-1.5 bg-gradient-to-b from-brand-500 to-brand-600 px-4 py-2 text-xs font-semibold shadow-sm transition hover:from-brand-400 hover:to-brand-600 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45;
   }
 
   .lh-btn-secondary {
@@ -300,6 +680,7 @@ html.dark[data-skin='retro_classic'] {
   }
 
   .lh-page-title {
+    font-family: var(--lh-heading-font);
     @apply text-2xl font-bold tracking-tight text-slate-900 dark:text-white;
   }
 
@@ -324,6 +705,183 @@ html.dark[data-skin='retro_classic'] {
   }
 }
 
+/* ==========================================================================
+   Per-Skin Signature Visual Touches (fidelidade às referências)
+   ========================================================================== */
+
+/* Editorial serif headings & brand logo for 01, 01B, 02B, 04C */
+html[data-skin='ref_agenda_verde'] h1,
+html[data-skin='ref_agenda_verde'] h2,
+html[data-skin='ref_agenda_verde'] h3,
+html[data-skin='ref_trabalho_salvia'] h1,
+html[data-skin='ref_trabalho_salvia'] h2,
+html[data-skin='ref_trabalho_salvia'] h3,
+html[data-skin='ref_relogio_noturno'] h1,
+html[data-skin='ref_relogio_noturno'] h2,
+html[data-skin='ref_relogio_noturno'] h3,
+html[data-skin='ref_caderno_oliva'] h1,
+html[data-skin='ref_caderno_oliva'] h2,
+html[data-skin='ref_caderno_oliva'] h3 {
+  font-family: var(--lh-heading-font);
+  letter-spacing: -0.01em;
+}
+
+/* 01 · Agenda Verde — solid forest-green active sidebar pill & dark pine titles */
+html[data-skin='ref_agenda_verde']:not(.dark) .lh-page-title {
+  color: #133122;
+}
+html[data-skin='ref_agenda_verde']:not(.dark) .lh-nav-active {
+  background-color: #1f513b !important;
+  color: #ffffff !important;
+}
+html[data-skin='ref_agenda_verde']:not(.dark) .lh-nav-active svg {
+  color: #ffffff !important;
+}
+html[data-skin='ref_agenda_verde']:not(.dark) .lh-brand-badge {
+  background: #1f513b !important;
+  box-shadow: none !important;
+}
+
+/* 01B · Trabalho Sálvia — luminous sage KPIs & high-contrast dark text on sage CTA */
+html.dark[data-skin='ref_trabalho_salvia'] .lh-kpi-value {
+  color: #85c97a;
+}
+html.dark[data-skin='ref_trabalho_salvia'] .lh-nav-active {
+  background-color: #2f4936 !important;
+  color: #f4f7f4 !important;
+}
+html.dark[data-skin='ref_trabalho_salvia'] .lh-brand-badge {
+  background: #2f4936 !important;
+  color: #85c97a !important;
+  box-shadow: none !important;
+}
+
+/* 02A · Linhas do Dia (Metrô Poster) — stark black ink, bold display & solid offset borders */
+html[data-skin='ref_linhas_dia'] h1,
+html[data-skin='ref_linhas_dia'] h2,
+html[data-skin='ref_linhas_dia'] .lh-page-title {
+  font-family: var(--lh-heading-font);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) body {
+  color: #111111;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-sidebar {
+  border-right-width: 2px;
+  border-color: #141414;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-topbar {
+  border-bottom-width: 2px;
+  border-color: #141414;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-btn-primary {
+  border: 2px solid #141414;
+  box-shadow: 2px 2px 0 #141414;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-btn-secondary {
+  border: 1.5px solid #141414;
+  background-color: #fffaf0;
+  color: #141414;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-nav-active {
+  background-color: #f2541b !important;
+  color: #ffffff !important;
+  border: 2px solid #141414;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-nav-active svg {
+  color: #ffffff !important;
+}
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-brand-badge {
+  background: #141414 !important;
+  color: #fbf3dc !important;
+  box-shadow: none !important;
+}
+
+/* 02B · Tempo Livre (Relógio Noturno) — warm ivory text & butter-yellow accents */
+html.dark[data-skin='ref_relogio_noturno'] body {
+  color: #f4f0e1;
+}
+html.dark[data-skin='ref_relogio_noturno'] .lh-page-title,
+html.dark[data-skin='ref_relogio_noturno'] .lh-kpi-value {
+  color: #f6f2e4;
+}
+html.dark[data-skin='ref_relogio_noturno'] .lh-brand-badge {
+  background: #1e2345 !important;
+  color: #f5e060 !important;
+  border: 1px solid rgba(245, 224, 96, 0.45);
+  box-shadow: none !important;
+}
+html.dark[data-skin='ref_relogio_noturno'] .lh-nav-active {
+  background-color: rgba(245, 224, 96, 0.14) !important;
+  color: #f5e060 !important;
+}
+
+/* 03 · Agenda Essencial — warm stone sidebar & blush terracotta active pill */
+html[data-skin='ref_essencial']:not(.dark) .lh-nav-active {
+  background-color: #f2e5e2 !important;
+  color: #9d3b2b !important;
+}
+html[data-skin='ref_essencial']:not(.dark) .lh-brand-badge {
+  background: #9d3b2b !important;
+  box-shadow: none !important;
+}
+
+/* 04A · Agenda Azul Clean — soft ice sidebar & cobalt blue focus */
+html[data-skin='ref_agenda_azul']:not(.dark) .lh-nav-active {
+  background-color: #dde8f6 !important;
+  color: #1e528c !important;
+}
+html[data-skin='ref_agenda_azul']:not(.dark) .lh-brand-badge {
+  background: #2563a6 !important;
+  box-shadow: none !important;
+}
+
+/* 04B · Jornada Noturna Menta — deep slate moss active state & calm mint buttons */
+html.dark[data-skin='ref_jornada_menta'] .lh-nav-active {
+  background-color: #253632 !important;
+  color: #d6ede0 !important;
+}
+html.dark[data-skin='ref_jornada_menta'] .lh-brand-badge {
+  background: #253632 !important;
+  color: #b7d9c6 !important;
+  box-shadow: none !important;
+}
+
+/* 04C · Caderno Papel Oliva — notebook paper tone & olive active item */
+html[data-skin='ref_caderno_oliva']:not(.dark) body {
+  color: #262924;
+}
+html[data-skin='ref_caderno_oliva']:not(.dark) .lh-nav-active {
+  background-color: #e4e8df !important;
+  color: #3d4d3a !important;
+}
+html[data-skin='ref_caderno_oliva']:not(.dark) .lh-brand-badge {
+  background: #4b5d47 !important;
+  box-shadow: none !important;
+}
+
+/* 05 · Fotografia & Laranja — high-contrast editorial typography & blush orange active nav */
+html[data-skin='ref_foto_laranja'] .lh-page-title {
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+html[data-skin='ref_foto_laranja']:not(.dark) .lh-nav-active {
+  background-color: #fff0ea !important;
+  color: #ef5a24 !important;
+}
+html[data-skin='ref_foto_laranja']:not(.dark) .lh-brand-badge {
+  background: #ef5a24 !important;
+  box-shadow: none !important;
+}
+
+/* Ensure brand-600/brand-500 buttons on bright-accent dark skins keep crisp dark text */
+html.dark[data-skin='ref_relogio_noturno'] .bg-brand-600,
+html.dark[data-skin='ref_trabalho_salvia'] .bg-brand-600,
+html.dark[data-skin='ref_jornada_menta'] .bg-brand-600 {
+  color: var(--lh-btn-primary-fg) !important;
+}
+
 /* Retro classic overrides for sharp nostalgic Win98/Winamp feel */
 html[data-skin='retro_classic'] .rounded-2xl,
 html[data-skin='retro_classic'] .rounded-3xl,
@@ -334,14 +892,14 @@ html[data-skin='retro_classic'] .rounded-lg {
 
 /* FullCalendar v6 refined dark/light + skin harmony */
 .fc {
-  --fc-border-color: rgba(148, 163, 184, 0.16);
+  --fc-border-color: rgba(148, 163, 184, 0.22);
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: rgba(15, 23, 42, 0.35);
   --fc-today-bg-color: rgb(var(--lh-brand-500) / 0.12);
   --fc-event-border-color: transparent;
   --fc-now-indicator-color: rgb(var(--lh-brand-500));
   --fc-button-bg-color: rgba(148, 163, 184, 0.12);
-  --fc-button-border-color: rgba(148, 163, 184, 0.2);
+  --fc-button-border-color: rgba(148, 163, 184, 0.24);
   --fc-button-text-color: #334155;
   --fc-button-hover-bg-color: rgb(var(--lh-brand-500) / 0.14);
   --fc-button-hover-border-color: rgb(var(--lh-brand-500) / 0.38);
@@ -351,9 +909,9 @@ html[data-skin='retro_classic'] .rounded-lg {
 }
 
 .dark .fc {
-  --fc-border-color: rgba(255, 255, 255, 0.08);
+  --fc-border-color: rgba(255, 255, 255, 0.09);
   --fc-button-bg-color: rgba(255, 255, 255, 0.05);
-  --fc-button-border-color: rgba(255, 255, 255, 0.1);
+  --fc-button-border-color: rgba(255, 255, 255, 0.12);
   --fc-button-text-color: #e2e8f0;
   --fc-button-hover-bg-color: rgba(255, 255, 255, 0.1);
   --fc-button-hover-border-color: rgba(255, 255, 255, 0.18);
@@ -380,6 +938,7 @@ html[data-skin='retro_classic'] .rounded-lg {
 }
 
 .fc .fc-toolbar-title {
+  font-family: var(--lh-heading-font);
   font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.015em;

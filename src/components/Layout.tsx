@@ -160,7 +160,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             onClick={() => handleSelectNav('dashboard')}
             className="flex items-center gap-3 text-left"
           >
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-indigo-700 text-white shadow-glow">
+            <div className="lh-brand-badge flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-indigo-700 text-white shadow-glow">
               <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <circle cx="12" cy="12" r="8" className="opacity-40" />
                 <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" />
@@ -223,7 +223,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                       onClick={() => handleSelectNav(item.id)}
                       className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all ${
                         active
-                          ? 'bg-brand-600/12 text-brand-700 dark:bg-brand-500/15 dark:text-white'
+                          ? 'lh-nav-active bg-brand-600/12 text-brand-700 dark:bg-brand-500/15 dark:text-white'
                           : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'
                       }`}
                     >

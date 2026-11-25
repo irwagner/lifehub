@@ -21,8 +21,8 @@ import {
   restoreBackupJson,
 } from '../services/backup';
 import { loadDemoData } from '../services/demoSeed';
-import { UI_SKINS } from '../services/skins';
-import type { ChildWeekendMode, RoutineMode, ThemeMode, UiSkin, WorkDaysPerWeek } from '../types/domain';
+import { CLASSIC_SKINS, REFERENCE_SKINS, UI_SKINS, type SkinDefinition } from '../services/skins';
+import type { ChildWeekendMode, RoutineMode, ThemeMode, WorkDaysPerWeek } from '../types/domain';
 import { todayISO } from '../utils/format';
 
 export const SettingsPage: React.FC = () => {
@@ -215,12 +215,107 @@ export const SettingsPage: React.FC = () => {
   const cardClass = 'lh-card';
   const inputClass = 'lh-input';
 
+  const handleSelectSkinCard = async (skin: SkinDefinition) => {
+    setTheme(skin.preferredTheme);
+    await patchSettings({ ui_skin: skin.id, theme: skin.preferredTheme });
+    notify(`Skin "${skin.name}" ativada.`);
+  };
+
+  const renderSkinCard = (skin: SkinDefinition) => {
+    const active = (settings.ui_skin ?? 'orbital') === skin.id;
+    const isDarkPreview = skin.preferredTheme === 'dark';
+    const subtleBar = isDarkPreview ? 'bg-white/25' : 'bg-slate-900/20';
+    const fainterBar = isDarkPreview ? 'bg-white/15' : 'bg-slate-900/12';
+    const borderMock =
+      skin.id === 'ref_linhas_dia'
+        ? 'border-2 border-[#141414]'
+        : isDarkPreview
+          ? 'border border-white/15'
+          : 'border border-black/15';
+
+    return (
+      <button
+        key={skin.id}
+        type="button"
+        onClick={() => handleSelectSkinCard(skin)}
+        className={`group rounded-2xl border p-3.5 text-left transition ${
+          active
+            ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/40'
+            : 'border-slate-200/80 hover:border-brand-400/60 dark:border-white/[0.08] dark:hover:border-brand-400/50'
+        }`}
+      >
+        {/* Mini desktop window mockup */}
+        <div
+          className={`mb-3 flex h-16 overflow-hidden rounded-xl p-1.5 ${borderMock}`}
+          style={{ backgroundColor: skin.swatches[0] }}
+        >
+          <div
+            className="mr-1.5 w-8 rounded-md p-1"
+            style={{ backgroundColor: skin.swatches[1] }}
+          >
+            <div
+              className="h-1.5 w-full rounded-sm"
+              style={{ backgroundColor: skin.swatches[2] }}
+            />
+            <div className={`mt-1 h-1 w-4/5 rounded-sm ${subtleBar}`} />
+            <div className={`mt-1 h-1 w-3/5 rounded-sm ${fainterBar}`} />
+          </div>
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div
+              className="flex h-4 items-center justify-between rounded-md px-1.5"
+              style={{ backgroundColor: skin.swatches[1] }}
+            >
+              <div className={`h-1.5 w-10 rounded-sm ${subtleBar}`} />
+              <div
+                className="h-2 w-5 rounded-sm"
+                style={{ backgroundColor: skin.swatches[2] }}
+              />
+            </div>
+            <div className="grid flex-1 grid-cols-2 gap-1.5">
+              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div
+                  className="h-1.5 w-6 rounded-sm"
+                  style={{ backgroundColor: skin.swatches[2] }}
+                />
+              </div>
+              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div className={`h-1.5 w-8 rounded-sm ${subtleBar}`} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <p className="truncate text-sm font-semibold">{skin.name}</p>
+          {active ? (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-brand-500/20 px-2 py-0.5 text-[10px] font-semibold text-brand-500">
+              <Check className="h-3 w-3" /> Ativa
+            </span>
+          ) : (
+            <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
+              {isDarkPreview ? <Moon className="h-2.5 w-2.5" /> : <Sun className="h-2.5 w-2.5" />}
+              {skin.vibe}
+            </span>
+          )}
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          {skin.tagline}
+        </p>
+        {skin.sourceRef && (
+          <p className="mt-1.5 truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
+            Ref: {skin.sourceRef}
+          </p>
+        )}
+      </button>
+    );
+  };
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="lh-page-title">Configurações, Skins, Rotina & Backup</h2>
         <p className="lh-page-subtitle">
-          Troque o visual do LifeHub ao vivo entre 6 skins sem perder nenhum estilo, alterne CLT/Apps/TI e gerencie backups locais.
+          Troque o visual do LifeHub ao vivo entre {UI_SKINS.length} skins (9 baseadas nas suas imagens de referência + 6 clássicas preservadas), alterne CLT/Apps/TI e gerencie backups locais.
         </p>
       </div>
 
@@ -229,95 +324,25 @@ export const SettingsPage: React.FC = () => {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-brand-500" />
-            <h3 className="font-semibold">Galeria de Skins (Estilos de Design)</h3>
+            <h3 className="font-semibold">Galeria de Skins ({UI_SKINS.length} estilos ao vivo)</h3>
           </div>
           <span className="text-xs text-slate-500 dark:text-slate-400">
-            Clique em qualquer skin para testar na hora — o estilo padrão Orbital permanece preservado.
+            Ao clicar, a skin aplica a paleta e o modo claro/escuro da referência; você ainda pode alternar Sol/Lua livremente.
           </span>
         </div>
 
+        <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
+          Baseadas em referencias-de-design ({REFERENCE_SKINS.length})
+        </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {UI_SKINS.map((skin) => {
-            const active = (settings.ui_skin ?? 'orbital') === skin.id;
-            return (
-              <button
-                key={skin.id}
-                type="button"
-                onClick={async () => {
-                  await patchSettings({ ui_skin: skin.id as UiSkin });
-                  notify(`Skin "${skin.name}" ativada.`);
-                }}
-                className={`group rounded-2xl border p-3.5 text-left transition ${
-                  active
-                    ? 'border-brand-500 bg-brand-500/10 ring-1 ring-brand-500/40'
-                    : 'border-slate-200/80 hover:border-brand-400/60 dark:border-white/[0.08] dark:hover:border-brand-400/50'
-                }`}
-              >
-                {/* Mini desktop window mockup */}
-                <div
-                  className="mb-3 flex h-16 overflow-hidden rounded-xl border border-black/20 p-1.5"
-                  style={{ backgroundColor: skin.swatches[0] }}
-                >
-                  <div
-                    className="mr-1.5 w-8 rounded-md p-1"
-                    style={{ backgroundColor: skin.swatches[1] }}
-                  >
-                    <div
-                      className="h-1.5 w-full rounded-sm"
-                      style={{ backgroundColor: skin.swatches[2] }}
-                    />
-                    <div className="mt-1 h-1 w-4/5 rounded-sm bg-white/20" />
-                    <div className="mt-1 h-1 w-3/5 rounded-sm bg-white/15" />
-                  </div>
-                  <div className="flex flex-1 flex-col gap-1.5">
-                    <div
-                      className="flex h-4 items-center justify-between rounded-md px-1.5"
-                      style={{ backgroundColor: skin.swatches[1] }}
-                    >
-                      <div className="h-1.5 w-10 rounded-sm bg-white/30" />
-                      <div
-                        className="h-2 w-5 rounded-sm"
-                        style={{ backgroundColor: skin.swatches[2] }}
-                      />
-                    </div>
-                    <div className="grid flex-1 grid-cols-2 gap-1.5">
-                      <div
-                        className="rounded-md p-1"
-                        style={{ backgroundColor: skin.swatches[1] }}
-                      >
-                        <div
-                          className="h-1.5 w-6 rounded-sm"
-                          style={{ backgroundColor: skin.swatches[2] }}
-                        />
-                      </div>
-                      <div
-                        className="rounded-md p-1"
-                        style={{ backgroundColor: skin.swatches[1] }}
-                      >
-                        <div className="h-1.5 w-8 rounded-sm bg-white/25" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          {REFERENCE_SKINS.map(renderSkinCard)}
+        </div>
 
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-sm font-semibold">{skin.name}</p>
-                  {active ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-500/20 px-2 py-0.5 text-[10px] font-semibold text-brand-500">
-                      <Check className="h-3 w-3" /> Ativa
-                    </span>
-                  ) : (
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
-                      {skin.vibe}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
-                  {skin.tagline}
-                </p>
-              </button>
-            );
-          })}
+        <p className="mb-2.5 mt-6 text-xs font-semibold uppercase tracking-wider text-slate-400">
+          Skins anteriores preservadas ({CLASSIC_SKINS.length})
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {CLASSIC_SKINS.map(renderSkinCard)}
         </div>
       </section>
 

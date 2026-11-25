@@ -16,7 +16,7 @@ import { searchAllModules } from '../repositories/searchRepo';
 import { getSettings, updateSettings } from '../repositories/settingsRepo';
 import { createWorkSession, getLastRecordedOdometer } from '../repositories/workRepo';
 import { clearAllUserData, exportBackupJson, restoreBackupJson } from '../services/backup';
-import { UI_SKINS } from '../services/skins';
+import { CLASSIC_SKINS, REFERENCE_SKINS, UI_SKINS } from '../services/skins';
 
 describe('Restauração Binária SQLite, Categorias Personalizadas, Odômetro e Busca Global', () => {
   it('exporta e restaura banco SQLite binário (.sqlite) e rejeita arquivo inválido', async () => {
@@ -127,16 +127,22 @@ describe('Restauração Binária SQLite, Categorias Personalizadas, Odômetro e 
     await db.close();
   });
 
-  it('persiste troca entre todas as 6 skins, rejeita skin inválida e preserva no backup JSON', async () => {
+  it('persiste troca entre todas as 15 skins (9 de referência + 6 clássicas), rejeita skin inválida e preserva no backup JSON', async () => {
     const db = await createInMemoryTestDatabase();
-    expect(UI_SKINS).toHaveLength(6);
+    expect(REFERENCE_SKINS).toHaveLength(9);
+    expect(CLASSIC_SKINS).toHaveLength(6);
+    expect(UI_SKINS).toHaveLength(15);
 
     const initial = await getSettings(db);
     expect(initial.ui_skin).toBe('orbital');
 
     for (const skin of UI_SKINS) {
-      const updated = await updateSettings(db, { ui_skin: skin.id });
+      const updated = await updateSettings(db, {
+        ui_skin: skin.id,
+        theme: skin.preferredTheme,
+      });
       expect(updated.ui_skin).toBe(skin.id);
+      expect(updated.theme).toBe(skin.preferredTheme);
     }
 
     // Invalid skin must be rejected by Zod
@@ -145,13 +151,13 @@ describe('Restauração Binária SQLite, Categorias Personalizadas, Odômetro e 
       updateSettings(db, { ui_skin: 'invalid_skin' as any }),
     ).rejects.toThrow();
 
-    // Backup round-trip preserves active skin
-    await updateSettings(db, { ui_skin: 'cyber_neon' });
+    // Backup round-trip preserves active reference skin
+    await updateSettings(db, { ui_skin: 'ref_relogio_noturno', theme: 'dark' });
     const backup = await exportBackupJson(db);
     await clearAllUserData(db);
     await restoreBackupJson(db, JSON.parse(JSON.stringify(backup)));
     const restored = await getSettings(db);
-    expect(restored.ui_skin).toBe('cyber_neon');
+    expect(restored.ui_skin).toBe('ref_relogio_noturno');
 
     await db.close();
   });
