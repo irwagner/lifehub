@@ -1325,9 +1325,32 @@ export const MobileApp: React.FC = () => {
 
             {/* Install guide iPhone + Android */}
             <section className={card}>
-              <div className="mb-2 flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-indigo-500" />
-                <h2 className="text-sm font-bold">Instalar como App (Grátis)</h2>
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="h-4 w-4 text-indigo-500" />
+                  <h2 className="text-sm font-bold">Instalar / Atualizar App (v{CURRENT_APP_VERSION})</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if ('caches' in window) {
+                        const keys = await caches.keys();
+                        await Promise.all(keys.map((k) => caches.delete(k)));
+                      }
+                      if ('serviceWorker' in navigator) {
+                        const regs = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(regs.map((r) => r.update()));
+                      }
+                    } catch {
+                      // ignore
+                    }
+                    window.location.reload();
+                  }}
+                  className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300"
+                >
+                  Atualizar agora
+                </button>
               </div>
               <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
                 <li>
