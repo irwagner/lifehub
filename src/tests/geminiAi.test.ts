@@ -81,7 +81,7 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     const mockFetch = (async (input: RequestInfo | URL) => {
       const url = String(input);
       calledUrls.push(url);
-      if (url.includes('gemini-3.8-flash:')) {
+      if (url.includes('gemini-3.5-flash-lite:')) {
         return new Response(
           JSON.stringify({ error: { message: 'Quota exceeded' } }),
           { status: 429, headers: { 'Content-Type': 'application/json' } },
@@ -92,7 +92,7 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
           candidates: [
             {
               content: {
-                parts: [{ text: 'Tudo certo! Usei o modelo econômico.' }],
+                parts: [{ text: 'Tudo certo! Usei o modelo reserva.' }],
               },
             },
           ],
@@ -103,13 +103,13 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
 
     const cfg: GeminiAiConfig = {
       apiKey: 'test-key-local',
-      model: 'gemini-3.8-flash',
+      model: 'gemini-3.5-flash-lite',
       shareFinancialContext: false,
     };
 
     const reply = await askLifeHubAssistant(db, cfg, [], 'Qual o foco de hoje?', mockFetch);
-    expect(reply.modelUsed).toBe('gemini-3.5-flash-lite');
-    expect(reply.text).toContain('modelo econômico');
+    expect(reply.modelUsed).toBe('gemini-3.1-flash-lite');
+    expect(reply.text).toContain('modelo reserva');
     expect(calledUrls).toHaveLength(2);
 
     await db.close();

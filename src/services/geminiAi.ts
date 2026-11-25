@@ -9,9 +9,12 @@ import type { EventCategory, Settings, WorkPlatform } from '../types/domain';
 import { formatBRL, formatNumber, todayISO } from '../utils/format';
 
 export const GEMINI_MODELS = [
-  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (Recomendado)' },
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Mais econômico)' },
-  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (Alternativo)' },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite (Padrão · 500/dia)' },
+  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite (500/dia)' },
+  { id: 'gemini-3.8-flash', label: 'Gemini 3.8 Flash (20/dia · Mais potente)' },
+  { id: 'gemini-3.6-flash', label: 'Gemini 3.6 Flash (20/dia)' },
+  { id: 'gemini-4-hydrogen', label: 'Gemini 4 Hydrogen (20/dia)' },
+  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B (14.400/dia · Reserva)' },
 ] as const;
 
 export type GeminiModelId = (typeof GEMINI_MODELS)[number]['id'];
@@ -126,7 +129,7 @@ export function loadGeminiAiConfig(): GeminiAiConfig {
       const parsed = JSON.parse(raw) as Partial<GeminiAiConfig>;
       const validModel = GEMINI_MODELS.some((m) => m.id === parsed.model)
         ? (parsed.model as GeminiModelId)
-        : 'gemini-3.8-flash';
+        : 'gemini-3.5-flash-lite';
       return {
         apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
         model: validModel,
@@ -138,7 +141,7 @@ export function loadGeminiAiConfig(): GeminiAiConfig {
   }
   return {
     apiKey: '',
-    model: 'gemini-3.8-flash',
+    model: 'gemini-3.5-flash-lite',
     shareFinancialContext: true,
   };
 }
@@ -300,7 +303,7 @@ async function callGeminiModel(
 
 export async function testGeminiConnection(
   apiKey: string,
-  preferredModel: GeminiModelId = 'gemini-3.8-flash',
+  preferredModel: GeminiModelId = 'gemini-3.5-flash-lite',
   fetchFn: typeof fetch = fetch,
 ): Promise<{ ok: true; modelUsed: string; reply: string }> {
   const cleanKey = apiKey.trim();
