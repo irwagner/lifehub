@@ -1,5 +1,12 @@
 export type RoutineMode = 'clt' | 'apps' | 'ti';
 export type ThemeMode = 'dark' | 'light';
+export type UiSkin =
+  | 'orbital'
+  | 'emerald_noir'
+  | 'amber_carbon'
+  | 'cyber_neon'
+  | 'nordic_frost'
+  | 'retro_classic';
 export type WorkDaysPerWeek = 4 | 5 | 6;
 export type ChildWeekendMode = 'all' | 'alternating' | 'custom';
 
@@ -24,6 +31,7 @@ export interface Settings {
   onboarding_completed: number;
   demo_data_loaded: number;
   reminders_enabled: number;
+  ui_skin: UiSkin;
   updated_at: string;
 }
 

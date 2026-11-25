@@ -99,9 +99,9 @@ export const DashboardPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-br from-white via-white to-brand-50/60 p-6 shadow-card dark:border-white/[0.08] dark:bg-gradient-to-br dark:from-[#111930] dark:via-[#0e1526] dark:to-[#0c1a24] dark:shadow-card-dark">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/15 blur-3xl dark:bg-brand-500/20" />
-        <div className="pointer-events-none absolute -bottom-24 right-40 h-52 w-52 rounded-full bg-emerald-500/10 blur-3xl" />
+      <div className="lh-card relative overflow-hidden p-6">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 right-40 h-52 w-52 rounded-full bg-brand-400/10 blur-3xl" />
 
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>

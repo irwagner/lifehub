@@ -2,6 +2,210 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ==========================================================================
+   LifeHub Skin Engine — 6 Live-Switchable Design Styles
+   Default ("orbital") preserves the current design untouched.
+   ========================================================================== */
+
+:root,
+html[data-skin='orbital'] {
+  --lh-brand-50: 238 242 255;
+  --lh-brand-100: 224 231 255;
+  --lh-brand-200: 199 210 254;
+  --lh-brand-300: 165 180 252;
+  --lh-brand-400: 129 140 248;
+  --lh-brand-500: 99 102 241;
+  --lh-brand-600: 79 70 229;
+  --lh-brand-700: 67 56 202;
+
+  --lh-font: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --lh-radius-card: 1rem;
+  --lh-radius-control: 0.75rem;
+
+  /* Light defaults */
+  --lh-canvas: #f4f6fb;
+  --lh-canvas-img: none;
+  --lh-sidebar: rgba(255, 255, 255, 0.95);
+  --lh-topbar: rgba(255, 255, 255, 0.82);
+  --lh-card: #ffffff;
+  --lh-card-border: rgba(226, 232, 240, 0.85);
+  --lh-card-shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 8px 24px -12px rgba(15, 23, 42, 0.12);
+}
+
+html.dark,
+html.dark[data-skin='orbital'] {
+  --lh-canvas: #070b14;
+  --lh-canvas-img:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.13), transparent 60%),
+    radial-gradient(ellipse 60% 45% at 90% 0%, rgba(16, 185, 129, 0.06), transparent 55%);
+  --lh-sidebar: rgba(10, 16, 31, 0.95);
+  --lh-topbar: rgba(10, 16, 31, 0.76);
+  --lh-card: rgba(14, 21, 38, 0.92);
+  --lh-card-border: rgba(255, 255, 255, 0.075);
+  --lh-card-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 12px 32px -16px rgba(0, 0, 0, 0.65);
+}
+
+/* Skin 2: Esmeralda Noir (Executivo / Financeiro) */
+html[data-skin='emerald_noir'] {
+  --lh-brand-50: 236 253 245;
+  --lh-brand-100: 209 250 229;
+  --lh-brand-200: 167 243 208;
+  --lh-brand-300: 110 231 183;
+  --lh-brand-400: 52 211 153;
+  --lh-brand-500: 16 185 129;
+  --lh-brand-600: 5 150 105;
+  --lh-brand-700: 4 120 87;
+
+  --lh-radius-card: 0.9rem;
+  --lh-radius-control: 0.65rem;
+  --lh-canvas: #f2f8f5;
+  --lh-sidebar: rgba(249, 253, 251, 0.96);
+  --lh-topbar: rgba(249, 253, 251, 0.85);
+  --lh-card: #ffffff;
+  --lh-card-border: rgba(16, 185, 129, 0.16);
+}
+html.dark[data-skin='emerald_noir'] {
+  --lh-canvas: #040c09;
+  --lh-canvas-img:
+    radial-gradient(ellipse 75% 45% at 15% -10%, rgba(16, 185, 129, 0.15), transparent 60%),
+    radial-gradient(ellipse 55% 40% at 88% 5%, rgba(20, 184, 166, 0.08), transparent 55%);
+  --lh-sidebar: rgba(7, 17, 13, 0.96);
+  --lh-topbar: rgba(7, 17, 13, 0.8);
+  --lh-card: rgba(10, 23, 18, 0.93);
+  --lh-card-border: rgba(52, 211, 153, 0.13);
+  --lh-card-shadow: 0 1px 0 0 rgba(52, 211, 153, 0.06) inset, 0 14px 32px -16px rgba(0, 0, 0, 0.72);
+}
+
+/* Skin 3: Carbono & Âmbar (Motovelocidade / Industrial) */
+html[data-skin='amber_carbon'] {
+  --lh-brand-50: 255 251 235;
+  --lh-brand-100: 254 243 199;
+  --lh-brand-200: 253 230 138;
+  --lh-brand-300: 252 211 77;
+  --lh-brand-400: 251 191 36;
+  --lh-brand-500: 245 158 11;
+  --lh-brand-600: 217 119 6;
+  --lh-brand-700: 180 83 9;
+
+  --lh-radius-card: 0.65rem;
+  --lh-radius-control: 0.5rem;
+  --lh-canvas: #f7f4f0;
+  --lh-sidebar: rgba(252, 249, 245, 0.96);
+  --lh-topbar: rgba(252, 249, 245, 0.86);
+  --lh-card: #ffffff;
+  --lh-card-border: rgba(217, 119, 6, 0.18);
+}
+html.dark[data-skin='amber_carbon'] {
+  --lh-canvas: #0b0a09;
+  --lh-canvas-img:
+    radial-gradient(ellipse 70% 45% at 85% -10%, rgba(245, 158, 11, 0.14), transparent 58%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.015) 0%, transparent 40%);
+  --lh-sidebar: rgba(18, 16, 14, 0.97);
+  --lh-topbar: rgba(18, 16, 14, 0.85);
+  --lh-card: rgba(24, 21, 18, 0.95);
+  --lh-card-border: rgba(245, 158, 11, 0.16);
+  --lh-card-shadow: 0 1px 0 0 rgba(251, 191, 36, 0.06) inset, 0 10px 26px -14px rgba(0, 0, 0, 0.78);
+}
+
+/* Skin 4: Cyber Terminal (Neon / Dev TI) */
+html[data-skin='cyber_neon'] {
+  --lh-brand-50: 236 254 255;
+  --lh-brand-100: 207 250 254;
+  --lh-brand-200: 165 243 252;
+  --lh-brand-300: 103 232 249;
+  --lh-brand-400: 34 211 238;
+  --lh-brand-500: 6 182 212;
+  --lh-brand-600: 8 145 178;
+  --lh-brand-700: 14 116 144;
+
+  --lh-font: 'Cascadia Code', 'JetBrains Mono', 'Segoe UI', monospace;
+  --lh-radius-card: 0.75rem;
+  --lh-radius-control: 0.55rem;
+  --lh-canvas: #f2f5ff;
+  --lh-sidebar: rgba(247, 245, 255, 0.96);
+  --lh-topbar: rgba(247, 245, 255, 0.86);
+  --lh-card: #ffffff;
+  --lh-card-border: rgba(6, 182, 212, 0.25);
+}
+html.dark[data-skin='cyber_neon'] {
+  --lh-canvas: #070412;
+  --lh-canvas-img:
+    radial-gradient(ellipse 75% 50% at 15% 0%, rgba(217, 70, 239, 0.16), transparent 55%),
+    radial-gradient(ellipse 65% 45% at 88% 10%, rgba(6, 182, 212, 0.16), transparent 55%);
+  --lh-sidebar: rgba(13, 8, 29, 0.95);
+  --lh-topbar: rgba(13, 8, 29, 0.8);
+  --lh-card: rgba(18, 11, 38, 0.88);
+  --lh-card-border: rgba(34, 211, 238, 0.24);
+  --lh-card-shadow: 0 0 0 1px rgba(217, 70, 239, 0.08) inset, 0 0 24px -10px rgba(6, 182, 212, 0.35);
+}
+
+/* Skin 5: Nórdico Fosco (Minimalista Zen) */
+html[data-skin='nordic_frost'] {
+  --lh-brand-50: 240 249 255;
+  --lh-brand-100: 224 242 254;
+  --lh-brand-200: 186 230 253;
+  --lh-brand-300: 125 211 252;
+  --lh-brand-400: 56 189 248;
+  --lh-brand-500: 14 165 233;
+  --lh-brand-600: 2 132 199;
+  --lh-brand-700: 3 105 161;
+
+  --lh-radius-card: 1.35rem;
+  --lh-radius-control: 0.9rem;
+  --lh-canvas: #eef2f7;
+  --lh-sidebar: rgba(246, 249, 252, 0.96);
+  --lh-topbar: rgba(246, 249, 252, 0.85);
+  --lh-card: #f9fbfd;
+  --lh-card-border: rgba(148, 163, 184, 0.25);
+  --lh-card-shadow: 0 2px 10px -4px rgba(15, 23, 42, 0.06);
+}
+html.dark[data-skin='nordic_frost'] {
+  --lh-canvas: #19202b;
+  --lh-canvas-img: radial-gradient(ellipse 75% 50% at 50% -15%, rgba(56, 189, 248, 0.1), transparent 60%);
+  --lh-sidebar: rgba(29, 38, 51, 0.96);
+  --lh-topbar: rgba(29, 38, 51, 0.85);
+  --lh-card: rgba(34, 44, 59, 0.95);
+  --lh-card-border: rgba(203, 213, 225, 0.1);
+  --lh-card-shadow: 0 8px 24px -14px rgba(0, 0, 0, 0.45);
+}
+
+/* Skin 6: Clássico 98 / Winamp (Retrô Desktop com chanfro 3D) */
+html[data-skin='retro_classic'] {
+  --lh-brand-50: 240 253 244;
+  --lh-brand-100: 220 252 231;
+  --lh-brand-200: 187 247 208;
+  --lh-brand-300: 134 239 172;
+  --lh-brand-400: 74 222 128;
+  --lh-brand-500: 34 197 94;
+  --lh-brand-600: 22 163 74;
+  --lh-brand-700: 21 128 61;
+
+  --lh-font: 'Tahoma', 'MS Sans Serif', 'Segoe UI', sans-serif;
+  --lh-radius-card: 2px;
+  --lh-radius-control: 2px;
+  --lh-canvas: #c9c6be;
+  --lh-sidebar: #d8d5cd;
+  --lh-topbar: #d8d5cd;
+  --lh-card: #ece9e1;
+  --lh-card-border: #808080;
+  --lh-card-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #6b6b6b, 2px 2px 0 rgba(0, 0, 0, 0.25);
+}
+html.dark[data-skin='retro_classic'] {
+  --lh-canvas: #181a1f;
+  --lh-canvas-img: repeating-linear-gradient(
+    0deg,
+    rgba(255, 255, 255, 0.015) 0px,
+    rgba(255, 255, 255, 0.015) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  --lh-sidebar: #20242c;
+  --lh-topbar: #20242c;
+  --lh-card: #252a34;
+  --lh-card-border: #4a5365;
+  --lh-card-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.14), inset -1px -1px 0 rgba(0, 0, 0, 0.7), 2px 2px 0 rgba(0, 0, 0, 0.5);
+}
+
 @layer base {
   html {
     color-scheme: light;
@@ -11,20 +215,18 @@
   }
 
   body {
-    font-family: 'Segoe UI Variable', 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: var(--lh-font);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #f4f6fb;
+    background-color: var(--lh-canvas);
+    background-image: var(--lh-canvas-img);
+    background-attachment: fixed;
     color: #0f172a;
+    transition: background-color 200ms ease, color 150ms ease;
   }
 
   .dark body {
-    background-color: #070b14;
     color: #f1f5f9;
-    background-image:
-      radial-gradient(ellipse 80% 50% at 20% -10%, rgba(99, 102, 241, 0.12), transparent 60%),
-      radial-gradient(ellipse 60% 45% at 90% 0%, rgba(16, 185, 129, 0.06), transparent 55%);
-    background-attachment: fixed;
   }
 
   /* Sleek custom scrollbars */
@@ -51,28 +253,50 @@
 }
 
 @layer components {
+  .lh-sidebar {
+    background-color: var(--lh-sidebar);
+    border-color: var(--lh-card-border);
+  }
+
+  .lh-topbar {
+    background-color: var(--lh-topbar);
+    border-color: var(--lh-card-border);
+  }
+
   .lh-card {
-    @apply rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card transition-colors dark:border-white/[0.07] dark:bg-[#0e1526]/90 dark:shadow-card-dark;
+    background-color: var(--lh-card);
+    border: 1px solid var(--lh-card-border);
+    border-radius: var(--lh-radius-card);
+    box-shadow: var(--lh-card-shadow);
+    padding: 1.25rem;
+    transition: border-color 160ms ease, background-color 200ms ease, box-shadow 180ms ease;
   }
 
   .lh-card-hover {
-    @apply lh-card hover:border-slate-300/90 dark:hover:border-white/[0.14];
+    @apply lh-card;
+  }
+  .lh-card-hover:hover {
+    border-color: rgb(var(--lh-brand-500) / 0.45);
   }
 
   .lh-input {
-    @apply w-full rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-white/[0.09] dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:bg-slate-950;
+    border-radius: var(--lh-radius-control);
+    @apply w-full border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-white/[0.09] dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:bg-slate-950;
   }
 
   .lh-btn-primary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-b from-brand-500 to-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:from-brand-400 hover:to-brand-600 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45;
+    border-radius: var(--lh-radius-control);
+    @apply inline-flex items-center justify-center gap-1.5 bg-gradient-to-b from-brand-500 to-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:from-brand-400 hover:to-brand-600 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-45;
   }
 
   .lh-btn-secondary {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand-400/60 hover:bg-slate-50 dark:border-white/[0.09] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-brand-400/50 dark:hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-45;
+    border-radius: var(--lh-radius-control);
+    @apply inline-flex items-center justify-center gap-1.5 border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand-400/60 hover:bg-slate-50 dark:border-white/[0.09] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-brand-400/50 dark:hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-45;
   }
 
   .lh-btn-danger {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/20 dark:text-rose-400 disabled:pointer-events-none disabled:opacity-45;
+    border-radius: var(--lh-radius-control);
+    @apply inline-flex items-center justify-center gap-1.5 border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-500/20 dark:text-rose-400 disabled:pointer-events-none disabled:opacity-45;
   }
 
   .lh-page-title {
@@ -100,31 +324,39 @@
   }
 }
 
-/* FullCalendar v6 refined dark/light harmony */
+/* Retro classic overrides for sharp nostalgic Win98/Winamp feel */
+html[data-skin='retro_classic'] .rounded-2xl,
+html[data-skin='retro_classic'] .rounded-3xl,
+html[data-skin='retro_classic'] .rounded-xl,
+html[data-skin='retro_classic'] .rounded-lg {
+  border-radius: 2px !important;
+}
+
+/* FullCalendar v6 refined dark/light + skin harmony */
 .fc {
   --fc-border-color: rgba(148, 163, 184, 0.16);
   --fc-page-bg-color: transparent;
   --fc-neutral-bg-color: rgba(15, 23, 42, 0.35);
-  --fc-today-bg-color: rgba(99, 102, 241, 0.11);
+  --fc-today-bg-color: rgb(var(--lh-brand-500) / 0.12);
   --fc-event-border-color: transparent;
-  --fc-now-indicator-color: #6366f1;
+  --fc-now-indicator-color: rgb(var(--lh-brand-500));
   --fc-button-bg-color: rgba(148, 163, 184, 0.12);
   --fc-button-border-color: rgba(148, 163, 184, 0.2);
   --fc-button-text-color: #334155;
-  --fc-button-hover-bg-color: rgba(99, 102, 241, 0.14);
-  --fc-button-hover-border-color: rgba(99, 102, 241, 0.35);
-  --fc-button-active-bg-color: #4f46e5;
-  --fc-button-active-border-color: #4f46e5;
+  --fc-button-hover-bg-color: rgb(var(--lh-brand-500) / 0.14);
+  --fc-button-hover-border-color: rgb(var(--lh-brand-500) / 0.38);
+  --fc-button-active-bg-color: rgb(var(--lh-brand-600));
+  --fc-button-active-border-color: rgb(var(--lh-brand-600));
   font-size: 0.84rem;
 }
 
 .dark .fc {
-  --fc-border-color: rgba(255, 255, 255, 0.07);
+  --fc-border-color: rgba(255, 255, 255, 0.08);
   --fc-button-bg-color: rgba(255, 255, 255, 0.05);
   --fc-button-border-color: rgba(255, 255, 255, 0.1);
   --fc-button-text-color: #e2e8f0;
   --fc-button-hover-bg-color: rgba(255, 255, 255, 0.1);
-  --fc-button-hover-border-color: rgba(255, 255, 255, 0.16);
+  --fc-button-hover-border-color: rgba(255, 255, 255, 0.18);
 }
 
 .dark .fc .fc-col-header-cell-cushion,
@@ -136,7 +368,7 @@
 }
 
 .fc .fc-button {
-  border-radius: 0.65rem !important;
+  border-radius: var(--lh-radius-control) !important;
   font-weight: 600 !important;
   font-size: 0.78rem !important;
   padding: 0.4rem 0.75rem !important;
@@ -155,7 +387,7 @@
 }
 
 .fc .fc-event {
-  border-radius: 8px;
+  border-radius: 6px;
   padding: 3px 6px;
   font-weight: 600;
   font-size: 0.76rem;

@@ -22,6 +22,7 @@ import { useApp, type NavSection, type QuickActionType } from '../context/AppCon
 import { ROUTINE_MODE_LABELS } from '../types/domain';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { RemindersMenu } from './RemindersMenu';
+import { SkinSwitcher } from './SkinSwitcher';
 
 interface NavGroup {
   label: string;
@@ -148,7 +149,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r border-slate-200/80 bg-white/95 backdrop-blur-xl transition-transform duration-200 dark:border-white/[0.06] dark:bg-[#0a101f]/95 lg:static lg:translate-x-0 ${
+        className={`lh-sidebar fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col border-r backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -266,7 +267,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       {/* Main area */}
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200/70 bg-white/80 px-4 py-3 backdrop-blur-xl dark:border-white/[0.06] dark:bg-[#0a101f]/75 sm:px-6">
+        <header className="lh-topbar sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur-xl sm:px-6">
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               type="button"
@@ -305,6 +306,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 Ctrl K
               </kbd>
             </button>
+
+            <SkinSwitcher />
 
             <button
               type="button"

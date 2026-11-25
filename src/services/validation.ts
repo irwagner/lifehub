@@ -22,6 +22,16 @@ export const settingsUpdateSchema = z.object({
   onboarding_completed: z.number().int().min(0).max(1).optional(),
   demo_data_loaded: z.number().int().min(0).max(1).optional(),
   reminders_enabled: z.number().int().min(0).max(1).optional(),
+  ui_skin: z
+    .enum([
+      'orbital',
+      'emerald_noir',
+      'amber_carbon',
+      'cyber_neon',
+      'nordic_frost',
+      'retro_classic',
+    ])
+    .optional(),
 });
 
 export const createTransactionSchema = z

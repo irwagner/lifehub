@@ -6,7 +6,7 @@ export interface Migration {
   statements: string[];
 }
 
-export const CURRENT_SCHEMA_VERSION = 3;
+export const CURRENT_SCHEMA_VERSION = 4;
 
 export const MIGRATIONS: Migration[] = [
   {
@@ -334,6 +334,13 @@ export const MIGRATIONS: Migration[] = [
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
       )`,
       `CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id)`,
+    ],
+  },
+  {
+    version: 4,
+    name: '004_ui_skin_preference',
+    statements: [
+      `ALTER TABLE settings ADD COLUMN ui_skin TEXT NOT NULL DEFAULT 'orbital'`,
     ],
   },
 ];

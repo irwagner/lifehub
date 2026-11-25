@@ -114,7 +114,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       root.classList.add('dark');
     }
-  }, [settings?.theme]);
+    root.dataset.skin = settings?.ui_skin || 'orbital';
+  }, [settings?.theme, settings?.ui_skin]);
 
   return (
     <AppContext.Provider

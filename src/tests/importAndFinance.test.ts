@@ -169,9 +169,9 @@ describe('Importação CSV/OFX, Deduplicação, Recorrências, Orçamentos e Lem
     expect(comp[1].income).toBe(2745);
     expect(comp[2].expense).toBe(640);
 
-    // Backup v3 round-trip preserves budgets and recurring rules
+    // Backup v4 round-trip preserves budgets and recurring rules
     const backup = await exportBackupJson(db);
-    expect(backup.schemaVersion).toBe(3);
+    expect(backup.schemaVersion).toBe(4);
     expect(backup.tableCounts.budgets).toBe(1);
     await clearAllUserData(db);
     await restoreBackupJson(db, JSON.parse(JSON.stringify(backup)));

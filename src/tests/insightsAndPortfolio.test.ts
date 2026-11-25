@@ -53,7 +53,10 @@ describe('Migração v1->v3, Portfólio, Recorrência de Eventos, Insights Expli
     const versions = await db.select<{ version: number }>(
       'SELECT version FROM schema_migrations ORDER BY version ASC',
     );
-    expect(versions.map((v) => v.version)).toEqual([1, 2, 3]);
+    expect(versions.map((v) => v.version)).toEqual([1, 2, 3, 4]);
+
+    const upgradedSettings = await getSettings(db);
+    expect(upgradedSettings.ui_skin).toBe('orbital');
 
     const accounts = await listAccounts(db);
     expect(accounts.some((a) => a.id === 'acc_v1' && a.current_balance === 500)).toBe(true);

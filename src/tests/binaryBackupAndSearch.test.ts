@@ -13,9 +13,10 @@ import {
 import { createIdea } from '../repositories/ideasRepo';
 import { createProject } from '../repositories/projectsRepo';
 import { searchAllModules } from '../repositories/searchRepo';
-import { getSettings } from '../repositories/settingsRepo';
+import { getSettings, updateSettings } from '../repositories/settingsRepo';
 import { createWorkSession, getLastRecordedOdometer } from '../repositories/workRepo';
-import { clearAllUserData } from '../services/backup';
+import { clearAllUserData, exportBackupJson, restoreBackupJson } from '../services/backup';
+import { UI_SKINS } from '../services/skins';
 
 describe('Restauração Binária SQLite, Categorias Personalizadas, Odômetro e Busca Global', () => {
   it('exporta e restaura banco SQLite binário (.sqlite) e rejeita arquivo inválido', async () => {
@@ -123,6 +124,35 @@ describe('Restauração Binária SQLite, Categorias Personalizadas, Odômetro e 
     expect(new Set(hits.map((h) => h.sectionLabel))).toEqual(
       new Set(['Financeiro', 'Tarefas', 'Calendário', 'Ideias', 'Portfólio TI', 'Vagas TI']),
     );
+    await db.close();
+  });
+
+  it('persiste troca entre todas as 6 skins, rejeita skin inválida e preserva no backup JSON', async () => {
+    const db = await createInMemoryTestDatabase();
+    expect(UI_SKINS).toHaveLength(6);
+
+    const initial = await getSettings(db);
+    expect(initial.ui_skin).toBe('orbital');
+
+    for (const skin of UI_SKINS) {
+      const updated = await updateSettings(db, { ui_skin: skin.id });
+      expect(updated.ui_skin).toBe(skin.id);
+    }
+
+    // Invalid skin must be rejected by Zod
+    await expect(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      updateSettings(db, { ui_skin: 'invalid_skin' as any }),
+    ).rejects.toThrow();
+
+    // Backup round-trip preserves active skin
+    await updateSettings(db, { ui_skin: 'cyber_neon' });
+    const backup = await exportBackupJson(db);
+    await clearAllUserData(db);
+    await restoreBackupJson(db, JSON.parse(JSON.stringify(backup)));
+    const restored = await getSettings(db);
+    expect(restored.ui_skin).toBe('cyber_neon');
+
     await db.close();
   });
 });
