@@ -3,6 +3,8 @@
 !.env.example
 node_modules/
 dist/
+dist-mobile/
+.wrangler/
 bin/
 obj/
 src-tauri/target/
