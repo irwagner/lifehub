@@ -15,8 +15,10 @@ import {
   Moon,
   Plus,
   RefreshCw,
+  Send,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   Sun,
   Wallet,
   X,
@@ -49,6 +51,15 @@ import {
   testCloudSyncConnection,
   type CloudSyncConfig,
 } from '../services/cloudSync';
+import {
+  askLifeHubAssistant,
+  executeProposedAiAction,
+  loadGeminiAiConfig,
+  saveGeminiAiConfig,
+  type AiChatMessage,
+  type GeminiAiConfig,
+  type ProposedAiAction,
+} from '../services/geminiAi';
 import {
   EVENT_CATEGORY_META,
   PLATFORM_LABELS,
@@ -121,6 +132,14 @@ export const MobileApp: React.FC = () => {
   const [syncKeyInput, setSyncKeyInput] = useState(
     () => loadCloudSyncConfig(detectMobileDeviceName()).passphrase,
   );
+
+  // Mobile Gemini AI state
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiConfig, setAiConfig] = useState<GeminiAiConfig>(() => loadGeminiAiConfig());
+  const [aiKeyInput, setAiKeyInput] = useState(() => loadGeminiAiConfig().apiKey);
+  const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([]);
+  const [aiPrompt, setAiPrompt] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
 
   // Quick-add form states
   const [txType, setTxType] = useState<TransactionType>('expense');
@@ -429,6 +448,65 @@ export const MobileApp: React.FC = () => {
     }
   };
 
+  const handleSaveMobileAiKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    const next: GeminiAiConfig = { ...aiConfig, apiKey: aiKeyInput.trim() };
+    saveGeminiAiConfig(next);
+    setAiConfig(next);
+    showToast('Chave Gemini salva neste celular!');
+  };
+
+  const handleSendMobileAi = async (textToSend: string) => {
+    if (!db || !textToSend.trim() || aiLoading) return;
+    const userMsg: AiChatMessage = {
+      id: `mu_${Date.now()}`,
+      role: 'user',
+      text: textToSend.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    const nextHist = [...aiMessages, userMsg];
+    setAiMessages(nextHist);
+    setAiPrompt('');
+    setAiLoading(true);
+    try {
+      const reply = await askLifeHubAssistant(db, aiConfig, aiMessages, userMsg.text);
+      setAiMessages([
+        ...nextHist,
+        {
+          id: `ma_${Date.now()}`,
+          role: 'assistant',
+          text: reply.text,
+          modelUsed: reply.modelUsed,
+          actions: reply.actions,
+          executedActionIds: [],
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao consultar Gemini.', 'err');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleExecuteMobileAiAction = async (msgId: string, action: ProposedAiAction) => {
+    if (!db || !snapshot) return;
+    try {
+      const msg = await executeProposedAiAction(db, snapshot.settings, action);
+      setAiMessages((prev) =>
+        prev.map((m) =>
+          m.id === msgId
+            ? { ...m, executedActionIds: [...(m.executedActionIds ?? []), action.id] }
+            : m,
+        ),
+      );
+      await refreshData(db);
+      showToast(msg);
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Erro ao salvar ação.', 'err');
+    }
+  };
+
   if (loading || !snapshot) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-200">
@@ -468,7 +546,17 @@ export const MobileApp: React.FC = () => {
             <h1 className="truncate text-lg font-bold tracking-tight">{tabTitles[tab]}</h1>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setAiOpen(true)}
+              aria-label="Abrir Assistente IA Gemini"
+              className="inline-flex items-center gap-1 rounded-full border border-indigo-500/35 bg-indigo-500/10 px-2.5 py-1.5 text-xs font-bold text-indigo-600 active:scale-95 dark:text-indigo-300"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>IA</span>
+            </button>
+
             <button
               type="button"
               disabled={syncing}
@@ -1355,6 +1443,145 @@ export const MobileApp: React.FC = () => {
                   Capturar Ideia
                 </button>
               </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Gemini AI Drawer Sheet */}
+      {aiOpen && (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setAiOpen(false);
+          }}
+        >
+          <div className="safe-bottom animate-sheet-up flex max-h-[85vh] w-full max-w-lg flex-col rounded-t-3xl border-t border-slate-200 bg-white p-4 shadow-2xl dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-indigo-500" />
+                <h2 className="text-sm font-bold">Assistente IA · Gemini</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiOpen(false)}
+                className="rounded-full p-1 text-slate-400"
+                aria-label="Fechar IA"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {!aiConfig.apiKey ? (
+              <form onSubmit={handleSaveMobileAiKey} className="space-y-3 py-2">
+                <p className="text-xs text-slate-500 dark:text-slate-300">
+                  Cole sua chave API Gemini do Google AI Studio (fica salva só neste celular) para lançar corridas, gastos e tarefas por frase natural:
+                </p>
+                <input
+                  required
+                  type="password"
+                  value={aiKeyInput}
+                  onChange={(e) => setAiKeyInput(e.target.value)}
+                  placeholder="Chave API Gemini (AQ... ou AIza...)"
+                  className={`${input} font-mono`}
+                />
+                <button
+                  type="submit"
+                  className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white"
+                >
+                  Ativar IA no Celular
+                </button>
+              </form>
+            ) : (
+              <>
+                <div className="mb-3 flex-1 space-y-2.5 overflow-y-auto pr-1">
+                  {aiMessages.length === 0 && (
+                    <div className="space-y-1.5">
+                      {[
+                        'Resuma meu dia e prioridades',
+                        'Rodei 80 km na Uber Moto, fiz 180 bruto e 30 de gasolina',
+                        'Gastei 35 reais no mercado hoje',
+                      ].map((q) => (
+                        <button
+                          key={q}
+                          type="button"
+                          onClick={() => handleSendMobileAi(q)}
+                          className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs dark:border-white/10 dark:bg-white/[0.04]"
+                        >
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {aiMessages.map((m) => (
+                    <div key={m.id} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                      <div
+                        className={`max-w-[90%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-xs leading-relaxed ${
+                          m.role === 'user'
+                            ? 'bg-indigo-600 text-white'
+                            : 'bg-slate-100 text-slate-900 dark:bg-white/[0.06] dark:text-slate-100'
+                        }`}
+                      >
+                        {m.text}
+                      </div>
+                      {m.actions && m.actions.length > 0 && (
+                        <div className="mt-1.5 w-[92%] space-y-1.5">
+                          {m.actions.map((act) => {
+                            const done = m.executedActionIds?.includes(act.id);
+                            return (
+                              <div
+                                key={act.id}
+                                className="flex items-center justify-between gap-2 rounded-xl border border-indigo-500/35 bg-indigo-500/10 px-3 py-2 text-xs"
+                              >
+                                <span className="font-semibold">{act.summary}</span>
+                                {done ? (
+                                  <span className="font-bold text-emerald-500">✓ Salvo</span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleExecuteMobileAiAction(m.id, act)}
+                                    className="shrink-0 rounded-lg bg-indigo-600 px-2.5 py-1 text-[11px] font-bold text-white"
+                                  >
+                                    Salvar
+                                  </button>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  {aiLoading && (
+                    <p className="text-xs text-slate-500">Consultando Gemini...</p>
+                  )}
+                </div>
+
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMobileAi(aiPrompt);
+                  }}
+                  className="flex items-center gap-2"
+                >
+                  <input
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Pergunte ou lance por frase..."
+                    className={`${input} flex-1`}
+                  />
+                  <button
+                    type="submit"
+                    disabled={aiLoading || !aiPrompt.trim()}
+                    className="rounded-xl bg-indigo-600 p-2.5 text-white disabled:opacity-40"
+                    aria-label="Enviar"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
+              </>
             )}
           </div>
         </div>

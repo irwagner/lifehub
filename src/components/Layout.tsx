@@ -13,6 +13,7 @@ import {
   Search,
   Settings as SettingsIcon,
   ShieldCheck,
+  Sparkles,
   Sun,
   Users,
   Wallet,
@@ -21,6 +22,7 @@ import {
 import { useApp, type NavSection, type QuickActionType } from '../context/AppContext';
 import { getSkinDefinition } from '../services/skins';
 import { ROUTINE_MODE_LABELS } from '../types/domain';
+import { AiAssistantDrawer } from './AiAssistantDrawer';
 import { CloudSyncQuickButton } from './CloudSyncQuickButton';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { RemindersMenu } from './RemindersMenu';
@@ -97,6 +99,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const activeSkin = getSkinDefinition(settings?.ui_skin);
   const shell = activeSkin.shell;
@@ -142,6 +145,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       } else if (key === 'i') {
         e.preventDefault();
         openQuickAction('idea');
+      } else if (key === 'a') {
+        e.preventDefault();
+        setAiOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -211,6 +217,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </kbd>
       </button>
 
+      <button
+        type="button"
+        onClick={() => setAiOpen(true)}
+        title="Assistente IA Gemini (Alt+A)"
+        aria-label="Abrir Assistente IA"
+        className="lh-control-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold shadow-sm"
+      >
+        <Sparkles className="h-3.5 w-3.5 text-brand-500" />
+        <span className="hidden sm:inline">IA</span>
+      </button>
+
       <CloudSyncQuickButton />
 
       <SkinSwitcher />
@@ -252,6 +269,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const renderOverlays = () => (
     <>
       <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      <AiAssistantDrawer open={aiOpen} onClose={() => setAiOpen(false)} />
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2">
         {toasts.map((t) => (
           <div

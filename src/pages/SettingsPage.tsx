@@ -13,6 +13,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { CloudSyncPanel } from '../components/CloudSyncPanel';
+import { GeminiConfigPanel } from '../components/GeminiConfigPanel';
 import { useApp } from '../context/AppContext';
 import { isTauriRuntime } from '../db/client';
 import { runMigrations } from '../db/migrations';
@@ -624,6 +625,9 @@ export const SettingsPage: React.FC = () => {
       {/* Mobile PWA + Cloudflare Free E2EE Sync */}
       <CloudSyncPanel />
 
+      {/* Optional Gemini AI Assistant */}
+      <GeminiConfigPanel />
+
       {/* Backup & Restore */}
       <section className={cardClass}>
         <div className="mb-3 flex items-center gap-2">
@@ -738,9 +742,6 @@ export const SettingsPage: React.FC = () => {
         <ul className="list-disc space-y-1.5 pl-5 text-xs text-slate-500 dark:text-slate-400">
           <li>
             <strong>Integração Google Calendar (OAuth):</strong> sincronização bidirecional somente mediante autorização do usuário.
-          </li>
-          <li>
-            <strong>Resumos assistidos por IA local (opt-in):</strong> planejamento opcional sobre dados locais sem envio automático para nuvem.
           </li>
         </ul>
       </section>
