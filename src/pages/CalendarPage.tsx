@@ -247,9 +247,9 @@ export const CalendarPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-4">
+      <div className="grid gap-4 xl:grid-cols-4">
         {/* FullCalendar */}
-        <div className="lh-card p-4 xl:col-span-3">
+        <div className="lh-card h-[calc(100vh-195px)] min-h-[420px] p-3.5 xl:col-span-3">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
@@ -261,7 +261,7 @@ export const CalendarPage: React.FC = () => {
             editable={true}
             selectable={false}
             nowIndicator={true}
-            height={680}
+            height="100%"
             slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             headerToolbar={{

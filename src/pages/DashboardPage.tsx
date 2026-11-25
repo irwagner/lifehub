@@ -113,22 +113,22 @@ export const DashboardPage: React.FC = () => {
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
           Saldo Registrado
         </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/12 text-emerald-500 ring-1 ring-emerald-500/20">
-          <Wallet className="h-4 w-4" />
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/12 text-emerald-500 ring-1 ring-emerald-500/20">
+          <Wallet className="h-3.5 w-3.5" />
         </span>
       </div>
-      <p className="lh-kpi-value mt-3">{formatBRL(snapshot.totalBalance)}</p>
-      <p className="mt-1 text-xs tabular-nums text-slate-500 dark:text-slate-400">
+      <p className="lh-kpi-value mt-2">{formatBRL(snapshot.totalBalance)}</p>
+      <p className="mt-0.5 text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
         <span className="text-emerald-500">+{formatBRL(snapshot.monthlyFinance.realizedIncome)}</span>
         {' · '}
         <span className="text-rose-400">-{formatBRL(snapshot.monthlyFinance.realizedExpense)}</span>
       </p>
-      <div className="mt-4">
+      <div className="mt-2.5">
         <div className="flex justify-between text-[11px] tabular-nums text-slate-500 dark:text-slate-400">
           <span>Meta {formatBRL(settings.monthly_net_goal)}</span>
           <span className="font-semibold text-emerald-500">{formatNumber(monthGoalPct, 0)}%</span>
         </div>
-        <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/[0.07]">
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/[0.07]">
           <div
             className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
             style={{ width: `${monthGoalPct}%` }}
@@ -148,15 +148,15 @@ export const DashboardPage: React.FC = () => {
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
           Apps Semana (Uber/99)
         </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-500/12 text-brand-500 ring-1 ring-brand-500/20">
-          <Bike className="h-4 w-4" />
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500/12 text-brand-500 ring-1 ring-brand-500/20">
+          <Bike className="h-3.5 w-3.5" />
         </span>
       </div>
-      <p className="lh-kpi-value mt-3">{formatBRL(snapshot.workWeek.totalGross)}</p>
-      <p className="mt-1 text-xs font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
+      <p className="lh-kpi-value mt-2">{formatBRL(snapshot.workWeek.totalGross)}</p>
+      <p className="mt-0.5 text-[11px] font-medium tabular-nums text-emerald-600 dark:text-emerald-400">
         Líquido oper.: {formatBRL(snapshot.workWeek.totalOperationalNet)}
       </p>
-      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-2.5 text-[11px] tabular-nums text-slate-500 dark:border-white/[0.06] dark:text-slate-400">
+      <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] tabular-nums text-slate-500 dark:border-white/[0.06] dark:text-slate-400">
         <span>Comb.: {formatBRL(snapshot.workWeek.totalFuelCost)}</span>
         <span>{formatNumber(snapshot.workWeek.totalKm, 1)} km</span>
       </div>
@@ -173,28 +173,28 @@ export const DashboardPage: React.FC = () => {
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
           Estudos & Carreira TI
         </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-sky-500/12 text-sky-500 ring-1 ring-sky-500/20">
-          <Briefcase className="h-4 w-4" />
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/12 text-sky-500 ring-1 ring-sky-500/20">
+          <Briefcase className="h-3.5 w-3.5" />
         </span>
       </div>
-      <p className="lh-kpi-value mt-3">
+      <p className="lh-kpi-value mt-2">
         {formatNumber(snapshot.weeklyStudyHours, 1)}h{' '}
-        <span className="text-sm font-medium text-slate-400">
+        <span className="text-xs font-medium text-slate-400">
           / {settings.study_weekly_goal_hours}h
         </span>
       </p>
-      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+      <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
         {snapshot.activeApplications.length} vaga(s) ativa(s) ·{' '}
         {snapshot.upcomingInterviews.length} entrevista(s)
       </p>
-      <div className="mt-4">
+      <div className="mt-2.5">
         <div className="h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/[0.07]">
           <div
             className="h-full rounded-full bg-gradient-to-r from-sky-500 to-brand-400 transition-all duration-500"
             style={{ width: `${studyGoalPct}%` }}
           />
         </div>
-        <p className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-sky-500 group-hover:underline">
+        <p className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-sky-500 group-hover:underline">
           Abrir trilhas e vagas <ArrowUpRight className="h-3 w-3" />
         </p>
       </div>
@@ -211,25 +211,25 @@ export const DashboardPage: React.FC = () => {
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
           Fim de Semana c/ Filho
         </span>
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-pink-500/12 text-pink-500 ring-1 ring-pink-500/20">
-          <Users className="h-4 w-4" />
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-pink-500/12 text-pink-500 ring-1 ring-pink-500/20">
+          <Users className="h-3.5 w-3.5" />
         </span>
       </div>
       {snapshot.upcomingChildWeekends.length > 0 ? (
         <>
-          <p className="mt-3 text-base font-bold tracking-tight text-slate-900 dark:text-white">
+          <p className="mt-2 text-sm font-bold tracking-tight text-slate-900 dark:text-white">
             {snapshot.upcomingChildWeekends[0].label}
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+          <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">
             Protegido automaticamente contra trabalho.
           </p>
         </>
       ) : (
-        <p className="mt-3 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
           Configure a regra ou data âncora na aba Família para gerar recorrências.
         </p>
       )}
-      <p className="mt-4 inline-flex items-center gap-1 text-[11px] font-semibold text-pink-500 group-hover:underline">
+      <p className="mt-2.5 inline-flex items-center gap-1 text-[11px] font-semibold text-pink-500 group-hover:underline">
         Gerenciar agenda família <ArrowUpRight className="h-3 w-3" />
       </p>
     </button>
@@ -775,30 +775,26 @@ export const DashboardPage: React.FC = () => {
   // LAYOUT E: STANDARD (Orbital padrão e skins preservadas)
   // =========================================================================
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Hero Banner */}
-      <div className="lh-card relative overflow-hidden p-6">
-        <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-24 right-40 h-52 w-52 rounded-full bg-brand-400/10 blur-3xl" />
+    <div className="space-y-4 animate-fade-in">
+      {/* Compact Proportional Hero Banner */}
+      <div className="lh-card relative overflow-hidden py-3.5 px-4">
+        <div className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-brand-500/20 blur-3xl" />
 
-        <div className="relative flex flex-wrap items-center justify-between gap-4">
+        <div className="relative flex flex-wrap items-center justify-between gap-3">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center rounded-full bg-brand-500/12 px-2.5 py-0.5 text-[11px] font-semibold text-brand-700 ring-1 ring-brand-500/20 dark:text-brand-300">
+              <span className="inline-flex items-center rounded-full bg-brand-500/12 px-2 py-0.5 text-[10.5px] font-semibold text-brand-700 ring-1 ring-brand-500/20 dark:text-brand-300">
                 {formatDateBR(snapshot.today)}
               </span>
-              <span className="inline-flex items-center rounded-full bg-slate-900/5 px-2.5 py-0.5 text-[11px] font-medium text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">
+              <span className="inline-flex items-center rounded-full bg-slate-900/5 px-2 py-0.5 text-[10.5px] font-medium text-slate-600 dark:bg-white/[0.06] dark:text-slate-300">
                 {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}{' '}
                 dias/sem
               </span>
             </div>
-            <h2 className="mt-2.5 text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            <h2 className="mt-1.5 text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
               {greeting}
               {displayName}
             </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Painel consolidado em tempo real direto do seu banco SQLite local.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -821,7 +817,7 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {financeCard}
         {workCard}
         {careerCard}
@@ -829,13 +825,13 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Main 2-column grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">{scheduleSection}</div>
         <div>{tasksSection}</div>
       </div>
 
       {/* Habits + Upcoming Bills */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2">
         {habitsSection}
         {billsSection}
       </div>

@@ -194,17 +194,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   );
 
   const renderUtilities = () => (
-    <div className="flex items-center gap-2">
+    <div className="flex shrink-0 items-center gap-1.5">
       <button
         type="button"
         onClick={() => setSearchOpen(true)}
         title="Busca global (Ctrl+K)"
-        className="lh-control-btn inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium opacity-85 hover:opacity-100"
+        className="lh-control-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium opacity-85 hover:opacity-100"
       >
         <Search className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">Buscar...</span>
+        <span className="hidden xl:inline">Buscar</span>
         <kbd
-          className="hidden rounded-md border px-1.5 py-0.5 font-mono text-[10px] opacity-75 md:inline"
+          className="hidden rounded border px-1 py-0.5 font-mono text-[10px] opacity-75 2xl:inline"
           style={{ borderColor: 'var(--lh-card-border)' }}
         >
           Ctrl K
@@ -220,7 +220,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         onClick={toggleTheme}
         title={settings?.theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
         aria-label="Alternar tema"
-        className="lh-control-btn p-2 opacity-85 hover:opacity-100"
+        className="lh-control-btn p-1.5 opacity-85 hover:opacity-100"
       >
         {settings?.theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
       </button>
@@ -230,15 +230,15 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   );
 
   const renderQuickPills = (compact = false) => (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-nowrap items-center gap-1 overflow-x-auto">
       {QUICK_PILLS.map((pill) => (
         <button
           key={pill.action}
           type="button"
           onClick={() => openQuickAction(pill.action)}
           title={`Novo: ${pill.label} (${pill.shortcut})`}
-          className={`lh-control-btn inline-flex items-center gap-1.5 ${
-            compact ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1.5 text-xs'
+          className={`lh-control-btn inline-flex shrink-0 items-center gap-1 ${
+            compact ? 'px-2 py-1 text-[11px]' : 'px-2 py-1 text-[11.5px]'
           } font-medium shadow-sm hover:-translate-y-[0.5px]`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${pill.dotColor}`} />
@@ -334,7 +334,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-7xl flex-1 p-5 sm:p-7">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 sm:p-5">{children}</main>
         </div>
 
         {renderOverlays()}
@@ -369,7 +369,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {renderQuickPills(true)}
           </div>
 
-          <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-28 sm:px-6">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 px-4 pt-3.5 pb-20 sm:px-5">{children}</main>
         </div>
 
         {/* Floating Windows/macOS style bottom dock */}
@@ -476,12 +476,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-            <header className="lh-topbar sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur-xl sm:px-6">
-              <div className="flex flex-wrap items-center gap-2">
+            <header className="lh-topbar sticky top-0 z-20 flex flex-nowrap items-center justify-between gap-2 border-b px-3.5 py-2 backdrop-blur-xl sm:px-5">
+              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <button
                   type="button"
                   onClick={() => setSidebarOpen(true)}
-                  className="lh-control-btn p-2 lg:hidden"
+                  className="lh-control-btn shrink-0 p-1.5 lg:hidden"
                   aria-label="Abrir menu"
                 >
                   <Menu className="h-4 w-4" />
@@ -491,7 +491,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               {renderUtilities()}
             </header>
 
-            <main className="mx-auto w-full max-w-[1440px] flex-1 p-5 sm:p-6">{children}</main>
+            <main className="mx-auto w-full max-w-[1440px] flex-1 p-3.5 sm:p-5">{children}</main>
           </div>
         </div>
 
@@ -520,19 +520,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <aside
           className={`lh-sidebar ${
             isDualTone ? 'lh-sidebar-dark-tone' : ''
-          } fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
+          } fixed inset-y-0 left-0 z-40 flex w-56 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
             isFloating
-              ? 'border lg:m-4 lg:mr-0 lg:rounded-3xl lg:shadow-xl'
+              ? 'border lg:m-3 lg:mr-0 lg:rounded-2xl lg:shadow-xl'
               : 'border-r'
           } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           {/* Brand header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-4">
+          <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
             {renderBrandMark()}
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] lg:hidden"
+              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] lg:hidden"
               aria-label="Fechar menu"
             >
               <X className="h-4 w-4" />
@@ -542,7 +542,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           {/* Mode & Demo pills */}
           {settings && (
             <div
-              className={`mx-4 mb-3 rounded-xl border p-2.5 ${
+              className={`mx-3 mb-2 rounded-xl border px-2.5 py-2 ${
                 isDualTone
                   ? 'border-white/10 bg-white/[0.05]'
                   : 'bg-black/[0.025] dark:bg-white/[0.03]'
@@ -550,17 +550,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               style={!isDualTone ? { borderColor: 'var(--lh-card-border)' } : undefined}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                <span className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-400">
                   Modo ativo
                 </span>
                 {settings.demo_data_loaded === 1 && (
-                  <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500 dark:text-amber-300">
+                  <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[9.5px] font-semibold text-amber-500 dark:text-amber-300">
                     Demo
                   </span>
                 )}
               </div>
               <p
-                className={`mt-0.5 text-xs font-semibold ${
+                className={`mt-0.5 truncate text-[11.5px] font-semibold ${
                   isDualTone ? 'text-brand-300' : 'text-brand-600 dark:text-brand-300'
                 }`}
               >
@@ -570,11 +570,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           )}
 
           {/* Grouped Navigation */}
-          <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2" aria-label="Navegação principal">
+          <nav className="flex-1 space-y-2.5 overflow-y-auto px-2.5 py-1.5" aria-label="Navegação principal">
             {NAV_GROUPS.map((group) => (
               <div key={group.label}>
                 <p
-                  className={`mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider ${
+                  className={`mb-1 px-2.5 text-[9.5px] font-semibold uppercase tracking-wider ${
                     isDualTone ? 'text-slate-400/80' : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
@@ -589,7 +589,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                         key={item.id}
                         type="button"
                         onClick={() => handleSelectNav(item.id)}
-                        className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all ${
+                        className={`group relative flex w-full items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-[12.5px] font-medium transition-all ${
                           active
                             ? isDualTone
                               ? 'lh-nav-active bg-brand-500 text-white shadow-sm'
@@ -654,17 +654,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Main area */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <header
-            className={`lh-topbar sticky z-20 flex flex-wrap items-center justify-between gap-3 backdrop-blur-xl ${
+            className={`lh-topbar sticky z-20 flex flex-nowrap items-center justify-between gap-2 backdrop-blur-xl ${
               isFloating
-                ? 'top-4 mx-4 mt-4 rounded-2xl border px-4 py-2.5 shadow-sm sm:mx-6 sm:px-5'
-                : 'top-0 border-b px-4 py-3 sm:px-6'
+                ? 'top-3 mx-3.5 mt-3 rounded-2xl border px-3.5 py-2 shadow-sm sm:mx-5'
+                : 'top-0 border-b px-3.5 py-2 sm:px-5'
             }`}
           >
-            <div className="flex flex-wrap items-center gap-1.5">
+            <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setSidebarOpen(true)}
-                className="lh-control-btn mr-1 p-2 lg:hidden"
+                className="lh-control-btn mr-1 shrink-0 p-1.5 lg:hidden"
                 aria-label="Abrir menu"
               >
                 <Menu className="h-4 w-4" />
@@ -674,7 +674,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {renderUtilities()}
           </header>
 
-          <main className="mx-auto w-full max-w-7xl flex-1 p-5 sm:p-7">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 sm:p-5">{children}</main>
         </div>
       </div>
 

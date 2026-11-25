@@ -14,10 +14,11 @@
       {
         "label": "main",
         "title": "LifeHub — Central de Vida",
-        "width": 1320,
-        "height": 840,
-        "minWidth": 960,
-        "minHeight": 640,
+        "width": 1160,
+        "height": 720,
+        "minWidth": 840,
+        "minHeight": 540,
+        "center": true,
         "resizable": true,
         "decorations": false,
         "shadow": true

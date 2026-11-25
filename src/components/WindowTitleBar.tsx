@@ -132,7 +132,7 @@ export const WindowTitleBar: React.FC = () => {
       <div
         data-tauri-drag-region
         onMouseDown={handleStartDrag}
-        className="lh-titlebar flex h-9 shrink-0 select-none items-center justify-between border-b px-3.5 text-xs"
+        className="lh-titlebar flex h-8 shrink-0 select-none items-center justify-between border-b px-3 text-xs"
       >
         <div className="group flex items-center gap-2">
           <button
@@ -288,7 +288,7 @@ export const WindowTitleBar: React.FC = () => {
       <div
         data-tauri-drag-region
         onMouseDown={handleStartDrag}
-        className="lh-titlebar flex h-9 shrink-0 select-none items-center justify-between border-b pl-3.5 text-xs"
+        className="lh-titlebar flex h-8 shrink-0 select-none items-center justify-between border-b pl-3 text-xs"
       >
         <div data-tauri-drag-region className="flex items-center gap-2.5 font-mono text-[11px]">
           <span className="inline-block h-2 w-2 rounded-sm bg-brand-500 shadow-[0_0_8px_rgb(var(--lh-brand-500))]" />
