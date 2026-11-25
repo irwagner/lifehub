@@ -55,7 +55,9 @@ import {
 import {
   askLifeHubAssistant,
   executeProposedAiAction,
+  loadAiChatHistory,
   loadGeminiAiConfig,
+  saveAiChatHistory,
   saveGeminiAiConfig,
   type AiChatMessage,
   type GeminiAiConfig,
@@ -140,7 +142,7 @@ export const MobileApp: React.FC = () => {
   const [aiOpen, setAiOpen] = useState(false);
   const [aiConfig, setAiConfig] = useState<GeminiAiConfig>(() => loadGeminiAiConfig());
   const [aiKeyInput, setAiKeyInput] = useState(() => loadGeminiAiConfig().apiKey);
-  const [aiMessages, setAiMessages] = useState<AiChatMessage[]>([]);
+  const [aiMessages, setAiMessages] = useState<AiChatMessage[]>(() => loadAiChatHistory());
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -480,12 +482,14 @@ export const MobileApp: React.FC = () => {
     try {
       const reply = await askLifeHubAssistant(db, aiConfig, aiMessages, userMsg.text);
       const executedIds: string[] = [];
+      const savedNotes: string[] = [];
       let savedNotice = '';
       if (aiConfig.autoExecuteActions && snapshot && reply.actions.length > 0) {
         for (const act of reply.actions) {
           try {
             savedNotice = await executeProposedAiAction(db, snapshot.settings, act);
             executedIds.push(act.id);
+            savedNotes.push(savedNotice);
           } catch (actErr) {
             showToast(actErr instanceof Error ? actErr.message : 'Erro ao salvar ação.', 'err');
           }
@@ -495,7 +499,7 @@ export const MobileApp: React.FC = () => {
           showToast(savedNotice || 'Lançamento salvo automaticamente!');
         }
       }
-      setAiMessages([
+      const nextMsgs: AiChatMessage[] = [
         ...nextHist,
         {
           id: `ma_${Date.now()}`,
@@ -504,10 +508,13 @@ export const MobileApp: React.FC = () => {
           modelUsed: reply.modelUsed,
           actions: reply.actions,
           executedActionIds: executedIds,
+          actionResultNotes: savedNotes,
           autoExecuted: executedIds.length > 0,
           createdAt: new Date().toISOString(),
         },
-      ]);
+      ];
+      setAiMessages(nextMsgs);
+      saveAiChatHistory(nextMsgs);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao consultar Gemini.', 'err');
     } finally {

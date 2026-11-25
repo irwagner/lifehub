@@ -2,7 +2,16 @@ import { z } from 'zod';
 import type { SqlExecutor } from '../db/types';
 import { createCalendarEvent, createTask } from '../repositories/calendarRepo';
 import { loadDashboardSnapshot } from '../repositories/dashboardRepo';
-import { createTransaction, listAccounts, listCategories } from '../repositories/financeRepo';
+import {
+  createRecurringRule,
+  createTransaction,
+  deleteTransaction,
+  listAccounts,
+  listCategories,
+  listRecurringRules,
+  listTransactions,
+  updateTransaction,
+} from '../repositories/financeRepo';
 import { createIdea } from '../repositories/ideasRepo';
 import { createWorkSession } from '../repositories/workRepo';
 import type { EventCategory, Settings, WorkPlatform } from '../types/domain';
@@ -11,7 +20,8 @@ import { formatBRL, formatNumber, todayISO } from '../utils/format';
 /**
  * Ordered strictly from BEST / MOST CAPABLE -> LIGHTEST / FALLBACK.
  * When `auto` is selected (default), the app starts at the top and falls back
- * down the chain automatically on quota (429), unavailable (404), or overload (503).
+ * down the chain automatically on quota (429), unavailable (404), overload (503),
+ * server error (500), or empty response (502).
  */
 export const ORDERED_GEMINI_FALLBACK_CHAIN = [
   'gemini-4-hydrogen',
@@ -44,6 +54,12 @@ export interface GeminiAiConfig {
   configVersion?: number;
 }
 
+export interface AiMemoryItem {
+  id: string;
+  fact: string;
+  createdAt: string;
+}
+
 export interface AiChatMessage {
   id: string;
   role: 'user' | 'assistant';
@@ -51,12 +67,17 @@ export interface AiChatMessage {
   modelUsed?: string;
   actions?: ProposedAiAction[];
   executedActionIds?: string[];
+  actionResultNotes?: string[];
   autoExecuted?: boolean;
   createdAt: string;
 }
 
 const AI_CONFIG_STORAGE_KEY = 'lifehub_gemini_ai_config_v1';
+const AI_CHAT_HISTORY_STORAGE_KEY = 'lifehub_gemini_chat_history_v1';
+const AI_MEMORY_STORAGE_KEY = 'lifehub_gemini_ai_memory_v1';
 const CURRENT_AI_CONFIG_VERSION = 2;
+const MAX_STORED_CHAT_MESSAGES = 40;
+const MAX_STORED_MEMORIES = 15;
 const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 
 const isoDate = /^\d{4}-\d{2}-\d{2}$/;
@@ -70,7 +91,6 @@ function parseFlexibleNumber(val: unknown): unknown {
     .replace(/\s+/g, '')
     .trim();
   if (!cleaned) return Number.NaN;
-  // Handle Brazilian formatting like "1.500,50" or "48,90"
   if (cleaned.includes(',') && cleaned.includes('.')) {
     return Number(cleaned.replace(/\./g, '').replace(',', '.'));
   }
@@ -84,7 +104,6 @@ function normalizeOptionalIsoDate(val: unknown): string | undefined {
   if (typeof val !== 'string') return undefined;
   const trimmed = val.trim();
   if (isoDate.test(trimmed)) return trimmed;
-  // Convert DD/MM/YYYY -> YYYY-MM-DD
   const brMatch = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (brMatch) {
     return `${brMatch[3]}-${brMatch[2]}-${brMatch[1]}`;
@@ -104,6 +123,18 @@ function normalizeTxType(val: unknown): unknown {
   return lower;
 }
 
+function normalizeStatus(val: unknown): unknown {
+  if (typeof val !== 'string') return val;
+  const lower = val.trim().toLowerCase();
+  if (['planned', 'previsto', 'pendente', 'agendado', 'futuro'].includes(lower)) {
+    return 'planned';
+  }
+  if (['realized', 'realizado', 'pago', 'recebido', 'efetivado'].includes(lower)) {
+    return 'realized';
+  }
+  return lower;
+}
+
 const flexiblePositiveNumber = z.preprocess(parseFlexibleNumber, z.number().positive());
 const flexibleNonNegativeNumber = z.preprocess(parseFlexibleNumber, z.number().min(0));
 const optionalNormalizedDate = z.preprocess(
@@ -113,6 +144,10 @@ const optionalNormalizedDate = z.preprocess(
 const nullableNormalizedDate = z.preprocess(
   (v) => (v === null || v === '' ? null : normalizeOptionalIsoDate(v) ?? null),
   z.string().regex(isoDate).nullable().optional(),
+);
+const optionalStatus = z.preprocess(
+  (v) => (v === undefined || v === null || v === '' ? undefined : normalizeStatus(v)),
+  z.enum(['realized', 'planned']).optional(),
 );
 
 const proposedActionSchema = z.discriminatedUnion('type', [
@@ -124,9 +159,62 @@ const proposedActionSchema = z.discriminatedUnion('type', [
       description: z.string().min(1).max(140),
       amount: flexiblePositiveNumber,
       date: optionalNormalizedDate,
+      due_date: nullableNormalizedDate,
       category_id: z.string().nullable().optional(),
       source_type: z.enum(['salario', 'aplicativos', 'servicos_ti', 'outros']).optional(),
-      status: z.enum(['realized', 'planned']).optional(),
+      status: optionalStatus,
+      notes: z.string().max(400).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('update_transaction'),
+    summary: z.string().min(1).max(160),
+    payload: z.object({
+      transaction_id: z.string().optional(),
+      match_description: z.string().optional(),
+      txType: z.preprocess(
+        (v) => (v === undefined ? undefined : normalizeTxType(v)),
+        z.enum(['income', 'expense']).optional(),
+      ),
+      description: z.string().min(1).max(140).optional(),
+      amount: z.preprocess(
+        (v) => (v === undefined ? undefined : parseFlexibleNumber(v)),
+        z.number().positive().optional(),
+      ),
+      date: optionalNormalizedDate,
+      due_date: nullableNormalizedDate,
+      category_id: z.string().nullable().optional(),
+      source_type: z.enum(['salario', 'aplicativos', 'servicos_ti', 'outros']).optional(),
+      status: optionalStatus,
+      notes: z.string().max(400).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('delete_transaction'),
+    summary: z.string().min(1).max(160),
+    payload: z.object({
+      transaction_id: z.string().optional(),
+      match_description: z.string().optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('create_recurring_rule'),
+    summary: z.string().min(1).max(160),
+    payload: z.object({
+      txType: z.preprocess(normalizeTxType, z.enum(['income', 'expense'])),
+      description: z.string().min(1).max(140),
+      amount: flexiblePositiveNumber,
+      day_of_month: z.preprocess(parseFlexibleNumber, z.number().int().min(1).max(31)),
+      category_id: z.string().nullable().optional(),
+      source_type: z.enum(['salario', 'aplicativos', 'servicos_ti', 'outros']).optional(),
+      notes: z.string().max(400).optional(),
+    }),
+  }),
+  z.object({
+    type: z.literal('save_memory'),
+    summary: z.string().min(1).max(160),
+    payload: z.object({
+      fact: z.string().min(3).max(200),
     }),
   }),
   z.object({
@@ -211,7 +299,6 @@ export function loadGeminiAiConfig(): GeminiAiConfig {
     const raw = localStorage.getItem(AI_CONFIG_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as Partial<GeminiAiConfig>;
-      // Migrate v1 default ('gemini-3.5-flash-lite') to 'auto' (best-first order)
       const isLegacyDefault =
         (parsed.configVersion ?? 1) < CURRENT_AI_CONFIG_VERSION &&
         parsed.model === 'gemini-3.5-flash-lite';
@@ -251,14 +338,99 @@ export function saveGeminiAiConfig(cfg: GeminiAiConfig): void {
   }
 }
 
+export function loadAiChatHistory(): AiChatMessage[] {
+  try {
+    const raw = localStorage.getItem(AI_CHAT_HISTORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.slice(-MAX_STORED_CHAT_MESSAGES) as AiChatMessage[];
+    }
+  } catch {
+    // ignore corrupted storage
+  }
+  return [];
+}
+
+export function saveAiChatHistory(messages: AiChatMessage[]): void {
+  try {
+    localStorage.setItem(
+      AI_CHAT_HISTORY_STORAGE_KEY,
+      JSON.stringify(messages.slice(-MAX_STORED_CHAT_MESSAGES)),
+    );
+  } catch {
+    // ignore storage quota errors
+  }
+}
+
+export function clearAiChatHistory(): void {
+  try {
+    localStorage.removeItem(AI_CHAT_HISTORY_STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function loadAiMemory(): AiMemoryItem[] {
+  try {
+    const raw = localStorage.getItem(AI_MEMORY_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed
+        .filter(
+          (item): item is AiMemoryItem =>
+            Boolean(item && typeof item.id === 'string' && typeof item.fact === 'string'),
+        )
+        .slice(-MAX_STORED_MEMORIES);
+    }
+  } catch {
+    // ignore
+  }
+  return [];
+}
+
+export function addAiMemoryFact(rawFact: string): AiMemoryItem {
+  const fact = rawFact.trim().slice(0, 200);
+  const current = loadAiMemory();
+  const normalized = fact.toLowerCase();
+  const existing = current.find((m) => m.fact.toLowerCase() === normalized);
+  if (existing) return existing;
+
+  const nextItem: AiMemoryItem = {
+    id: `mem_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    fact,
+    createdAt: new Date().toISOString(),
+  };
+  const updated = [...current, nextItem].slice(-MAX_STORED_MEMORIES);
+  try {
+    localStorage.setItem(AI_MEMORY_STORAGE_KEY, JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+  return nextItem;
+}
+
+export function removeAiMemoryFact(id: string): AiMemoryItem[] {
+  const updated = loadAiMemory().filter((m) => m.id !== id);
+  try {
+    localStorage.setItem(AI_MEMORY_STORAGE_KEY, JSON.stringify(updated));
+  } catch {
+    // ignore
+  }
+  return updated;
+}
+
 export async function buildCompactLifeHubContext(
   db: SqlExecutor,
   shareFinancialContext: boolean,
 ): Promise<string> {
   const today = todayISO();
-  const [snap, categories] = await Promise.all([
+  const [snap, categories, recentTxs, recurring] = await Promise.all([
     loadDashboardSnapshot(db, today),
     listCategories(db),
+    listTransactions(db),
+    listRecurringRules(db),
   ]);
 
   const money = (val: number) => (shareFinancialContext ? formatBRL(val) : '[OCULTO]');
@@ -285,6 +457,32 @@ export async function buildCompactLifeHubContext(
 
   const catsLine = categories.map((c) => `${c.id}=${c.name}(${c.kind})`).join(', ');
 
+  const recentTxLines =
+    recentTxs.length > 0
+      ? recentTxs
+          .slice(0, 10)
+          .map(
+            (tx) =>
+              `id=${tx.id} | ${tx.date} | ${tx.type} | ${tx.status} | ${money(tx.amount)} | ${tx.description}`,
+          )
+          .join('\n  ')
+      : 'nenhuma';
+
+  const recurringLines =
+    recurring.length > 0
+      ? recurring
+          .slice(0, 10)
+          .map(
+            (r) =>
+              `dia ${String(r.day_of_month).padStart(2, '0')} | ${r.type} | ${money(r.amount)} | ${r.description}`,
+          )
+          .join('; ')
+      : 'nenhuma';
+
+  const memories = loadAiMemory();
+  const memoryLine =
+    memories.length > 0 ? memories.map((m) => `- ${m.fact}`).join('\n  ') : 'nenhuma salva ainda';
+
   return [
     `Data de hoje: ${today}`,
     `Usuário: ${snap.settings.user_name || 'Usuário'} | Modo rotina: ${snap.settings.routine_mode} (${snap.settings.work_days_per_week}d/sem)`,
@@ -295,6 +493,9 @@ export async function buildCompactLifeHubContext(
     `Agenda de hoje: ${eventsLine}`,
     `Tarefas pendentes: ${tasksLine}`,
     `Hábitos semana: ${habitsLine}`,
+    `Regras recorrentes mensais: ${recurringLines}`,
+    `Últimas transações no banco (use o id para corrigir/apagar quando pedido):\n  ${recentTxLines}`,
+    `Memória persistente sobre o usuário:\n  ${memoryLine}`,
     `Categorias válidas (use estes IDs ao sugerir transações): ${catsLine}`,
   ].join('\n');
 }
@@ -324,12 +525,23 @@ function tryParseActionsFromJsonString(rawJson: string): ProposedAiAction[] {
   return found;
 }
 
+const KNOWN_ACTION_KEYWORDS = [
+  'create_transaction',
+  'update_transaction',
+  'delete_transaction',
+  'create_recurring_rule',
+  'save_memory',
+  'create_work_session',
+  'create_task',
+  'create_event',
+  'create_idea',
+];
+
 export function extractProposedActions(rawText: string): {
   cleanText: string;
   actions: ProposedAiAction[];
 } {
   const actions: ProposedAiAction[] = [];
-  // Primary: ```lifehub_actions or ```lifehub_action
   const primaryRegex = /```lifehub_actions?\s*([\s\S]*?)```/gi;
   let workingText = rawText.replace(primaryRegex, (_full, inner: string) => {
     try {
@@ -340,17 +552,10 @@ export function extractProposedActions(rawText: string): {
     return '';
   });
 
-  // Fallback: if LLM wrote ```json containing LifeHub action objects
   if (actions.length === 0) {
     const jsonFenceRegex = /```json\s*([\s\S]*?)```/gi;
     workingText = workingText.replace(jsonFenceRegex, (full, inner: string) => {
-      if (
-        !inner.includes('create_transaction') &&
-        !inner.includes('create_work_session') &&
-        !inner.includes('create_task') &&
-        !inner.includes('create_event') &&
-        !inner.includes('create_idea')
-      ) {
+      if (!KNOWN_ACTION_KEYWORDS.some((kw) => inner.includes(kw))) {
         return full;
       }
       try {
@@ -371,34 +576,47 @@ export function extractProposedActions(rawText: string): {
 }
 
 function buildSystemInstruction(contextSummary: string): string {
-  return `Você é o Assistente IA pessoal integrado ao LifeHub (app desktop e mobile em português do Brasil).
+  return `Você é o Assistente IA pessoal integrado ao LifeHub (app desktop e mobile em português do Brasil), com memória persistente leve e capacidade de criar, corrigir e organizar registros reais no SQLite do usuário.
+
 Regras obrigatórias:
 - Responda em português do Brasil, de forma prática, direta e em parágrafos curtos ou listas.
 - NUNCA mencione nem sugira iFood (apenas Uber Moto e 99Moto para aplicativos).
 - Respeite sempre os fins de semana com o filho e o equilíbrio entre trabalho, saúde e estudos de TI.
-- REGRA DE LANÇAMENTO AUTOMÁTICO: SEMPRE que o usuário relatar qualquer ganho, recebimento, parcela, salário, gasto, despesa, corrida/jornada Uber/99, nova tarefa, compromisso ou ideia — MESMO em frase natural/informal sem dizer explicitamente "registre" (exemplos: "ganhei 1200 da primeira parcela hj", "recebi 350 de freela", "paguei 85 de internet", "gastei 35 de gasolina", "rodei 80km e fiz 190", "tenho médico amanhã às 15h") — você DEVE incluir ao final UM bloco \`\`\`lifehub_actions com um array JSON válido para lançar no banco do usuário!
-- Use SEMPRE número puro em JSON para valores monetários (ex: 1200 ou 48.5, sem "R$").
-- Quando o usuário disser "hoje" ou "hj", use exatamente a Data de hoje informada no contexto abaixo (formato YYYY-MM-DD).
-- Para ganhos/recebimentos/salário/13º/parcela recebida, use "txType":"income" e "status":"realized" (use "source_type":"salario" para salário/13º/parcela CLT, "aplicativos" para Uber/99, "servicos_ti" para freela TI, ou "outros").
+- REGRA DE LANÇAMENTO E CORREÇÃO:
+  1) Quando o usuário relatar ganho/recebimento ou gasto JÁ PAGO/RECEBIDO hoje (ex: "recebi 1514,79 do 13º hoje", "gastei 35 de gasolina"), emita \`create_transaction\` com \`"status":"realized"\`.
+  2) Quando o usuário informar um **gasto fixo mensal / conta recorrente** SEM dizer que já pagou hoje (ex: "tenho um gasto fixo mensal de 620 de pensão", "pago internet dia 10"), emita \`create_recurring_rule\` (regra mensal) e, se criar a próxima fatura, use \`"status":"planned"\` (Previsto — NÃO desconta do saldo atual!).
+  3) Quando o usuário CORRIGIR algo que acabou de ser lançado (ex: "não, ainda não saiu, só sai dia 01", "errei o valor, era 500", "apaga esse lançamento"), use \`update_transaction\` (com o \`transaction_id\` da lista "Últimas transações no banco") ou \`delete_transaction\` para corrigir imediatamente — NUNCA crie duplicata!
+  4) Quando o usuário revelar uma preferência/regra duradoura de rotina ou pagamentos (ex: "faço meus pagamentos todo dia 01", "minha meta é juntar X"), salve uma nota curta com \`save_memory\` (sem repetir fatos que já estão na Memória persistente).
+- Use SEMPRE número puro em JSON para valores (ex: 1514.79 ou 620, sem "R$").
+- Quando o usuário disser "hoje"/"hj", use a Data de hoje do contexto (YYYY-MM-DD).
 
-Formatos permitidos no bloco \`\`\`lifehub_actions:
-1) Receita (ex. ganhei 1200 da primeira parcela hj):
-{"type":"create_transaction","summary":"Receita: Primeira parcela R$ 1.200,00","payload":{"txType":"income","description":"Primeira parcela","amount":1200,"date":"YYYY-MM-DD","category_id":"cat_salario","source_type":"salario","status":"realized"}}
-2) Despesa:
-{"type":"create_transaction","summary":"Despesa: Mercado R$ 48,00","payload":{"txType":"expense","description":"Mercado","amount":48,"date":"YYYY-MM-DD","category_id":"cat_alimentacao","source_type":"outros","status":"realized"}}
-3) Jornada Uber/99:
+Formatos permitidos no bloco \`\`\`lifehub_actions (array JSON válido, sem comentários):
+1) Criar transação:
+{"type":"create_transaction","summary":"Receita: 1ª parcela 13º R$ 1.514,79","payload":{"txType":"income","description":"1ª parcela 13º salário","amount":1514.79,"date":"YYYY-MM-DD","category_id":"cat_salario","source_type":"salario","status":"realized"}}
+2) Corrigir transação existente (mudar status planned/realized, data, valor ou descrição):
+{"type":"update_transaction","summary":"Corrigir Pensão para Previsto em 01/12","payload":{"transaction_id":"tx_xxx","match_description":"Pensão","status":"planned","date":"2026-12-01","due_date":"2026-12-01"}}
+3) Apagar transação errada:
+{"type":"delete_transaction","summary":"Remover lançamento duplicado","payload":{"transaction_id":"tx_xxx","match_description":"Pensão"}}
+4) Criar gasto/receita fixa mensal (recorrência):
+{"type":"create_recurring_rule","summary":"Recorrência mensal: Pensão filho R$ 620 (dia 01)","payload":{"txType":"expense","description":"Pensão do filho","amount":620,"day_of_month":1,"category_id":"cat_filho","source_type":"outros"}}
+5) Salvar memória persistente leve:
+{"type":"save_memory","summary":"Lembrar: pagamentos fixos no dia 01","payload":{"fact":"Pagamentos fixos mensais são feitos no dia 01 de cada mês."}}
+6) Jornada Uber/99:
 {"type":"create_work_session","summary":"Uber Moto: R$ 210 bruto · 95 km · Comb. R$ 35","payload":{"platform":"uber_moto","date":"YYYY-MM-DD","start_time":"07:00","end_time":"12:30","gross_amount":210,"km_total":95,"fuel_cost":35,"syncFinance":true,"notes":""}}
-4) Tarefa:
+7) Tarefa:
 {"type":"create_task","summary":"Tarefa: Revisar currículo TI","payload":{"title":"Revisar currículo TI","priority":"high","due_date":"YYYY-MM-DD","category":"carreira"}}
-5) Evento:
+8) Evento:
 {"type":"create_event","summary":"Evento: Estudar Redes 19:00-20:30","payload":{"title":"Estudar Redes","category":"estudos","date":"YYYY-MM-DD","start_time":"19:00","end_time":"20:30"}}
-6) Ideia:
+9) Ideia:
 {"type":"create_idea","summary":"Ideia: Script backup automático","payload":{"title":"Script backup automático","description":"","tags":"ti,automacao","impact":4,"effort":2}}
-
-Não inclua \`\`\`lifehub_actions quando o usuário estiver apenas fazendo uma pergunta, pedindo resumo ou análise sem relatar um novo lançamento.
 
 Contexto atual do banco local do usuário:
 ${contextSummary}`;
+}
+
+interface GeminiPart {
+  text?: string;
+  thought?: boolean;
 }
 
 async function callGeminiModel(
@@ -417,7 +635,7 @@ async function callGeminiModel(
       contents,
       generationConfig: {
         temperature: 0.35,
-        maxOutputTokens: 1200,
+        maxOutputTokens: 2048,
       },
     }),
   });
@@ -434,18 +652,24 @@ async function callGeminiModel(
   }
 
   const data = (await res.json()) as {
-    candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    candidates?: Array<{ content?: { parts?: GeminiPart[] } }>;
   };
-  const text =
-    data.candidates?.[0]?.content?.parts
-      ?.map((p) => p.text ?? '')
-      .join('')
-      .trim() ?? '';
+  const allParts = data.candidates?.[0]?.content?.parts ?? [];
+  const visibleParts = allParts.filter((p) => !p.thought && typeof p.text === 'string' && p.text.trim());
+  const sourceParts = visibleParts.length > 0 ? visibleParts : allParts;
+  const text = sourceParts
+    .map((p) => p.text ?? '')
+    .join('')
+    .trim();
 
   if (!text) {
     return { ok: false, status: 502, message: 'O modelo retornou uma resposta vazia.' };
   }
   return { ok: true, text };
+}
+
+function isFallbackableStatus(status: number): boolean {
+  return status === 429 || status === 404 || status === 503 || status === 502 || status === 500;
 }
 
 export async function testGeminiConnection(
@@ -472,11 +696,24 @@ export async function testGeminiConnection(
       return { ok: true, modelUsed: modelId, reply: res.text };
     }
     lastErr = `${modelId}: ${res.message}`;
-    if (res.status !== 404 && res.status !== 429 && res.status !== 503) {
+    if (!isFallbackableStatus(res.status)) {
       break;
     }
   }
   throw new Error(`Falha ao conectar no Gemini (${lastErr}).`);
+}
+
+function formatHistoryTurnForModel(m: AiChatMessage): string {
+  if (m.role !== 'assistant') return m.text;
+  const notes = m.actionResultNotes?.filter(Boolean) ?? [];
+  if (notes.length > 0) {
+    return `${m.text}\n[Ações executadas no banco: ${notes.join(' | ')}]`;
+  }
+  if (m.actions && m.actions.length > 0) {
+    const summaries = m.actions.map((a) => a.summary).join(' | ');
+    return `${m.text}\n[Ações sugeridas: ${summaries}]`;
+  }
+  return m.text;
 }
 
 export async function askLifeHubAssistant(
@@ -494,9 +731,9 @@ export async function askLifeHubAssistant(
   const contextSummary = await buildCompactLifeHubContext(db, config.shareFinancialContext);
   const systemInstruction = buildSystemInstruction(contextSummary);
 
-  const recentHistory = history.slice(-6).map((m) => ({
+  const recentHistory = history.slice(-12).map((m) => ({
     role: (m.role === 'assistant' ? 'model' : 'user') as 'user' | 'model',
-    parts: [{ text: m.text }],
+    parts: [{ text: formatHistoryTurnForModel(m) }],
   }));
   const contents = [...recentHistory, { role: 'user' as const, parts: [{ text: userPrompt.trim() }] }];
 
@@ -509,16 +746,34 @@ export async function askLifeHubAssistant(
       const { cleanText, actions } = extractProposedActions(res.text);
       return { text: cleanText, actions, modelUsed: modelId };
     }
-    lastErr = res.message;
-    // Automatic fallback from best -> lighter models on rate-limit (429), unavailable (404), or overload (503)
-    if (res.status !== 429 && res.status !== 404 && res.status !== 503) {
+    lastErr = `${modelId}: ${res.message}`;
+    // Automatic fallback from best -> lighter models on 429, 404, 503, 502 (empty), or 500
+    if (!isFallbackableStatus(res.status)) {
       throw new Error(`Erro Gemini API: ${res.message}`);
     }
   }
 
   throw new Error(
-    `Limite de cota (429) ou indisponibilidade temporária nos modelos Gemini. Detalhe: ${lastErr}`,
+    `Não foi possível obter resposta dos modelos Gemini no momento. Detalhe: ${lastErr}`,
   );
+}
+
+async function resolveTargetTransaction(
+  db: SqlExecutor,
+  transactionId?: string,
+  matchDescription?: string,
+) {
+  const all = await listTransactions(db);
+  if (transactionId) {
+    const exact = all.find((t) => t.id === transactionId.trim());
+    if (exact) return exact;
+  }
+  if (matchDescription && matchDescription.trim()) {
+    const needle = matchDescription.trim().toLowerCase();
+    const matched = all.find((t) => t.description.toLowerCase().includes(needle));
+    if (matched) return matched;
+  }
+  return null;
 }
 
 export async function executeProposedAiAction(
@@ -545,10 +800,89 @@ export async function executeProposedAiAction(
       description: action.payload.description,
       amount: action.payload.amount,
       date: action.payload.date ?? today,
+      due_date: action.payload.due_date ?? null,
       status: action.payload.status ?? 'realized',
+      notes: action.payload.notes ?? '',
     });
     const first = created[0];
-    return `Transação salva no Financeiro: ${first?.description ?? action.payload.description} (${formatBRL(first?.amount ?? action.payload.amount)}).`;
+    const statusLabel = (first?.status ?? action.payload.status) === 'planned' ? 'Previsto' : 'Realizado';
+    return `Transação salva [${first?.id ?? 'ok'}] (${statusLabel}): ${first?.description ?? action.payload.description} (${formatBRL(first?.amount ?? action.payload.amount)}).`;
+  }
+
+  if (action.type === 'update_transaction') {
+    const target = await resolveTargetTransaction(
+      db,
+      action.payload.transaction_id,
+      action.payload.match_description,
+    );
+    if (!target) {
+      throw new Error('Não encontrei o lançamento original para corrigir no Financeiro.');
+    }
+    const categories = await listCategories(db);
+    const nextType = action.payload.txType ?? (target.type === 'transfer' ? 'expense' : target.type);
+    const requestedCatId = action.payload.category_id;
+    const nextCatId =
+      requestedCatId !== undefined
+        ? requestedCatId && categories.some((c) => c.id === requestedCatId)
+          ? requestedCatId
+          : target.category_id
+        : target.category_id;
+
+    const updated = await updateTransaction(db, target.id, {
+      account_id: target.account_id,
+      destination_account_id: target.destination_account_id,
+      category_id: nextCatId,
+      type: nextType,
+      source_type: action.payload.source_type ?? target.source_type,
+      description: action.payload.description ?? target.description,
+      amount: action.payload.amount ?? target.amount,
+      date: action.payload.date ?? target.date,
+      due_date: action.payload.due_date !== undefined ? action.payload.due_date : target.due_date,
+      status: action.payload.status ?? target.status,
+      notes: action.payload.notes ?? target.notes,
+    });
+    const statusLabel = updated.status === 'planned' ? 'Previsto' : 'Realizado';
+    return `Lançamento corrigido [${updated.id}]: ${updated.description} → ${statusLabel} em ${updated.date} (${formatBRL(updated.amount)}).`;
+  }
+
+  if (action.type === 'delete_transaction') {
+    const target = await resolveTargetTransaction(
+      db,
+      action.payload.transaction_id,
+      action.payload.match_description,
+    );
+    if (!target) {
+      throw new Error('Não encontrei o lançamento para remover.');
+    }
+    await deleteTransaction(db, target.id);
+    return `Lançamento removido [${target.id}]: ${target.description} (${formatBRL(target.amount)}).`;
+  }
+
+  if (action.type === 'create_recurring_rule') {
+    const [accounts, categories] = await Promise.all([listAccounts(db), listCategories(db)]);
+    const targetAcc = accounts[0]?.id ?? 'acc_principal';
+    const requestedCatId = action.payload.category_id ?? null;
+    const validCatId =
+      requestedCatId && categories.some((c) => c.id === requestedCatId)
+        ? requestedCatId
+        : categories.find((c) => c.kind === action.payload.txType)?.id ?? null;
+
+    const rule = await createRecurringRule(db, {
+      account_id: targetAcc,
+      category_id: validCatId,
+      type: action.payload.txType,
+      source_type: action.payload.source_type ?? 'outros',
+      description: action.payload.description,
+      amount: action.payload.amount,
+      day_of_month: action.payload.day_of_month,
+      notes: action.payload.notes ?? '',
+    });
+    return `Recorrência mensal salva: ${rule.description} (${formatBRL(rule.amount)} · dia ${String(rule.day_of_month).padStart(2, '0')}).`;
+  }
+
+  if (action.type === 'save_memory') {
+    const item = addAiMemoryFact(action.payload.fact);
+    return `Memória salva: "${item.fact}"`;
   }
 
   if (action.type === 'create_work_session') {

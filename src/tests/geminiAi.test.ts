@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createInMemoryTestDatabase } from '../db/client';
 import { listCalendarEvents, listTasks } from '../repositories/calendarRepo';
-import { listTransactions } from '../repositories/financeRepo';
+import { listRecurringRules, listTransactions } from '../repositories/financeRepo';
 import { listIdeas } from '../repositories/ideasRepo';
 import { getSettings } from '../repositories/settingsRepo';
 import { listWorkSessions } from '../repositories/workRepo';
@@ -11,6 +11,8 @@ import {
   buildModelChain,
   executeProposedAiAction,
   extractProposedActions,
+  loadAiMemory,
+  removeAiMemoryFact,
   type GeminiAiConfig,
 } from '../services/geminiAi';
 
@@ -166,6 +168,91 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     expect(calledUrls[0]).toContain('gemini-4-hydrogen:');
     expect(calledUrls[1]).toContain('gemini-3.8-flash:');
 
+    await db.close();
+  });
+
+  it('corrige lançamento anterior (Realizado -> Previsto dia 01), cria recorrência fixa, salva memória e faz fallback em resposta vazia', async () => {
+    const db = await createInMemoryTestDatabase();
+    const settings = await getSettings(db);
+
+    // 1. Initial creation (13º + Pensão wrongly marked realized today)
+    const initial = extractProposedActions(`\`\`\`lifehub_actions
+[
+  {"type":"create_transaction","summary":"Receita 13º","payload":{"txType":"income","description":"1ª Parcela 13º Salário","amount":1514.79,"date":"2026-11-25","status":"realized"}},
+  {"type":"create_transaction","summary":"Pensão","payload":{"txType":"expense","description":"Pensão do filho","amount":620,"date":"2026-11-25","status":"realized"}}
+]
+\`\`\``);
+    for (const act of initial.actions) {
+      await executeProposedAiAction(db, settings, act);
+    }
+
+    const beforeTxs = await listTransactions(db);
+    const pensao = beforeTxs.find((t) => t.description.includes('Pensão'));
+    expect(pensao?.status).toBe('realized');
+
+    // 2. Follow-up correction: change Pensão to planned on 2026-12-01 + recurring rule day 01 + save memory
+    const correction = extractProposedActions(`\`\`\`lifehub_actions
+[
+  {"type":"update_transaction","summary":"Mover pensão para previsto dia 01","payload":{"transaction_id":"${pensao!.id}","status":"planned","date":"2026-12-01","due_date":"2026-12-01"}},
+  {"type":"create_recurring_rule","summary":"Recorrência pensão dia 01","payload":{"txType":"expense","description":"Pensão do filho","amount":620,"day_of_month":1}},
+  {"type":"save_memory","summary":"Lembrar dia de pagamento","payload":{"fact":"Pagamentos fixos mensais saem sempre no dia 01."}}
+]
+\`\`\``);
+
+    for (const act of correction.actions) {
+      await executeProposedAiAction(db, settings, act);
+    }
+
+    const afterTxs = await listTransactions(db);
+    const updatedPensao = afterTxs.find((t) => t.id === pensao!.id);
+    expect(updatedPensao?.status).toBe('planned');
+    expect(updatedPensao?.date).toBe('2026-12-01');
+
+    const rules = await listRecurringRules(db);
+    expect(rules).toHaveLength(1);
+    expect(rules[0].day_of_month).toBe(1);
+    expect(rules[0].amount).toBe(620);
+
+    const ctxAfter = await buildCompactLifeHubContext(db, true);
+    expect(ctxAfter).toContain(pensao!.id);
+    expect(ctxAfter).toContain('dia 01');
+
+    // 3. Fallback on empty response (HTTP 200 with empty parts -> internal 502 -> next model!)
+    let callCount = 0;
+    const mockEmptyThenOk = (async () => {
+      callCount++;
+      if (callCount === 1) {
+        return new Response(
+          JSON.stringify({ candidates: [{ content: { parts: [{ thought: true, text: '' }] } }] }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: 'Corrigido para dia 01!' }] } }],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    const reply = await askLifeHubAssistant(
+      db,
+      {
+        apiKey: 'test-key',
+        model: 'gemini-3.8-flash',
+        shareFinancialContext: true,
+        autoExecuteActions: true,
+      },
+      [],
+      'não, só sai dia 01',
+      mockEmptyThenOk,
+    );
+    expect(callCount).toBe(2);
+    expect(reply.modelUsed).toBe('gemini-4-hydrogen');
+    expect(reply.text).toContain('Corrigido');
+
+    // Clean up memory created during test
+    for (const m of loadAiMemory()) removeAiMemoryFact(m.id);
     await db.close();
   });
 });

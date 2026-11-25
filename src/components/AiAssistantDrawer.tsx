@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
+  Brain,
   CheckCircle2,
   Eye,
   EyeOff,
@@ -12,10 +13,16 @@ import {
 import { useApp } from '../context/AppContext';
 import {
   askLifeHubAssistant,
+  clearAiChatHistory,
   executeProposedAiAction,
+  loadAiChatHistory,
+  loadAiMemory,
   loadGeminiAiConfig,
+  removeAiMemoryFact,
+  saveAiChatHistory,
   saveGeminiAiConfig,
   type AiChatMessage,
+  type AiMemoryItem,
   type GeminiAiConfig,
   type ProposedAiAction,
 } from '../services/geminiAi';
@@ -35,7 +42,9 @@ export const AiAssistantDrawer: React.FC<{
   const [config, setConfig] = useState<GeminiAiConfig>(() => loadGeminiAiConfig());
   const [keyDraft, setKeyDraft] = useState(config.apiKey);
   const [showKey, setShowKey] = useState(false);
-  const [messages, setMessages] = useState<AiChatMessage[]>([]);
+  const [messages, setMessages] = useState<AiChatMessage[]>(() => loadAiChatHistory());
+  const [memories, setMemories] = useState<AiMemoryItem[]>(() => loadAiMemory());
+  const [showMemory, setShowMemory] = useState(false);
   const [prompt, setPrompt] = useState('');
   const [loading, setLoading] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -45,8 +54,13 @@ export const AiAssistantDrawer: React.FC<{
       const fresh = loadGeminiAiConfig();
       setConfig(fresh);
       setKeyDraft(fresh.apiKey);
+      setMemories(loadAiMemory());
     }
   }, [open]);
+
+  useEffect(() => {
+    saveAiChatHistory(messages);
+  }, [messages]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -120,6 +134,7 @@ export const AiAssistantDrawer: React.FC<{
           }
         }
         if (executedIds.length > 0) {
+          setMemories(loadAiMemory());
           bumpDataVersion();
           notify(savedSummaries[0] ?? 'Lançamento salvo automaticamente no LifeHub!');
         }
@@ -132,6 +147,7 @@ export const AiAssistantDrawer: React.FC<{
         modelUsed: reply.modelUsed,
         actions: reply.actions,
         executedActionIds: executedIds,
+        actionResultNotes: savedSummaries,
         autoExecuted: executedIds.length > 0,
         createdAt: new Date().toISOString(),
       };
@@ -159,10 +175,15 @@ export const AiAssistantDrawer: React.FC<{
       setMessages((prev) =>
         prev.map((m) =>
           m.id === msgId
-            ? { ...m, executedActionIds: [...(m.executedActionIds ?? []), action.id] }
+            ? {
+                ...m,
+                executedActionIds: [...(m.executedActionIds ?? []), action.id],
+                actionResultNotes: [...(m.actionResultNotes ?? []), doneText],
+              }
             : m,
         ),
       );
+      setMemories(loadAiMemory());
       bumpDataVersion();
       notify(doneText);
     } catch (err) {
@@ -200,11 +221,25 @@ export const AiAssistantDrawer: React.FC<{
           </div>
 
           <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setShowMemory((v) => !v)}
+              title="Memória persistente do Assistente"
+              className={`lh-control-btn inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold ${
+                showMemory ? 'border-brand-500 text-brand-500' : 'opacity-80 hover:opacity-100'
+              }`}
+            >
+              <Brain className="h-3.5 w-3.5" />
+              <span>{memories.length}</span>
+            </button>
             {messages.length > 0 && (
               <button
                 type="button"
-                onClick={() => setMessages([])}
-                title="Limpar conversa"
+                onClick={() => {
+                  setMessages([]);
+                  clearAiChatHistory();
+                }}
+                title="Limpar conversa salva"
                 className="lh-control-btn p-1.5 opacity-75 hover:opacity-100"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -251,6 +286,47 @@ export const AiAssistantDrawer: React.FC<{
             </label>
           </div>
         </div>
+
+        {/* Collapsible Lightweight Persistent Memory Panel */}
+        {showMemory && (
+          <div
+            className="border-b bg-brand-500/[0.04] px-4 py-2.5 text-[11px]"
+            style={{ borderColor: 'var(--lh-card-border)' }}
+          >
+            <div className="mb-1.5 flex items-center justify-between font-semibold">
+              <span className="inline-flex items-center gap-1.5">
+                <Brain className="h-3.5 w-3.5 text-brand-500" />
+                Memória Persistente ({memories.length}/15)
+              </span>
+              <span className="text-[10px] font-normal opacity-65">Salva localmente</span>
+            </div>
+            {memories.length === 0 ? (
+              <p className="opacity-70">
+                Nenhuma memória salva ainda. Quando você contar regras fixas (ex.: &ldquo;faço pagamentos dia 01&rdquo;), eu guardo aqui automaticamente.
+              </p>
+            ) : (
+              <ul className="max-h-32 space-y-1 overflow-y-auto">
+                {memories.map((mem) => (
+                  <li
+                    key={mem.id}
+                    className="flex items-start justify-between gap-2 rounded-lg border px-2 py-1"
+                    style={{ borderColor: 'var(--lh-card-border)' }}
+                  >
+                    <span className="leading-snug">{mem.fact}</span>
+                    <button
+                      type="button"
+                      onClick={() => setMemories(removeAiMemoryFact(mem.id))}
+                      aria-label="Esquecer memória"
+                      className="shrink-0 opacity-60 hover:text-rose-500 hover:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Body */}
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
