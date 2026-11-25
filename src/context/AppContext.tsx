@@ -1,7 +1,14 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { getDatabase } from '../db/client';
 import type { SqlExecutor } from '../db/types';
 import { getSettings, updateSettings } from '../repositories/settingsRepo';
+import {
+  AutoSyncController,
+  isCloudSyncReady,
+  loadCloudSyncConfig,
+  syncDatabaseWithCloud,
+  type AutoSyncStatus,
+} from '../services/cloudSync';
 import { getSkinDefinition } from '../services/skins';
 import type { Settings } from '../types/domain';
 
@@ -40,11 +47,13 @@ interface AppContextValue {
   quickAction: QuickActionType;
   openQuickAction: (action: QuickActionType) => void;
   dataVersion: number;
-  bumpDataVersion: () => void;
+  bumpDataVersion: (options?: { skipAutoSync?: boolean }) => void;
   reloadSettings: () => Promise<void>;
   patchSettings: (patch: Partial<Omit<Settings, 'id' | 'updated_at'>>) => Promise<void>;
   notify: (text: string, kind?: 'success' | 'error' | 'info') => void;
   toasts: ToastMessage[];
+  autoSyncStatus: AutoSyncStatus;
+  triggerCloudSync: (options?: { manual?: boolean }) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -58,6 +67,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [quickAction, setQuickAction] = useState<QuickActionType>(null);
   const [dataVersion, setDataVersion] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [autoSyncStatus, setAutoSyncStatus] = useState<AutoSyncStatus>('idle');
+
+  const autoSyncRef = useRef<AutoSyncController | null>(null);
+  const lastFocusSyncAtRef = useRef(0);
 
   const notify = useCallback((text: string, kind: 'success' | 'error' | 'info' = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -67,8 +80,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 3800);
   }, []);
 
-  const bumpDataVersion = useCallback(() => {
+  const bumpDataVersion = useCallback((options?: { skipAutoSync?: boolean }) => {
     setDataVersion((v) => v + 1);
+    if (!options?.skipAutoSync) {
+      autoSyncRef.current?.schedule();
+    }
   }, []);
 
   const reloadSettings = useCallback(async () => {
@@ -82,11 +98,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!db) return;
       const updated = await updateSettings(db, patch);
       setSettings(updated);
-      setDataVersion((v) => v + 1);
+      const keys = Object.keys(patch);
+      const onlyLocalVisual =
+        keys.length > 0 && keys.every((k) => k === 'ui_skin' || k === 'theme');
+      bumpDataVersion({ skipAutoSync: onlyLocalVisual });
     },
-    [db],
+    [db, bumpDataVersion],
   );
 
+  // Initialize local SQLite
   useEffect(() => {
     let active = true;
     (async () => {
@@ -107,6 +127,90 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       active = false;
     };
   }, []);
+
+  // Automatic background E2EE Sync controller (on every action + startup + window focus/online)
+  useEffect(() => {
+    if (!db) return;
+    const controller = new AutoSyncController({
+      debounceMs: 1200,
+      getConfig: () => loadCloudSyncConfig('Windows Desktop'),
+      runSyncFn: (cfg) => syncDatabaseWithCloud(db, cfg),
+      onStateChange: (st) => setAutoSyncStatus(st),
+      onSynced: async (res) => {
+        if (res.remoteHadData) {
+          const fresh = await getSettings(db);
+          setSettings(fresh);
+          setDataVersion((v) => v + 1);
+        }
+      },
+    });
+    autoSyncRef.current = controller;
+
+    // Initial silent pull/merge on app open
+    const initialTimer = window.setTimeout(() => {
+      const cfg = loadCloudSyncConfig('Windows Desktop');
+      if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
+        lastFocusSyncAtRef.current = Date.now();
+        void controller.flushNow();
+      }
+    }, 1500);
+
+    const handleResumeSync = () => {
+      const now = Date.now();
+      if (now - lastFocusSyncAtRef.current < 15_000) return;
+      const cfg = loadCloudSyncConfig('Windows Desktop');
+      if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
+        lastFocusSyncAtRef.current = now;
+        void controller.flushNow();
+      }
+    };
+
+    const handleOnline = () => {
+      const cfg = loadCloudSyncConfig('Windows Desktop');
+      if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
+        void controller.flushNow();
+      }
+    };
+
+    window.addEventListener('focus', handleResumeSync);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.clearTimeout(initialTimer);
+      window.removeEventListener('focus', handleResumeSync);
+      window.removeEventListener('online', handleOnline);
+      controller.dispose();
+      autoSyncRef.current = null;
+    };
+  }, [db]);
+
+  const triggerCloudSync = useCallback(
+    async (options?: { manual?: boolean }) => {
+      const cfg = loadCloudSyncConfig('Windows Desktop');
+      if (!isCloudSyncReady(cfg)) {
+        if (options?.manual) {
+          setActiveSection('settings');
+          notify(
+            'Configure a URL do Cloudflare e a Chave Secreta em Configurações para ativar o Sync.',
+            'info',
+          );
+        }
+        return;
+      }
+      if (!autoSyncRef.current) return;
+      try {
+        const res = await autoSyncRef.current.flushNow(Boolean(options?.manual));
+        if (options?.manual && res) {
+          notify(`Sincronizado com celular (rev. ${res.revision}).`);
+        }
+      } catch (err) {
+        if (options?.manual) {
+          notify(err instanceof Error ? err.message : 'Erro ao sincronizar.', 'error');
+        }
+      }
+    },
+    [notify],
+  );
 
   useEffect(() => {
     const root = document.documentElement;
@@ -138,6 +242,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         patchSettings,
         notify,
         toasts,
+        autoSyncStatus,
+        triggerCloudSync,
       }}
     >
       {children}

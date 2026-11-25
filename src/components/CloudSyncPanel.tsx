@@ -33,6 +33,7 @@ export const CloudSyncPanel: React.FC = () => {
   );
   const [passphrase, setPassphrase] = useState(config.passphrase);
   const [deviceName, setDeviceName] = useState(config.deviceName || 'Windows Desktop');
+  const [autoSync, setAutoSync] = useState(config.autoSync !== false);
   const [showKey, setShowKey] = useState(false);
   const [showQr, setShowQr] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -43,6 +44,7 @@ export const CloudSyncPanel: React.FC = () => {
     const next: CloudSyncConfig = {
       ...config,
       enabled: Boolean(endpointUrl.trim() && passphrase.trim()),
+      autoSync,
       endpointUrl: endpointUrl.trim(),
       passphrase: passphrase.trim(),
       deviceName: deviceName.trim() || 'Windows Desktop',
@@ -83,7 +85,7 @@ export const CloudSyncPanel: React.FC = () => {
         lastRevision: result.revision,
       });
       await reloadSettings();
-      bumpDataVersion();
+      bumpDataVersion({ skipAutoSync: true });
       notify(
         result.remoteHadData
           ? `Sincronização concluída (rev. ${result.revision}) · ${result.mergedRowCount} registros mesclados com segurança.`
@@ -186,6 +188,28 @@ export const CloudSyncPanel: React.FC = () => {
           </button>
         </div>
       </div>
+
+      <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+        <input
+          type="checkbox"
+          checked={autoSync}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setAutoSync(checked);
+            persistForm({ autoSync: checked });
+            notify(
+              checked
+                ? 'Auto-sync ativado: toda ação feita será sincronizada automaticamente.'
+                : 'Auto-sync pausado (você ainda pode sincronizar manualmente).',
+              'info',
+            );
+          }}
+          className="h-4 w-4 rounded"
+        />
+        <span>
+          <strong>Sincronizar automaticamente a cada ação</strong> (transações, IA, tarefas, jornadas e agenda sobem em ~1s em segundo plano).
+        </span>
+      </label>
 
       <div className="flex flex-wrap items-center gap-2.5">
         <button

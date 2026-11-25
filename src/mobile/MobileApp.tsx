@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Bike,
   CalendarDays,
@@ -45,11 +45,14 @@ import { createIdea, listIdeas } from '../repositories/ideasRepo';
 import { createWorkSession, listWorkSessions } from '../repositories/workRepo';
 import { calculateWorkSessionMetrics } from '../services/calculations';
 import {
+  AutoSyncController,
+  isCloudSyncReady,
   loadCloudSyncConfig,
   parseMobilePairingHash,
   saveCloudSyncConfig,
   syncDatabaseWithCloud,
   testCloudSyncConnection,
+  type AutoSyncStatus,
   type CloudSyncConfig,
 } from '../services/cloudSync';
 import {
@@ -126,8 +129,11 @@ export const MobileApp: React.FC = () => {
     loadCloudSyncConfig(detectMobileDeviceName()),
   );
   const [syncing, setSyncing] = useState(false);
+  const [autoSyncStatus, setAutoSyncStatus] = useState<AutoSyncStatus>('idle');
   const [showKey, setShowKey] = useState(false);
   const [justPairedBanner, setJustPairedBanner] = useState(false);
+  const autoSyncRef = useRef<AutoSyncController | null>(null);
+  const lastFocusSyncRef = useRef(0);
   const [syncUrlInput, setSyncUrlInput] = useState(() =>
     loadCloudSyncConfig(detectMobileDeviceName()).endpointUrl ||
     (window.location.origin.startsWith('http') && !window.location.hostname.includes('localhost')
@@ -290,10 +296,74 @@ export const MobileApp: React.FC = () => {
     };
   }, [refreshData, runSync, showToast]);
 
+  // Auto-Sync controller on Mobile PWA (syncs every action + startup + returning to app)
+  useEffect(() => {
+    if (!db) return;
+    const controller = new AutoSyncController({
+      debounceMs: 1200,
+      getConfig: () => loadCloudSyncConfig(detectMobileDeviceName()),
+      runSyncFn: (cfg) => syncDatabaseWithCloud(db, cfg),
+      onStateChange: (st) => {
+        setAutoSyncStatus(st);
+        setSyncing(st === 'syncing');
+      },
+      onSynced: async (res, updatedCfg) => {
+        setSyncConfig(updatedCfg);
+        if (res.remoteHadData) {
+          await refreshData(db);
+        }
+      },
+    });
+    autoSyncRef.current = controller;
+
+    // Initial background sync if already paired (and not handling #pair= hash)
+    const initTimer = window.setTimeout(() => {
+      const cfg = loadCloudSyncConfig(detectMobileDeviceName());
+      if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
+        lastFocusSyncRef.current = Date.now();
+        void controller.flushNow();
+      }
+    }, 1500);
+
+    const handleVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      const now = Date.now();
+      if (now - lastFocusSyncRef.current < 15_000) return;
+      const cfg = loadCloudSyncConfig(detectMobileDeviceName());
+      if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
+        lastFocusSyncRef.current = now;
+        void controller.flushNow();
+      }
+    };
+
+    const handleOnline = () => {
+      const cfg = loadCloudSyncConfig(detectMobileDeviceName());
+      if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
+        void controller.flushNow();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('online', handleOnline);
+
+    return () => {
+      window.clearTimeout(initTimer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('online', handleOnline);
+      controller.dispose();
+      autoSyncRef.current = null;
+    };
+  }, [db, refreshData]);
+
+  const scheduleAutoSync = useCallback(() => {
+    autoSyncRef.current?.schedule();
+  }, []);
+
   const handleToggleTask = async (id: string) => {
     if (!db) return;
     await toggleTaskStatus(db, id);
     await refreshData(db);
+    scheduleAutoSync();
     showToast('Tarefa atualizada.');
   };
 
@@ -301,6 +371,7 @@ export const MobileApp: React.FC = () => {
     if (!db) return;
     await logHabitSession(db, { habit_id: habitId, date: todayISO(), duration_minutes: 30 });
     await refreshData(db);
+    scheduleAutoSync();
     showToast(`${name} registrado!`);
   };
 
@@ -322,7 +393,8 @@ export const MobileApp: React.FC = () => {
       setTxAmount('');
       setSheet(null);
       await refreshData(db);
-      showToast('Lançamento salvo offline.');
+      scheduleAutoSync();
+      showToast('Lançamento salvo e sincronizando...');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao salvar.', 'err');
     }
@@ -378,6 +450,7 @@ export const MobileApp: React.FC = () => {
       setWsFuel('');
       setSheet(null);
       await refreshData(db);
+      scheduleAutoSync();
       showToast('Jornada Uber/99 registrada!');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao registrar jornada.', 'err');
@@ -396,6 +469,7 @@ export const MobileApp: React.FC = () => {
       setTkTitle('');
       setSheet(null);
       await refreshData(db);
+      scheduleAutoSync();
       showToast('Tarefa adicionada.');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao criar tarefa.', 'err');
@@ -415,6 +489,7 @@ export const MobileApp: React.FC = () => {
       setEvTitle('');
       setSheet(null);
       await refreshData(db);
+      scheduleAutoSync();
       showToast('Compromisso salvo na agenda.');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao salvar compromisso.', 'err');
@@ -429,6 +504,7 @@ export const MobileApp: React.FC = () => {
       setIdeaTitle('');
       setSheet(null);
       await refreshData(db);
+      scheduleAutoSync();
       showToast('Ideia capturada.');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao salvar ideia.', 'err');
@@ -496,6 +572,7 @@ export const MobileApp: React.FC = () => {
         }
         if (executedIds.length > 0) {
           await refreshData(db);
+          scheduleAutoSync();
           showToast(savedNotice || 'Lançamento salvo automaticamente!');
         }
       }
@@ -534,6 +611,7 @@ export const MobileApp: React.FC = () => {
         ),
       );
       await refreshData(db);
+      scheduleAutoSync();
       showToast(msg);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erro ao salvar ação.', 'err');
@@ -601,8 +679,16 @@ export const MobileApp: React.FC = () => {
                   : 'border-slate-200 bg-white text-slate-600 dark:border-white/10 dark:bg-white/[0.05] dark:text-slate-300'
               }`}
             >
-              <RefreshCw className={`h-3.5 w-3.5 ${syncing ? 'animate-spin' : ''}`} />
-              <span>{syncing ? 'Sync...' : 'Sync'}</span>
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${syncing || autoSyncStatus === 'scheduled' ? 'animate-spin' : ''}`}
+              />
+              <span>
+                {syncing
+                  ? 'Sync...'
+                  : autoSyncStatus === 'scheduled'
+                    ? 'Auto...'
+                    : 'Sync'}
+              </span>
             </button>
 
             <button
@@ -1130,6 +1216,28 @@ export const MobileApp: React.FC = () => {
                     </button>
                   </div>
                 </div>
+
+                <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                  <input
+                    type="checkbox"
+                    checked={syncConfig.autoSync !== false}
+                    onChange={(e) => {
+                      const nextCfg: CloudSyncConfig = {
+                        ...syncConfig,
+                        autoSync: e.target.checked,
+                      };
+                      saveCloudSyncConfig(nextCfg);
+                      setSyncConfig(nextCfg);
+                      showToast(
+                        e.target.checked
+                          ? 'Auto-sync ativado a cada ação.'
+                          : 'Auto-sync pausado (somente manual).',
+                      );
+                    }}
+                    className="h-4 w-4 rounded"
+                  />
+                  <span>Sincronizar automaticamente a cada ação</span>
+                </label>
 
                 <div className="flex gap-2">
                   <button

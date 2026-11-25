@@ -11,12 +11,15 @@ import {
 
 export interface CloudSyncConfig {
   enabled: boolean;
+  autoSync?: boolean;
   endpointUrl: string; // Ex.: https://lifehub-sync.sua-conta.workers.dev
   passphrase: string;
   deviceName: string;
   lastSyncedAt: string | null;
   lastRevision: number;
 }
+
+export type AutoSyncStatus = 'idle' | 'scheduled' | 'syncing' | 'synced' | 'error' | 'offline';
 
 export interface EncryptedVaultEnvelope {
   v: 1;
@@ -346,6 +349,7 @@ export function loadCloudSyncConfig(defaultDeviceName = 'Windows Desktop'): Clou
       const parsed = JSON.parse(raw) as Partial<CloudSyncConfig>;
       return {
         enabled: Boolean(parsed.enabled),
+        autoSync: parsed.autoSync !== false,
         endpointUrl: typeof parsed.endpointUrl === 'string' ? parsed.endpointUrl : '',
         passphrase: typeof parsed.passphrase === 'string' ? parsed.passphrase : '',
         deviceName:
@@ -361,12 +365,17 @@ export function loadCloudSyncConfig(defaultDeviceName = 'Windows Desktop'): Clou
   }
   return {
     enabled: false,
+    autoSync: true,
     endpointUrl: '',
     passphrase: '',
     deviceName: defaultDeviceName,
     lastSyncedAt: null,
     lastRevision: 0,
   };
+}
+
+export function isCloudSyncReady(cfg: CloudSyncConfig): boolean {
+  return Boolean(cfg.endpointUrl.trim() && cfg.passphrase.trim().length >= 8);
 }
 
 export function saveCloudSyncConfig(config: CloudSyncConfig): void {
@@ -508,4 +517,124 @@ export async function syncDatabaseWithCloud(
     localRowCount,
     mergedRowCount,
   };
+}
+
+export interface AutoSyncControllerOptions {
+  debounceMs?: number;
+  conflictRetryDelayMs?: number;
+  isOnline?: () => boolean;
+  getConfig: () => CloudSyncConfig;
+  saveConfig?: (cfg: CloudSyncConfig) => void;
+  runSyncFn: (cfg: CloudSyncConfig) => Promise<SyncResult>;
+  onStateChange?: (status: AutoSyncStatus, errorMessage?: string) => void;
+  onSynced?: (result: SyncResult, cfg: CloudSyncConfig) => void | Promise<void>;
+}
+
+/**
+ * Coalesces rapid local edits into a single background E2EE sync, serializes in-flight uploads,
+ * and retries once automatically on HTTP 409 revision conflicts.
+ */
+export class AutoSyncController {
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private inFlight = false;
+  private pendingAnotherRun = false;
+  private disposed = false;
+
+  constructor(private readonly opts: AutoSyncControllerOptions) {}
+
+  schedule(): void {
+    if (this.disposed) return;
+    const cfg = this.opts.getConfig();
+    if (!isCloudSyncReady(cfg) || cfg.autoSync === false) return;
+
+    if (this.inFlight) {
+      this.pendingAnotherRun = true;
+      return;
+    }
+
+    if (this.timer) clearTimeout(this.timer);
+    this.opts.onStateChange?.('scheduled');
+    const delay = this.opts.debounceMs ?? 1200;
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      void this.flushNow();
+    }, delay);
+  }
+
+  async flushNow(forceEvenIfAutoDisabled = false): Promise<SyncResult | null> {
+    if (this.disposed) return null;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+
+    const cfg = this.opts.getConfig();
+    if (!isCloudSyncReady(cfg)) return null;
+    if (!forceEvenIfAutoDisabled && cfg.autoSync === false) return null;
+
+    const online = this.opts.isOnline
+      ? this.opts.isOnline()
+      : typeof navigator === 'undefined' || navigator.onLine !== false;
+    if (!online) {
+      this.opts.onStateChange?.('offline');
+      return null;
+    }
+
+    if (this.inFlight) {
+      this.pendingAnotherRun = true;
+      return null;
+    }
+
+    this.inFlight = true;
+    this.pendingAnotherRun = false;
+    this.opts.onStateChange?.('syncing');
+
+    let finalResult: SyncResult | null = null;
+    try {
+      let attempt = 0;
+      while (attempt < 2) {
+        attempt++;
+        try {
+          const res = await this.opts.runSyncFn(cfg);
+          const updatedCfg: CloudSyncConfig = {
+            ...cfg,
+            enabled: true,
+            lastSyncedAt: res.syncedAt,
+            lastRevision: res.revision,
+          };
+          (this.opts.saveConfig ?? saveCloudSyncConfig)(updatedCfg);
+          await this.opts.onSynced?.(res, updatedCfg);
+          this.opts.onStateChange?.('synced');
+          finalResult = res;
+          break;
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          const isConflict409 = msg.includes('Outro dispositivo sincronizou') || msg.includes('409');
+          if (isConflict409 && attempt < 2 && !this.disposed) {
+            await new Promise((r) => setTimeout(r, this.opts.conflictRetryDelayMs ?? 450));
+            continue;
+          }
+          this.opts.onStateChange?.('error', msg);
+          if (forceEvenIfAutoDisabled) throw err;
+          break;
+        }
+      }
+    } finally {
+      this.inFlight = false;
+      if (this.pendingAnotherRun && !this.disposed) {
+        this.pendingAnotherRun = false;
+        this.schedule();
+      }
+    }
+
+    return finalResult;
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    if (this.timer) {
+      clearTimeout(this.timer);
+      this.timer = null;
+    }
+  }
 }
