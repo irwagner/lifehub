@@ -1,6 +1,30 @@
 import type { ThemeMode, UiSkin } from '../types/domain';
 
-export type SkinGroup = 'reference' | 'classic';
+export type SkinGroup = 'concept' | 'reference' | 'classic';
+
+export type ShellLayout =
+  | 'sidebar-classic'
+  | 'top-nav'
+  | 'icon-rail'
+  | 'floating-island'
+  | 'bottom-dock'
+  | 'dual-tone-sidebar';
+
+export type DashboardLayout =
+  | 'standard'
+  | 'bento-split'
+  | 'telemetry-console'
+  | 'widgets-canvas'
+  | 'board-columns';
+
+export const SHELL_LAYOUT_LABELS: Record<ShellLayout, string> = {
+  'sidebar-classic': 'Sidebar Clássica',
+  'top-nav': 'Menu Topo',
+  'icon-rail': 'Rail Ícones',
+  'floating-island': 'Ilhas Flutuantes',
+  'bottom-dock': 'Dock Inferior',
+  'dual-tone-sidebar': 'Sidebar Dual-Tone',
+};
 
 export interface SkinDefinition {
   id: UiSkin;
@@ -10,12 +34,270 @@ export interface SkinDefinition {
   group: SkinGroup;
   sourceRef?: string;
   preferredTheme: ThemeMode;
+  shell: ShellLayout;
+  dashboard: DashboardLayout;
   swatches: [string, string, string]; // [background, card/sidebar, accent]
 }
 
 export const UI_SKINS: SkinDefinition[] = [
   // =========================================================================
-  // Skins criadas com base nas imagens de referencias-de-design/
+  // 21 Skins Estruturais inspiradas nos conceitos Dribbble / Figma / Behance
+  // =========================================================================
+  {
+    id: 'concept_horizon_homes',
+    name: 'Horizon Homes',
+    tagline: 'Menu superior horizontal, bento assimétrico em alabastro e acento azul-petróleo imobiliário.',
+    vibe: 'Menu Topo',
+    group: 'concept',
+    sourceRef: 'Dribbble · Horizon Homes Real Estate',
+    preferredTheme: 'light',
+    shell: 'top-nav',
+    dashboard: 'bento-split',
+    swatches: ['#f6f6f3', '#ffffff', '#0f5c6e'],
+  },
+  {
+    id: 'concept_student_portal',
+    name: 'Student Portal',
+    tagline: 'Ilha lateral flutuante, widgets de rotina suaves e acento azul acadêmico luminoso.',
+    vibe: 'Ilha Flutuante',
+    group: 'concept',
+    sourceRef: 'Dribbble · Student Portal Web App',
+    preferredTheme: 'light',
+    shell: 'floating-island',
+    dashboard: 'widgets-canvas',
+    swatches: ['#edf4ff', '#ffffff', '#2563eb'],
+  },
+  {
+    id: 'concept_flup_delivery',
+    name: 'Flup Delivery',
+    tagline: 'Rail vertical compacto de ícones escuros, painel em 3 colunas operacionais e coral entrega.',
+    vibe: 'Rail + Colunas',
+    group: 'concept',
+    sourceRef: 'Dribbble · Flup Delivery Admin',
+    preferredTheme: 'light',
+    shell: 'icon-rail',
+    dashboard: 'board-columns',
+    swatches: ['#f5f6fa', '#18181b', '#ff5722'],
+  },
+  {
+    id: 'concept_gridtrade',
+    name: 'GridTrade Energy',
+    tagline: 'Terminal de energia em alta densidade, barra técnica e telemetria em verde-elétrico.',
+    vibe: 'Telemetria',
+    group: 'concept',
+    sourceRef: 'Dribbble · GridTrade Energy Trading',
+    preferredTheme: 'dark',
+    shell: 'dual-tone-sidebar',
+    dashboard: 'telemetry-console',
+    swatches: ['#070d11', '#0e1820', '#00e5a0'],
+  },
+  {
+    id: 'concept_cyfocus',
+    name: 'CyFocus SOC',
+    tagline: 'Console de cibersegurança preto absoluto, rail de ícones e alertas carmesim #BE0900.',
+    vibe: 'SOC Security',
+    group: 'concept',
+    sourceRef: 'Dribbble · CyFocus Cybersecurity',
+    preferredTheme: 'dark',
+    shell: 'icon-rail',
+    dashboard: 'telemetry-console',
+    swatches: ['#040404', '#121010', '#be0900'],
+  },
+  {
+    id: 'concept_traffictrace',
+    name: 'TrafficTrace IT',
+    tagline: 'Monitoramento SaaS de TI escuro, telemetria compacta e gradientes azul-violeta.',
+    vibe: 'IT Analytics',
+    group: 'concept',
+    sourceRef: 'Dribbble · TrafficTrace SaaS IT',
+    preferredTheme: 'dark',
+    shell: 'dual-tone-sidebar',
+    dashboard: 'telemetry-console',
+    swatches: ['#090e1c', '#121a30', '#4f8cff'],
+  },
+  {
+    id: 'concept_fintech_app',
+    name: 'Fintech Wealth',
+    tagline: 'Ilhas flutuantes limpas, bento financeiro de alto contraste e verde-esmeralda bancário.',
+    vibe: 'Fintech Bento',
+    group: 'concept',
+    sourceRef: 'Dribbble · Fintech Web App Design',
+    preferredTheme: 'light',
+    shell: 'floating-island',
+    dashboard: 'bento-split',
+    swatches: ['#f2f5f8', '#ffffff', '#0d9488'],
+  },
+  {
+    id: 'concept_isora_saas',
+    name: 'Isora Enterprise',
+    tagline: 'Barra superior corporativa limpa, cards estruturados de governança e azul institucional.',
+    vibe: 'SaaS Topo',
+    group: 'concept',
+    sourceRef: 'Dribbble · Isora SaaS Platform',
+    preferredTheme: 'light',
+    shell: 'top-nav',
+    dashboard: 'standard',
+    swatches: ['#f4f6fa', '#ffffff', '#1d4ed8'],
+  },
+  {
+    id: 'concept_crm_dashboard',
+    name: 'CRM Pipeline',
+    tagline: 'Sidebar roxo-marinho contrastante sobre canvas claro com visão em 3 colunas de funil.',
+    vibe: 'Dual-Tone CRM',
+    group: 'concept',
+    sourceRef: 'Dribbble · CRM Dashboard App',
+    preferredTheme: 'light',
+    shell: 'dual-tone-sidebar',
+    dashboard: 'board-columns',
+    swatches: ['#f7f6fc', '#1d1738', '#6d28d9'],
+  },
+  {
+    id: 'concept_figma_taskboard',
+    name: 'Figma Task Board',
+    tagline: 'Quadro de tarefas estilo Kanban com colunas paralelas, grade sutil e acento azul Figma.',
+    vibe: 'Board Kanban',
+    group: 'concept',
+    sourceRef: 'Figma · Free Task Board Dashboard',
+    preferredTheme: 'light',
+    shell: 'dual-tone-sidebar',
+    dashboard: 'board-columns',
+    swatches: ['#f6f8fc', '#1e2433', '#3b82f6'],
+  },
+  {
+    id: 'concept_figma_dashboard',
+    name: 'Figma Analytics',
+    tagline: 'Sidebar grafite profunda com bento claro elevado e acento índigo de produto digital.',
+    vibe: 'Dual-Tone Bento',
+    group: 'concept',
+    sourceRef: 'Figma · Dashboard Community',
+    preferredTheme: 'light',
+    shell: 'dual-tone-sidebar',
+    dashboard: 'bento-split',
+    swatches: ['#f3f4f8', '#111827', '#4f46e5'],
+  },
+  {
+    id: 'concept_figma_uikit',
+    name: 'Style Guide UI Kit',
+    tagline: 'Navegação superior modular com bordas nítidas de Design System e acento magenta vibrante.',
+    vibe: 'Design System',
+    group: 'concept',
+    sourceRef: 'Figma · Style Guide UI Kit',
+    preferredTheme: 'light',
+    shell: 'top-nav',
+    dashboard: 'bento-split',
+    swatches: ['#fafafa', '#ffffff', '#db2777'],
+  },
+  {
+    id: 'concept_voip_desktop',
+    name: 'VoIP Desktop',
+    tagline: 'Cliente desktop nativo com rail fino de ícones, superfícies slate e azul-chamada nítido.',
+    vibe: 'App Desktop',
+    group: 'concept',
+    sourceRef: 'Dribbble · Voip App Desktop',
+    preferredTheme: 'dark',
+    shell: 'icon-rail',
+    dashboard: 'bento-split',
+    swatches: ['#111620', '#1a2230', '#38bdf8'],
+  },
+  {
+    id: 'concept_shipnow',
+    name: 'ShipNow Logistics',
+    tagline: 'Sidebar azul-marinho logística, canvas branco-gelo e painel de despacho em 3 colunas.',
+    vibe: 'Logística',
+    group: 'concept',
+    sourceRef: 'Dribbble · ShipNow Shipping UI',
+    preferredTheme: 'light',
+    shell: 'dual-tone-sidebar',
+    dashboard: 'board-columns',
+    swatches: ['#f4f8fc', '#0f2342', '#0284c7'],
+  },
+  {
+    id: 'concept_ramaroo',
+    name: 'Ramaroo Reviews',
+    tagline: 'Ilhas flutuantes sobre lavanda suave, cards amigáveis e acento roxo e-commerce.',
+    vibe: 'Ilha Lavanda',
+    group: 'concept',
+    sourceRef: 'Dribbble · Ramaroo Review Platform',
+    preferredTheme: 'light',
+    shell: 'floating-island',
+    dashboard: 'bento-split',
+    swatches: ['#f5f2ff', '#ffffff', '#7c3aed'],
+  },
+  {
+    id: 'concept_hospital_saas',
+    name: 'Hospital SaaS',
+    tagline: 'Painel clínico de alta legibilidade, fundo azul-asséptico e telemetria médica em turquesa.',
+    vibe: 'Clínico',
+    group: 'concept',
+    sourceRef: 'Dribbble · Hospital SaaS Desktop',
+    preferredTheme: 'light',
+    shell: 'sidebar-classic',
+    dashboard: 'telemetry-console',
+    swatches: ['#f0f7f9', '#ffffff', '#0891b2'],
+  },
+  {
+    id: 'concept_qleandesk',
+    name: 'QleanDesk Widgets',
+    tagline: 'Dock flutuante inferior estilo Windows 11, vidro acrílico fosco e widgets soltos na tela.',
+    vibe: 'Dock + Vidro',
+    group: 'concept',
+    sourceRef: 'Behance · QleanDesk Windows Widgets',
+    preferredTheme: 'dark',
+    shell: 'bottom-dock',
+    dashboard: 'widgets-canvas',
+    swatches: ['#0c1220', '#18243a', '#38bdf8'],
+  },
+  {
+    id: 'concept_sprinta',
+    name: 'Sprinta Tracker',
+    tagline: 'Rail minimalista de ícones, quadro ágil em 3 colunas carbono e acento lima-elétrico.',
+    vibe: 'Rail + Sprint',
+    group: 'concept',
+    sourceRef: 'Behance · Sprinta Task Tracker',
+    preferredTheme: 'dark',
+    shell: 'icon-rail',
+    dashboard: 'board-columns',
+    swatches: ['#0d0e12', '#171920', '#a3e635'],
+  },
+  {
+    id: 'concept_iqon_pc',
+    name: 'IQON PC Boost',
+    tagline: 'Dock inferior de performance, console de telemetria hardware e neon ciano/menta.',
+    vibe: 'Dock + Perf',
+    group: 'concept',
+    sourceRef: 'Behance · IQON PC Performance SaaS',
+    preferredTheme: 'dark',
+    shell: 'bottom-dock',
+    dashboard: 'telemetry-console',
+    swatches: ['#080c14', '#111826', '#00d2ff'],
+  },
+  {
+    id: 'concept_zenite',
+    name: 'Zênite Foco',
+    tagline: 'Ilha flutuante zen sem distrações, respiro visual amplo, índigo abissal e widgets calmos.',
+    vibe: 'Ilha Zen',
+    group: 'concept',
+    sourceRef: 'Behance · Zênite Foco e Produtividade',
+    preferredTheme: 'dark',
+    shell: 'floating-island',
+    dashboard: 'widgets-canvas',
+    swatches: ['#0b0f1c', '#141b30', '#818cf8'],
+  },
+  {
+    id: 'concept_thebean_ai',
+    name: 'TheBean.ai Coach',
+    tagline: 'Menu superior leve em cápsula, fundo creme orgânico, cards redondos e verde-energia.',
+    vibe: 'Topo Orgânico',
+    group: 'concept',
+    sourceRef: 'Behance · TheBean.ai Fitness Coach',
+    preferredTheme: 'light',
+    shell: 'top-nav',
+    dashboard: 'widgets-canvas',
+    swatches: ['#faf6ef', '#ffffff', '#65a30d'],
+  },
+
+  // =========================================================================
+  // 9 Skins das imagens locais em referencias-de-design/ (preservadas)
   // =========================================================================
   {
     id: 'ref_agenda_verde',
@@ -25,6 +307,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '01-agenda-verde/hoje.png · calendario.png',
     preferredTheme: 'light',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#f6f5f0', '#ffffff', '#1f513b'],
   },
   {
@@ -35,6 +319,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '01-agenda-verde/trabalho.png',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#0c1714', '#13221d', '#85c97a'],
   },
   {
@@ -45,6 +331,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '02-mapa-e-relogio/linhas-do-dia.png',
     preferredTheme: 'light',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#fbf3dc', '#fffaf0', '#f2541b'],
   },
   {
@@ -55,6 +343,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '02-mapa-e-relogio/tempo-livre.png',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#0e1021', '#151830', '#f5e060'],
   },
   {
@@ -65,6 +355,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '03-agenda-essencial/lifehub-desktop.png',
     preferredTheme: 'light',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#f5f3ef', '#ffffff', '#9d3b2b'],
   },
   {
@@ -75,6 +367,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '04-agenda-jornada-caderno/agenda-desktop.png',
     preferredTheme: 'light',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#eef3f8', '#ffffff', '#2563a6'],
   },
   {
@@ -85,6 +379,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '04-agenda-jornada-caderno/jornada-desktop.png',
     preferredTheme: 'dark',
+    shell: 'top-nav',
+    dashboard: 'bento-split',
     swatches: ['#15191d', '#22312e', '#b7d9c6'],
   },
   {
@@ -95,6 +391,8 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '04-agenda-jornada-caderno/caderno-desktop.png',
     preferredTheme: 'light',
+    shell: 'top-nav',
+    dashboard: 'standard',
     swatches: ['#f4f2ec', '#fdfcf9', '#4b5d47'],
   },
   {
@@ -105,11 +403,13 @@ export const UI_SKINS: SkinDefinition[] = [
     group: 'reference',
     sourceRef: '05-fotografia-e-laranja/hoje.png · jornadas.png',
     preferredTheme: 'light',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#ffffff', '#f3f2ef', '#ef5a24'],
   },
 
   // =========================================================================
-  // Skins anteriores preservadas (Orbital padrão + 5 skins clássicas)
+  // 6 Skins anteriores preservadas (Orbital padrão + 5 clássicas)
   // =========================================================================
   {
     id: 'orbital',
@@ -118,6 +418,8 @@ export const UI_SKINS: SkinDefinition[] = [
     vibe: 'Moderno',
     group: 'classic',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#070b14', '#0e1526', '#6366f1'],
   },
   {
@@ -127,6 +429,8 @@ export const UI_SKINS: SkinDefinition[] = [
     vibe: 'Executivo',
     group: 'classic',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#050d0a', '#0b1813', '#10b981'],
   },
   {
@@ -136,6 +440,8 @@ export const UI_SKINS: SkinDefinition[] = [
     vibe: 'Moto / Tech',
     group: 'classic',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#0c0a09', '#171412', '#f59e0b'],
   },
   {
@@ -145,6 +451,8 @@ export const UI_SKINS: SkinDefinition[] = [
     vibe: 'Dev / TI',
     group: 'classic',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#090514', '#140c29', '#06b6d4'],
   },
   {
@@ -154,6 +462,8 @@ export const UI_SKINS: SkinDefinition[] = [
     vibe: 'Minimalista',
     group: 'classic',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#181f2a', '#212b3a', '#38bdf8'],
   },
   {
@@ -163,10 +473,17 @@ export const UI_SKINS: SkinDefinition[] = [
     vibe: 'Retrô',
     group: 'classic',
     preferredTheme: 'dark',
+    shell: 'sidebar-classic',
+    dashboard: 'standard',
     swatches: ['#1b1e24', '#262b33', '#22c55e'],
   },
 ];
 
+export const CONCEPT_SKINS: SkinDefinition[] = UI_SKINS.filter((s) => s.group === 'concept');
 export const REFERENCE_SKINS: SkinDefinition[] = UI_SKINS.filter((s) => s.group === 'reference');
 export const CLASSIC_SKINS: SkinDefinition[] = UI_SKINS.filter((s) => s.group === 'classic');
 export const VALID_SKIN_IDS: readonly UiSkin[] = UI_SKINS.map((s) => s.id);
+
+export function getSkinDefinition(skinId: UiSkin | undefined | null): SkinDefinition {
+  return UI_SKINS.find((s) => s.id === skinId) ?? UI_SKINS.find((s) => s.id === 'orbital')!;
+}

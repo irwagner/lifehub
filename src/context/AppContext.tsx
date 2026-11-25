@@ -2,6 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useState } fr
 import { getDatabase } from '../db/client';
 import type { SqlExecutor } from '../db/types';
 import { getSettings, updateSettings } from '../repositories/settingsRepo';
+import { getSkinDefinition } from '../services/skins';
 import type { Settings } from '../types/domain';
 
 export type NavSection =
@@ -114,7 +115,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     } else {
       root.classList.add('dark');
     }
-    root.dataset.skin = settings?.ui_skin || 'orbital';
+    const skinDef = getSkinDefinition(settings?.ui_skin);
+    root.dataset.skin = skinDef.id;
+    root.dataset.shell = skinDef.shell;
+    root.dataset.dashboard = skinDef.dashboard;
   }, [settings?.theme, settings?.ui_skin]);
 
   return (

@@ -419,6 +419,616 @@ html.dark[data-skin='ref_foto_laranja'] {
 }
 
 /* ==========================================================================
+   CONCEPT SKINS (21 designs estruturais Dribbble / Figma / Behance)
+   ========================================================================== */
+
+/* 1. Horizon Homes — Real Estate Top-Nav + Bento Alabastro */
+html[data-skin='concept_horizon_homes'] {
+  --lh-brand-50: 236 248 250;
+  --lh-brand-100: 207 235 240;
+  --lh-brand-200: 158 214 224;
+  --lh-brand-300: 99 185 201;
+  --lh-brand-400: 42 141 161;
+  --lh-brand-500: 15 92 110;
+  --lh-brand-600: 12 74 90;
+  --lh-brand-700: 9 57 70;
+  --lh-radius-card: 1.4rem;
+  --lh-radius-control: 9999px;
+  --lh-canvas: #f5f5f2;
+  --lh-sidebar: #ffffff;
+  --lh-topbar: rgba(255, 255, 255, 0.92);
+  --lh-card: #ffffff;
+  --lh-card-border: #e6e5df;
+  --lh-card-shadow: 0 6px 24px -14px rgba(15, 76, 92, 0.14);
+}
+html.dark[data-skin='concept_horizon_homes'] {
+  --lh-brand-400: 72 184 204;
+  --lh-brand-500: 36 146 168;
+  --lh-brand-600: 24 118 138;
+  --lh-canvas: #0c1417;
+  --lh-sidebar: #111d21;
+  --lh-topbar: rgba(17, 29, 33, 0.9);
+  --lh-card: #132126;
+  --lh-card-border: rgba(120, 200, 215, 0.14);
+}
+
+/* 2. Student Portal — Ilha Flutuante Azul Acadêmico */
+html[data-skin='concept_student_portal'] {
+  --lh-brand-50: 239 246 255;
+  --lh-brand-100: 219 234 254;
+  --lh-brand-200: 191 219 254;
+  --lh-brand-300: 147 197 253;
+  --lh-brand-400: 96 165 250;
+  --lh-brand-500: 37 99 235;
+  --lh-brand-600: 29 78 216;
+  --lh-brand-700: 30 64 175;
+  --lh-radius-card: 1.35rem;
+  --lh-radius-control: 0.9rem;
+  --lh-canvas: #edf4ff;
+  --lh-canvas-img: radial-gradient(circle at 12% 10%, rgba(56, 189, 248, 0.16), transparent 45%);
+  --lh-sidebar: #ffffff;
+  --lh-topbar: rgba(255, 255, 255, 0.9);
+  --lh-card: #ffffff;
+  --lh-card-border: rgba(147, 197, 253, 0.45);
+  --lh-card-shadow: 0 10px 30px -16px rgba(37, 99, 235, 0.18);
+}
+html.dark[data-skin='concept_student_portal'] {
+  --lh-canvas: #0b1326;
+  --lh-sidebar: #121d38;
+  --lh-topbar: rgba(18, 29, 56, 0.88);
+  --lh-card: #13203d;
+  --lh-card-border: rgba(96, 165, 250, 0.18);
+}
+
+/* 3. Flup Delivery — Icon Rail Escuro + Coral Entrega + 3 Colunas */
+html[data-skin='concept_flup_delivery'] {
+  --lh-brand-50: 255 243 239;
+  --lh-brand-100: 255 227 217;
+  --lh-brand-200: 255 198 179;
+  --lh-brand-300: 255 156 125;
+  --lh-brand-400: 255 117 77;
+  --lh-brand-500: 255 87 34;
+  --lh-brand-600: 230 68 18;
+  --lh-brand-700: 194 53 12;
+  --lh-radius-card: 1rem;
+  --lh-radius-control: 0.7rem;
+  --lh-canvas: #f5f6fa;
+  --lh-sidebar: #18181b;
+  --lh-topbar: rgba(255, 255, 255, 0.94);
+  --lh-card: #ffffff;
+  --lh-card-border: #e4e6ef;
+  --lh-card-shadow: 0 4px 16px -10px rgba(24, 24, 27, 0.12);
+}
+html.dark[data-skin='concept_flup_delivery'] {
+  --lh-canvas: #111114;
+  --lh-sidebar: #09090b;
+  --lh-topbar: rgba(20, 20, 24, 0.92);
+  --lh-card: #1a1a20;
+  --lh-card-border: rgba(255, 255, 255, 0.08);
+}
+
+/* 4. GridTrade Energy — Terminal de Energia Verde-Elétrico */
+html[data-skin='concept_gridtrade'] {
+  --lh-brand-50: 234 253 246;
+  --lh-brand-100: 202 250 233;
+  --lh-brand-200: 145 245 211;
+  --lh-brand-300: 77 238 187;
+  --lh-brand-400: 26 232 168;
+  --lh-brand-500: 0 184 128;
+  --lh-brand-600: 0 150 105;
+  --lh-brand-700: 0 118 82;
+  --lh-radius-card: 0.5rem;
+  --lh-radius-control: 0.4rem;
+  --lh-canvas: #eef4f3;
+  --lh-sidebar: #0d171c;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #cfdcd9;
+}
+html.dark[data-skin='concept_gridtrade'] {
+  --lh-brand-400: 46 242 182;
+  --lh-brand-500: 0 229 160;
+  --lh-brand-600: 0 194 134;
+  --lh-btn-primary-fg: #041912;
+  --lh-canvas: #060b0f;
+  --lh-canvas-img: linear-gradient(180deg, rgba(0, 229, 160, 0.05) 0%, transparent 40%);
+  --lh-sidebar: #0b1319;
+  --lh-topbar: rgba(11, 19, 25, 0.92);
+  --lh-card: #0e1820;
+  --lh-card-border: rgba(0, 229, 160, 0.18);
+  --lh-card-shadow: none;
+}
+
+/* 5. CyFocus SOC — Cibersegurança Preto Absoluto + Carmesim #BE0900 */
+html[data-skin='concept_cyfocus'] {
+  --lh-brand-50: 254 242 242;
+  --lh-brand-100: 254 226 226;
+  --lh-brand-200: 254 202 202;
+  --lh-brand-300: 248 113 113;
+  --lh-brand-400: 224 49 38;
+  --lh-brand-500: 190 9 0;
+  --lh-brand-600: 158 8 0;
+  --lh-brand-700: 125 6 0;
+  --lh-radius-card: 0.45rem;
+  --lh-radius-control: 0.35rem;
+  --lh-canvas: #f3f0ee;
+  --lh-sidebar: #121010;
+  --lh-topbar: #faf8f6;
+  --lh-card: #ffffff;
+  --lh-card-border: #d8d0cc;
+}
+html.dark[data-skin='concept_cyfocus'] {
+  --lh-canvas: #040404;
+  --lh-canvas-img: radial-gradient(ellipse 65% 40% at 80% -10%, rgba(190, 9, 0, 0.18), transparent 60%);
+  --lh-sidebar: #0a0909;
+  --lh-topbar: rgba(10, 9, 9, 0.94);
+  --lh-card: #110f0f;
+  --lh-card-border: rgba(195, 133, 116, 0.22);
+  --lh-card-shadow: none;
+}
+
+/* 6. TrafficTrace IT — SaaS Analytics Azul Elétrico + Violeta */
+html[data-skin='concept_traffictrace'] {
+  --lh-brand-50: 239 246 255;
+  --lh-brand-100: 219 234 254;
+  --lh-brand-200: 191 219 254;
+  --lh-brand-300: 147 197 253;
+  --lh-brand-400: 96 165 250;
+  --lh-brand-500: 59 130 246;
+  --lh-brand-600: 37 99 235;
+  --lh-brand-700: 29 78 216;
+  --lh-radius-card: 0.85rem;
+  --lh-radius-control: 0.6rem;
+  --lh-canvas: #f1f5fb;
+  --lh-sidebar: #0e1629;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #d8e2f0;
+}
+html.dark[data-skin='concept_traffictrace'] {
+  --lh-canvas: #090e1c;
+  --lh-canvas-img:
+    radial-gradient(ellipse 70% 45% at 15% 0%, rgba(79, 140, 255, 0.16), transparent 55%),
+    radial-gradient(ellipse 55% 40% at 90% 10%, rgba(139, 92, 246, 0.14), transparent 55%);
+  --lh-sidebar: #0d1427;
+  --lh-topbar: rgba(13, 20, 39, 0.9);
+  --lh-card: rgba(18, 26, 48, 0.92);
+  --lh-card-border: rgba(96, 165, 250, 0.2);
+}
+
+/* 7. Fintech Wealth — Ilha Flutuante Esmeralda Bancário */
+html[data-skin='concept_fintech_app'] {
+  --lh-brand-50: 240 253 250;
+  --lh-brand-100: 204 251 241;
+  --lh-brand-200: 153 246 228;
+  --lh-brand-300: 94 234 212;
+  --lh-brand-400: 45 212 191;
+  --lh-brand-500: 13 148 136;
+  --lh-brand-600: 15 118 110;
+  --lh-brand-700: 17 94 89;
+  --lh-radius-card: 1.3rem;
+  --lh-radius-control: 0.8rem;
+  --lh-canvas: #f1f5f7;
+  --lh-sidebar: #ffffff;
+  --lh-topbar: rgba(255, 255, 255, 0.92);
+  --lh-card: #ffffff;
+  --lh-card-border: #dfe7ec;
+  --lh-card-shadow: 0 8px 26px -14px rgba(15, 23, 42, 0.1);
+}
+html.dark[data-skin='concept_fintech_app'] {
+  --lh-canvas: #081214;
+  --lh-sidebar: #0e1c1f;
+  --lh-topbar: rgba(14, 28, 31, 0.9);
+  --lh-card: #102124;
+  --lh-card-border: rgba(45, 212, 191, 0.16);
+}
+
+/* 8. Isora Enterprise — Top-Nav Corporativo Limpo */
+html[data-skin='concept_isora_saas'] {
+  --lh-brand-50: 239 246 255;
+  --lh-brand-100: 219 234 254;
+  --lh-brand-200: 191 219 254;
+  --lh-brand-300: 147 197 253;
+  --lh-brand-400: 59 130 246;
+  --lh-brand-500: 29 78 216;
+  --lh-brand-600: 30 64 175;
+  --lh-brand-700: 30 58 138;
+  --lh-radius-card: 0.85rem;
+  --lh-radius-control: 0.55rem;
+  --lh-canvas: #f4f6fa;
+  --lh-sidebar: #ffffff;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #d9e1ec;
+  --lh-card-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+html.dark[data-skin='concept_isora_saas'] {
+  --lh-canvas: #0d131f;
+  --lh-sidebar: #131c2e;
+  --lh-topbar: #131c2e;
+  --lh-card: #151f33;
+  --lh-card-border: rgba(148, 163, 184, 0.16);
+}
+
+/* 9. CRM Pipeline — Sidebar Roxo-Marinho + Colunas Claras */
+html[data-skin='concept_crm_dashboard'] {
+  --lh-brand-50: 245 243 255;
+  --lh-brand-100: 237 233 254;
+  --lh-brand-200: 221 214 254;
+  --lh-brand-300: 196 181 253;
+  --lh-brand-400: 167 139 250;
+  --lh-brand-500: 109 40 217;
+  --lh-brand-600: 91 33 182;
+  --lh-brand-700: 76 29 149;
+  --lh-radius-card: 1rem;
+  --lh-radius-control: 0.7rem;
+  --lh-canvas: #f7f6fc;
+  --lh-sidebar: #1d1738;
+  --lh-topbar: rgba(255, 255, 255, 0.94);
+  --lh-card: #ffffff;
+  --lh-card-border: #e5e1f5;
+  --lh-card-shadow: 0 4px 18px -12px rgba(76, 29, 149, 0.14);
+}
+html.dark[data-skin='concept_crm_dashboard'] {
+  --lh-canvas: #100d1f;
+  --lh-sidebar: #181330;
+  --lh-topbar: rgba(24, 19, 48, 0.92);
+  --lh-card: #191430;
+  --lh-card-border: rgba(167, 139, 250, 0.18);
+}
+
+/* 10. Figma Task Board — Quadro Kanban com Grade Sutil */
+html[data-skin='concept_figma_taskboard'] {
+  --lh-brand-50: 239 246 255;
+  --lh-brand-100: 219 234 254;
+  --lh-brand-200: 191 219 254;
+  --lh-brand-300: 147 197 253;
+  --lh-brand-400: 96 165 250;
+  --lh-brand-500: 59 130 246;
+  --lh-brand-600: 37 99 235;
+  --lh-brand-700: 29 78 216;
+  --lh-radius-card: 0.9rem;
+  --lh-radius-control: 0.6rem;
+  --lh-canvas: #f5f7fb;
+  --lh-canvas-img: radial-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+  --lh-sidebar: #1e2433;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #dde3ef;
+  --lh-card-shadow: 0 3px 12px -6px rgba(15, 23, 42, 0.08);
+}
+html.dark[data-skin='concept_figma_taskboard'] {
+  --lh-canvas: #12151f;
+  --lh-sidebar: #191d2b;
+  --lh-topbar: #191d2b;
+  --lh-card: #1b2030;
+  --lh-card-border: rgba(147, 197, 253, 0.14);
+}
+
+/* 11. Figma Analytics — Sidebar Grafite + Bento Índigo */
+html[data-skin='concept_figma_dashboard'] {
+  --lh-brand-50: 238 242 255;
+  --lh-brand-100: 224 231 255;
+  --lh-brand-200: 199 210 254;
+  --lh-brand-300: 165 180 252;
+  --lh-brand-400: 129 140 248;
+  --lh-brand-500: 79 70 229;
+  --lh-brand-600: 67 56 202;
+  --lh-brand-700: 55 48 163;
+  --lh-radius-card: 1.15rem;
+  --lh-radius-control: 0.7rem;
+  --lh-canvas: #f2f4f8;
+  --lh-sidebar: #111827;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #e2e6f0;
+  --lh-card-shadow: 0 6px 20px -12px rgba(17, 24, 39, 0.14);
+}
+html.dark[data-skin='concept_figma_dashboard'] {
+  --lh-canvas: #0c101b;
+  --lh-sidebar: #111827;
+  --lh-topbar: rgba(17, 24, 39, 0.92);
+  --lh-card: #151d2e;
+  --lh-card-border: rgba(129, 140, 248, 0.16);
+}
+
+/* 12. Style Guide UI Kit — Design System Bordas Nítidas Magenta */
+html[data-skin='concept_figma_uikit'] {
+  --lh-brand-50: 253 242 248;
+  --lh-brand-100: 252 231 243;
+  --lh-brand-200: 251 207 232;
+  --lh-brand-300: 249 168 212;
+  --lh-brand-400: 244 114 182;
+  --lh-brand-500: 219 39 119;
+  --lh-brand-600: 190 24 93;
+  --lh-brand-700: 157 23 77;
+  --lh-radius-card: 0.65rem;
+  --lh-radius-control: 0.45rem;
+  --lh-canvas: #fafafa;
+  --lh-sidebar: #ffffff;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #d4d4d8;
+  --lh-card-border-width: 1.5px;
+  --lh-card-shadow: 0 2px 0 rgba(24, 24, 27, 0.06);
+}
+html.dark[data-skin='concept_figma_uikit'] {
+  --lh-canvas: #121014;
+  --lh-sidebar: #1a161e;
+  --lh-topbar: #1a161e;
+  --lh-card: #1c1821;
+  --lh-card-border: rgba(244, 114, 182, 0.24);
+  --lh-card-border-width: 1.5px;
+}
+
+/* 13. VoIP Desktop — Cliente Desktop Nativo com Icon Rail */
+html[data-skin='concept_voip_desktop'] {
+  --lh-brand-50: 240 249 255;
+  --lh-brand-100: 224 242 254;
+  --lh-brand-200: 186 230 253;
+  --lh-brand-300: 125 211 252;
+  --lh-brand-400: 56 189 248;
+  --lh-brand-500: 14 165 233;
+  --lh-brand-600: 2 132 199;
+  --lh-brand-700: 3 105 161;
+  --lh-radius-card: 1.1rem;
+  --lh-radius-control: 0.75rem;
+  --lh-canvas: #eef3f8;
+  --lh-sidebar: #141923;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #d7e2ee;
+}
+html.dark[data-skin='concept_voip_desktop'] {
+  --lh-canvas: #111620;
+  --lh-sidebar: #0c1018;
+  --lh-topbar: rgba(20, 26, 38, 0.92);
+  --lh-card: #192130;
+  --lh-card-border: rgba(56, 189, 248, 0.16);
+}
+
+/* 14. ShipNow Logistics — Sidebar Azul-Marinho + Colunas Logísticas */
+html[data-skin='concept_shipnow'] {
+  --lh-brand-50: 240 249 255;
+  --lh-brand-100: 224 242 254;
+  --lh-brand-200: 186 230 253;
+  --lh-brand-300: 125 211 252;
+  --lh-brand-400: 56 189 248;
+  --lh-brand-500: 2 132 199;
+  --lh-brand-600: 3 105 161;
+  --lh-brand-700: 7 89 133;
+  --lh-radius-card: 0.95rem;
+  --lh-radius-control: 0.65rem;
+  --lh-canvas: #f4f8fc;
+  --lh-sidebar: #0f2342;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #d9e4f2;
+  --lh-card-shadow: 0 4px 16px -10px rgba(15, 35, 66, 0.14);
+}
+html.dark[data-skin='concept_shipnow'] {
+  --lh-canvas: #091322;
+  --lh-sidebar: #0c1a30;
+  --lh-topbar: rgba(12, 26, 48, 0.92);
+  --lh-card: #102038;
+  --lh-card-border: rgba(56, 189, 248, 0.16);
+}
+
+/* 15. Ramaroo Reviews — Ilhas Flutuantes Lavanda & Roxo Uva */
+html[data-skin='concept_ramaroo'] {
+  --lh-brand-50: 245 243 255;
+  --lh-brand-100: 237 233 254;
+  --lh-brand-200: 221 214 254;
+  --lh-brand-300: 196 181 253;
+  --lh-brand-400: 167 139 250;
+  --lh-brand-500: 124 58 237;
+  --lh-brand-600: 109 40 217;
+  --lh-brand-700: 91 33 182;
+  --lh-radius-card: 1.4rem;
+  --lh-radius-control: 0.9rem;
+  --lh-canvas: #f5f2ff;
+  --lh-canvas-img: radial-gradient(circle at 85% 5%, rgba(167, 139, 250, 0.18), transparent 45%);
+  --lh-sidebar: #ffffff;
+  --lh-topbar: rgba(255, 255, 255, 0.92);
+  --lh-card: #ffffff;
+  --lh-card-border: #e5ddff;
+  --lh-card-shadow: 0 10px 28px -16px rgba(124, 58, 237, 0.18);
+}
+html.dark[data-skin='concept_ramaroo'] {
+  --lh-canvas: #120d21;
+  --lh-sidebar: #1b1433;
+  --lh-topbar: rgba(27, 20, 51, 0.9);
+  --lh-card: #1d1536;
+  --lh-card-border: rgba(167, 139, 250, 0.2);
+}
+
+/* 16. Hospital SaaS — Clínico Ultra-Limpo Turquesa */
+html[data-skin='concept_hospital_saas'] {
+  --lh-brand-50: 236 254 255;
+  --lh-brand-100: 207 250 254;
+  --lh-brand-200: 165 243 252;
+  --lh-brand-300: 103 232 249;
+  --lh-brand-400: 34 211 238;
+  --lh-brand-500: 8 145 178;
+  --lh-brand-600: 14 116 144;
+  --lh-brand-700: 21 94 117;
+  --lh-radius-card: 0.8rem;
+  --lh-radius-control: 0.55rem;
+  --lh-canvas: #eff7f9;
+  --lh-sidebar: #ffffff;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #d2e6ec;
+  --lh-card-shadow: 0 1px 4px rgba(8, 145, 178, 0.06);
+}
+html.dark[data-skin='concept_hospital_saas'] {
+  --lh-canvas: #08151a;
+  --lh-sidebar: #0d1f26;
+  --lh-topbar: rgba(13, 31, 38, 0.94);
+  --lh-card: #0f252d;
+  --lh-card-border: rgba(34, 211, 238, 0.16);
+}
+
+/* 17. QleanDesk Widgets — Windows 11 Dock Inferior + Acrílico Vidro Fosco */
+html[data-skin='concept_qleandesk'] {
+  --lh-brand-50: 240 249 255;
+  --lh-brand-100: 224 242 254;
+  --lh-brand-200: 186 230 253;
+  --lh-brand-300: 125 211 252;
+  --lh-brand-400: 56 189 248;
+  --lh-brand-500: 14 165 233;
+  --lh-brand-600: 2 132 199;
+  --lh-brand-700: 3 105 161;
+  --lh-radius-card: 1.45rem;
+  --lh-radius-control: 0.9rem;
+  --lh-canvas: #dce9f9;
+  --lh-canvas-img:
+    radial-gradient(circle at 20% 20%, rgba(56, 189, 248, 0.35), transparent 50%),
+    radial-gradient(circle at 80% 75%, rgba(129, 140, 248, 0.28), transparent 55%);
+  --lh-sidebar: rgba(255, 255, 255, 0.72);
+  --lh-topbar: rgba(255, 255, 255, 0.68);
+  --lh-card: rgba(255, 255, 255, 0.72);
+  --lh-card-border: rgba(255, 255, 255, 0.7);
+  --lh-card-shadow: 0 12px 32px -12px rgba(15, 23, 42, 0.16);
+}
+html.dark[data-skin='concept_qleandesk'] {
+  --lh-canvas: #0b1220;
+  --lh-canvas-img:
+    radial-gradient(circle at 18% 18%, rgba(56, 189, 248, 0.22), transparent 48%),
+    radial-gradient(circle at 82% 80%, rgba(99, 102, 241, 0.22), transparent 52%);
+  --lh-sidebar: rgba(18, 28, 46, 0.72);
+  --lh-topbar: rgba(16, 25, 42, 0.65);
+  --lh-card: rgba(22, 34, 56, 0.62);
+  --lh-card-border: rgba(255, 255, 255, 0.14);
+  --lh-card-shadow: 0 16px 36px -16px rgba(0, 0, 0, 0.65);
+}
+
+/* 18. Sprinta Tracker — Rail Carbono + Acento Lima Elétrico */
+html[data-skin='concept_sprinta'] {
+  --lh-brand-50: 247 254 231;
+  --lh-brand-100: 236 252 203;
+  --lh-brand-200: 217 249 157;
+  --lh-brand-300: 190 242 100;
+  --lh-brand-400: 163 230 53;
+  --lh-brand-500: 101 163 13;
+  --lh-brand-600: 77 124 15;
+  --lh-brand-700: 63 98 18;
+  --lh-radius-card: 0.75rem;
+  --lh-radius-control: 0.5rem;
+  --lh-canvas: #f4f5f2;
+  --lh-sidebar: #141519;
+  --lh-topbar: #ffffff;
+  --lh-card: #ffffff;
+  --lh-card-border: #dedfd8;
+}
+html.dark[data-skin='concept_sprinta'] {
+  --lh-brand-400: 190 242 100;
+  --lh-brand-500: 163 230 53;
+  --lh-brand-600: 132 204 22;
+  --lh-btn-primary-fg: #111805;
+  --lh-canvas: #0d0e12;
+  --lh-sidebar: #13151b;
+  --lh-topbar: rgba(19, 21, 27, 0.92);
+  --lh-card: #161820;
+  --lh-card-border: rgba(163, 230, 53, 0.16);
+}
+
+/* 19. IQON PC Boost — Dock Inferior Performance + Neon Ciano */
+html[data-skin='concept_iqon_pc'] {
+  --lh-brand-50: 236 254 255;
+  --lh-brand-100: 207 250 254;
+  --lh-brand-200: 165 243 252;
+  --lh-brand-300: 103 232 249;
+  --lh-brand-400: 34 211 238;
+  --lh-brand-500: 0 168 214;
+  --lh-brand-600: 0 138 179;
+  --lh-brand-700: 0 110 145;
+  --lh-radius-card: 0.65rem;
+  --lh-radius-control: 0.45rem;
+  --lh-canvas: #edf2f7;
+  --lh-sidebar: #111826;
+  --lh-topbar: rgba(255, 255, 255, 0.92);
+  --lh-card: #ffffff;
+  --lh-card-border: #cdd9e6;
+}
+html.dark[data-skin='concept_iqon_pc'] {
+  --lh-brand-400: 56 226 255;
+  --lh-brand-500: 0 210 255;
+  --lh-brand-600: 0 176 220;
+  --lh-btn-primary-fg: #04131c;
+  --lh-canvas: #070b13;
+  --lh-canvas-img:
+    radial-gradient(ellipse 65% 40% at 50% -10%, rgba(0, 210, 255, 0.17), transparent 58%),
+    radial-gradient(ellipse 50% 35% at 90% 90%, rgba(16, 185, 129, 0.12), transparent 55%);
+  --lh-sidebar: rgba(14, 21, 35, 0.88);
+  --lh-topbar: rgba(11, 17, 28, 0.88);
+  --lh-card: rgba(17, 24, 38, 0.9);
+  --lh-card-border: rgba(0, 210, 255, 0.22);
+  --lh-card-shadow: 0 0 24px -14px rgba(0, 210, 255, 0.35);
+}
+
+/* 20. Zênite Foco — Ilha Flutuante Zen Índigo Abissal */
+html[data-skin='concept_zenite'] {
+  --lh-brand-50: 238 242 255;
+  --lh-brand-100: 224 231 255;
+  --lh-brand-200: 199 210 254;
+  --lh-brand-300: 165 180 252;
+  --lh-brand-400: 129 140 248;
+  --lh-brand-500: 99 102 241;
+  --lh-brand-600: 79 70 229;
+  --lh-brand-700: 67 56 202;
+  --lh-radius-card: 1.5rem;
+  --lh-radius-control: 1rem;
+  --lh-canvas: #f1f3fa;
+  --lh-sidebar: #ffffff;
+  --lh-topbar: rgba(255, 255, 255, 0.85);
+  --lh-card: #ffffff;
+  --lh-card-border: #e1e5f4;
+  --lh-card-shadow: 0 12px 32px -20px rgba(79, 70, 229, 0.16);
+}
+html.dark[data-skin='concept_zenite'] {
+  --lh-canvas: #0b0f1c;
+  --lh-canvas-img: radial-gradient(circle at 50% 0%, rgba(129, 140, 248, 0.15), transparent 55%);
+  --lh-sidebar: rgba(18, 24, 44, 0.92);
+  --lh-topbar: rgba(18, 24, 44, 0.78);
+  --lh-card: rgba(20, 27, 48, 0.86);
+  --lh-card-border: rgba(165, 180, 252, 0.14);
+  --lh-card-shadow: 0 16px 40px -22px rgba(0, 0, 0, 0.65);
+}
+
+/* 21. TheBean.ai Coach — Menu Topo Orgânico Creme & Verde-Energia */
+html[data-skin='concept_thebean_ai'] {
+  --lh-brand-50: 247 254 231;
+  --lh-brand-100: 236 252 203;
+  --lh-brand-200: 217 249 157;
+  --lh-brand-300: 190 242 100;
+  --lh-brand-400: 132 204 22;
+  --lh-brand-500: 101 163 13;
+  --lh-brand-600: 77 124 15;
+  --lh-brand-700: 63 98 18;
+  --lh-radius-card: 1.6rem;
+  --lh-radius-control: 9999px;
+  --lh-canvas: #faf6ef;
+  --lh-canvas-img: radial-gradient(circle at 85% 10%, rgba(163, 230, 53, 0.16), transparent 45%);
+  --lh-sidebar: #ffffff;
+  --lh-topbar: rgba(255, 255, 255, 0.9);
+  --lh-card: #ffffff;
+  --lh-card-border: #ebe4d6;
+  --lh-card-shadow: 0 8px 24px -16px rgba(101, 163, 13, 0.16);
+}
+html.dark[data-skin='concept_thebean_ai'] {
+  --lh-brand-400: 163 230 53;
+  --lh-brand-500: 132 204 22;
+  --lh-brand-600: 101 163 13;
+  --lh-btn-primary-fg: #111b04;
+  --lh-canvas: #141711;
+  --lh-sidebar: #1c2018;
+  --lh-topbar: rgba(28, 32, 24, 0.9);
+  --lh-card: #1e2319;
+  --lh-card-border: rgba(163, 230, 53, 0.16);
+}
+
+/* ==========================================================================
    CLASSIC PRESERVED SKINS (Esmeralda Noir, Carbono, Cyber, Nórdico, Retrô)
    ========================================================================== */
 
@@ -878,8 +1488,35 @@ html[data-skin='ref_foto_laranja']:not(.dark) .lh-brand-badge {
 /* Ensure brand-600/brand-500 buttons on bright-accent dark skins keep crisp dark text */
 html.dark[data-skin='ref_relogio_noturno'] .bg-brand-600,
 html.dark[data-skin='ref_trabalho_salvia'] .bg-brand-600,
-html.dark[data-skin='ref_jornada_menta'] .bg-brand-600 {
+html.dark[data-skin='ref_jornada_menta'] .bg-brand-600,
+html.dark[data-skin='concept_gridtrade'] .bg-brand-600,
+html.dark[data-skin='concept_sprinta'] .bg-brand-600,
+html.dark[data-skin='concept_iqon_pc'] .bg-brand-600,
+html.dark[data-skin='concept_thebean_ai'] .bg-brand-600 {
   color: var(--lh-btn-primary-fg) !important;
+}
+
+/* Structural glassmorphism for QleanDesk acrylic widgets */
+html[data-skin='concept_qleandesk'] .lh-card,
+html[data-skin='concept_qleandesk'] .lh-topbar,
+html[data-skin='concept_qleandesk'] .lh-dock {
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+
+/* Figma Task Board subtle dot-grid canvas */
+html[data-skin='concept_figma_taskboard']:not(.dark) body {
+  background-size: 22px 22px;
+}
+
+/* Dual-tone dark sidebar on light canvas (ShipNow, CRM, Figma Board/Analytics, Flup rail) */
+html[data-shell='dual-tone-sidebar']:not(.dark) .lh-sidebar-dark-tone,
+html[data-skin='concept_flup_delivery']:not(.dark) .lh-rail-dark-tone,
+html[data-skin='concept_voip_desktop']:not(.dark) .lh-rail-dark-tone,
+html[data-skin='concept_sprinta']:not(.dark) .lh-rail-dark-tone,
+html[data-skin='concept_cyfocus']:not(.dark) .lh-rail-dark-tone {
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Retro classic overrides for sharp nostalgic Win98/Winamp feel */

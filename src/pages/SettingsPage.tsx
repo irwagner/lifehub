@@ -21,7 +21,15 @@ import {
   restoreBackupJson,
 } from '../services/backup';
 import { loadDemoData } from '../services/demoSeed';
-import { CLASSIC_SKINS, REFERENCE_SKINS, UI_SKINS, type SkinDefinition } from '../services/skins';
+import {
+  CLASSIC_SKINS,
+  CONCEPT_SKINS,
+  REFERENCE_SKINS,
+  SHELL_LAYOUT_LABELS,
+  UI_SKINS,
+  type SkinDefinition,
+  type SkinGroup,
+} from '../services/skins';
 import type { ChildWeekendMode, RoutineMode, ThemeMode, WorkDaysPerWeek } from '../types/domain';
 import { todayISO } from '../utils/format';
 
@@ -51,6 +59,7 @@ export const SettingsPage: React.FC = () => {
     (settings?.reminders_enabled ?? 1) === 1,
   );
   const [nativeDbPath, setNativeDbPath] = useState<string | null>(null);
+  const [skinTab, setSkinTab] = useState<'all' | SkinGroup>('concept');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -233,6 +242,121 @@ export const SettingsPage: React.FC = () => {
           ? 'border border-white/15'
           : 'border border-black/15';
 
+    const renderMiniStructure = () => {
+      if (skin.shell === 'top-nav') {
+        return (
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div
+              className="flex h-4 items-center justify-between rounded-md px-1.5"
+              style={{ backgroundColor: skin.swatches[1] }}
+            >
+              <div className="flex items-center gap-1">
+                <div className="h-2 w-2 rounded-full" style={{ backgroundColor: skin.swatches[2] }} />
+                <div className={`h-1.5 w-6 rounded-sm ${subtleBar}`} />
+                <div className={`h-1.5 w-5 rounded-sm ${fainterBar}`} />
+                <div className={`h-1.5 w-5 rounded-sm ${fainterBar}`} />
+              </div>
+              <div className="h-2 w-4 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+            </div>
+            <div className="grid flex-1 grid-cols-3 gap-1.5">
+              <div className="col-span-2 rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div className="h-1.5 w-8 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+              </div>
+              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div className={`h-1.5 w-6 rounded-sm ${subtleBar}`} />
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (skin.shell === 'bottom-dock') {
+        return (
+          <div className="flex flex-1 flex-col justify-between gap-1">
+            <div className="grid flex-1 grid-cols-3 gap-1">
+              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div className="h-1.5 w-5 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+              </div>
+              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div className={`h-1.5 w-6 rounded-sm ${subtleBar}`} />
+              </div>
+              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
+                <div className={`h-1.5 w-4 rounded-sm ${fainterBar}`} />
+              </div>
+            </div>
+            <div className="mx-auto flex h-3.5 w-3/4 items-center justify-center gap-1 rounded-full px-2" style={{ backgroundColor: skin.swatches[1] }}>
+              <span className="h-1.5 w-3 rounded-full" style={{ backgroundColor: skin.swatches[2] }} />
+              <span className={`h-1.5 w-1.5 rounded-full ${subtleBar}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${subtleBar}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${subtleBar}`} />
+            </div>
+          </div>
+        );
+      }
+
+      if (skin.shell === 'icon-rail') {
+        return (
+          <>
+            <div
+              className="mr-1.5 flex w-4 flex-col items-center gap-1 rounded-md py-1"
+              style={{ backgroundColor: skin.swatches[1] }}
+            >
+              <div className="h-2 w-2 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+              <div className="h-1.5 w-1.5 rounded-sm bg-white/30" />
+              <div className="h-1.5 w-1.5 rounded-sm bg-white/20" />
+            </div>
+            <div className="grid flex-1 grid-cols-3 gap-1">
+              <div className="rounded-md border border-black/10 bg-white/70 p-1 dark:bg-white/10">
+                <div className="h-1.5 w-5 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+              </div>
+              <div className="rounded-md border border-black/10 bg-white/70 p-1 dark:bg-white/10">
+                <div className={`h-1.5 w-5 rounded-sm ${subtleBar}`} />
+              </div>
+              <div className="rounded-md border border-black/10 bg-white/70 p-1 dark:bg-white/10">
+                <div className={`h-1.5 w-4 rounded-sm ${fainterBar}`} />
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      return (
+        <>
+          <div
+            className={`mr-1.5 w-8 p-1 ${skin.shell === 'floating-island' ? 'rounded-lg shadow-sm' : 'rounded-md'}`}
+            style={{ backgroundColor: skin.swatches[1] }}
+          >
+            <div className="h-1.5 w-full rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+            <div className={`mt-1 h-1 w-4/5 rounded-sm ${skin.shell === 'dual-tone-sidebar' ? 'bg-white/30' : subtleBar}`} />
+            <div className={`mt-1 h-1 w-3/5 rounded-sm ${skin.shell === 'dual-tone-sidebar' ? 'bg-white/20' : fainterBar}`} />
+          </div>
+          <div className="flex flex-1 flex-col gap-1.5">
+            <div
+              className="flex h-4 items-center justify-between rounded-md px-1.5"
+              style={{ backgroundColor: skin.shell === 'dual-tone-sidebar' && !isDarkPreview ? '#ffffff' : skin.swatches[1] }}
+            >
+              <div className={`h-1.5 w-10 rounded-sm ${subtleBar}`} />
+              <div className="h-2 w-5 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+            </div>
+            <div className="grid flex-1 grid-cols-2 gap-1.5">
+              <div
+                className="rounded-md p-1"
+                style={{ backgroundColor: skin.shell === 'dual-tone-sidebar' && !isDarkPreview ? '#ffffff' : skin.swatches[1] }}
+              >
+                <div className="h-1.5 w-6 rounded-sm" style={{ backgroundColor: skin.swatches[2] }} />
+              </div>
+              <div
+                className="rounded-md p-1"
+                style={{ backgroundColor: skin.shell === 'dual-tone-sidebar' && !isDarkPreview ? '#ffffff' : skin.swatches[1] }}
+              >
+                <div className={`h-1.5 w-8 rounded-sm ${subtleBar}`} />
+              </div>
+            </div>
+          </div>
+        </>
+      );
+    };
+
     return (
       <button
         key={skin.id}
@@ -244,45 +368,12 @@ export const SettingsPage: React.FC = () => {
             : 'border-slate-200/80 hover:border-brand-400/60 dark:border-white/[0.08] dark:hover:border-brand-400/50'
         }`}
       >
-        {/* Mini desktop window mockup */}
+        {/* Structural mini desktop mockup */}
         <div
           className={`mb-3 flex h-16 overflow-hidden rounded-xl p-1.5 ${borderMock}`}
           style={{ backgroundColor: skin.swatches[0] }}
         >
-          <div
-            className="mr-1.5 w-8 rounded-md p-1"
-            style={{ backgroundColor: skin.swatches[1] }}
-          >
-            <div
-              className="h-1.5 w-full rounded-sm"
-              style={{ backgroundColor: skin.swatches[2] }}
-            />
-            <div className={`mt-1 h-1 w-4/5 rounded-sm ${subtleBar}`} />
-            <div className={`mt-1 h-1 w-3/5 rounded-sm ${fainterBar}`} />
-          </div>
-          <div className="flex flex-1 flex-col gap-1.5">
-            <div
-              className="flex h-4 items-center justify-between rounded-md px-1.5"
-              style={{ backgroundColor: skin.swatches[1] }}
-            >
-              <div className={`h-1.5 w-10 rounded-sm ${subtleBar}`} />
-              <div
-                className="h-2 w-5 rounded-sm"
-                style={{ backgroundColor: skin.swatches[2] }}
-              />
-            </div>
-            <div className="grid flex-1 grid-cols-2 gap-1.5">
-              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
-                <div
-                  className="h-1.5 w-6 rounded-sm"
-                  style={{ backgroundColor: skin.swatches[2] }}
-                />
-              </div>
-              <div className="rounded-md p-1" style={{ backgroundColor: skin.swatches[1] }}>
-                <div className={`h-1.5 w-8 rounded-sm ${subtleBar}`} />
-              </div>
-            </div>
-          </div>
+          {renderMiniStructure()}
         </div>
 
         <div className="flex items-center justify-between gap-2">
@@ -294,7 +385,7 @@ export const SettingsPage: React.FC = () => {
           ) : (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
               {isDarkPreview ? <Moon className="h-2.5 w-2.5" /> : <Sun className="h-2.5 w-2.5" />}
-              {skin.vibe}
+              {SHELL_LAYOUT_LABELS[skin.shell]}
             </span>
           )}
         </div>
@@ -303,19 +394,28 @@ export const SettingsPage: React.FC = () => {
         </p>
         {skin.sourceRef && (
           <p className="mt-1.5 truncate font-mono text-[10px] text-slate-400 dark:text-slate-500">
-            Ref: {skin.sourceRef}
+            {skin.sourceRef}
           </p>
         )}
       </button>
     );
   };
 
+  const displayedGallerySkins =
+    skinTab === 'concept'
+      ? CONCEPT_SKINS
+      : skinTab === 'reference'
+        ? REFERENCE_SKINS
+        : skinTab === 'classic'
+          ? CLASSIC_SKINS
+          : UI_SKINS;
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div>
         <h2 className="lh-page-title">Configurações, Skins, Rotina & Backup</h2>
         <p className="lh-page-subtitle">
-          Troque o visual do LifeHub ao vivo entre {UI_SKINS.length} skins (9 baseadas nas suas imagens de referência + 6 clássicas preservadas), alterne CLT/Apps/TI e gerencie backups locais.
+          Troque visual, estrutura de navegação e layout do dashboard ao vivo entre {UI_SKINS.length} skins ({CONCEPT_SKINS.length} ideias Dribbble/Figma/Behance + {REFERENCE_SKINS.length} referências locais + {CLASSIC_SKINS.length} clássicas).
         </p>
       </div>
 
@@ -324,25 +424,35 @@ export const SettingsPage: React.FC = () => {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-brand-500" />
-            <h3 className="font-semibold">Galeria de Skins ({UI_SKINS.length} estilos ao vivo)</h3>
+            <h3 className="font-semibold">Galeria de Skins & Arquiteturas ({UI_SKINS.length} estilos)</h3>
           </div>
-          <span className="text-xs text-slate-500 dark:text-slate-400">
-            Ao clicar, a skin aplica a paleta e o modo claro/escuro da referência; você ainda pode alternar Sol/Lua livremente.
-          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {(
+              [
+                ['concept', `Ideias Web (${CONCEPT_SKINS.length})`],
+                ['reference', `Referências Locais (${REFERENCE_SKINS.length})`],
+                ['classic', `Clássicas (${CLASSIC_SKINS.length})`],
+                ['all', `Todas (${UI_SKINS.length})`],
+              ] as Array<['all' | SkinGroup, string]>
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSkinTab(key)}
+                className={`rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                  skinTab === key
+                    ? 'bg-brand-600 text-white shadow-sm'
+                    : 'border border-slate-200/80 text-slate-600 hover:border-brand-400 dark:border-white/[0.08] dark:text-slate-300'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
-        <p className="mb-2.5 text-xs font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-          Baseadas em referencias-de-design ({REFERENCE_SKINS.length})
-        </p>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {REFERENCE_SKINS.map(renderSkinCard)}
-        </div>
-
-        <p className="mb-2.5 mt-6 text-xs font-semibold uppercase tracking-wider text-slate-400">
-          Skins anteriores preservadas ({CLASSIC_SKINS.length})
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {CLASSIC_SKINS.map(renderSkinCard)}
+          {displayedGallerySkins.map(renderSkinCard)}
         </div>
       </section>
 

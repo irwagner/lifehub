@@ -15,7 +15,28 @@ export type UiSkin =
   | 'ref_agenda_azul'
   | 'ref_jornada_menta'
   | 'ref_caderno_oliva'
-  | 'ref_foto_laranja';
+  | 'ref_foto_laranja'
+  | 'concept_horizon_homes'
+  | 'concept_student_portal'
+  | 'concept_flup_delivery'
+  | 'concept_gridtrade'
+  | 'concept_cyfocus'
+  | 'concept_traffictrace'
+  | 'concept_fintech_app'
+  | 'concept_isora_saas'
+  | 'concept_crm_dashboard'
+  | 'concept_figma_taskboard'
+  | 'concept_figma_dashboard'
+  | 'concept_figma_uikit'
+  | 'concept_voip_desktop'
+  | 'concept_shipnow'
+  | 'concept_ramaroo'
+  | 'concept_hospital_saas'
+  | 'concept_qleandesk'
+  | 'concept_sprinta'
+  | 'concept_iqon_pc'
+  | 'concept_zenite'
+  | 'concept_thebean_ai';
 export type WorkDaysPerWeek = 4 | 5 | 6;
 export type ChildWeekendMode = 'all' | 'alternating' | 'custom';
 
