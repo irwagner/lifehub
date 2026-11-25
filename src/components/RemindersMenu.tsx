@@ -60,7 +60,7 @@ export const RemindersMenu: React.FC = () => {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="relative inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition hover:border-brand-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+        className="relative inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-brand-400/60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]"
         aria-label="Abrir lembretes locais discretos"
       >
         <Bell className="h-3.5 w-3.5" />
@@ -73,7 +73,7 @@ export const RemindersMenu: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-80 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+        <div className="absolute right-0 z-40 mt-2 w-80 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-2xl animate-scale-in dark:border-white/[0.1] dark:bg-[#0f172a]">
           <div className="mb-2 flex items-center justify-between">
             <h3 className="text-sm font-semibold">Lembretes Locais</h3>
             <span className="inline-flex items-center gap-1 text-[10px] text-emerald-500">

@@ -211,15 +211,14 @@ export const CalendarPage: React.FC = () => {
     }
   };
 
-  const inputClass =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100';
+  const inputClass = 'lh-input';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Calendário & Tarefas</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="lh-page-title">Calendário & Tarefas</h2>
+          <p className="lh-page-subtitle">
             Arraste ou redimensione para reagendar. Clique em qualquer evento para editar ou excluir.
           </p>
         </div>
@@ -228,7 +227,7 @@ export const CalendarPage: React.FC = () => {
           <select
             value={selectedTemplate}
             onChange={(e) => setSelectedTemplate(e.target.value as ScheduleTemplateId)}
-            className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium dark:border-slate-700 dark:bg-slate-900"
+            className="lh-input w-auto text-xs font-medium"
           >
             {SCHEDULE_TEMPLATES.map((t) => (
               <option key={t.id} value={t.id}>
@@ -240,7 +239,7 @@ export const CalendarPage: React.FC = () => {
             type="button"
             disabled={applying}
             onClick={handleApplyTemplate}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-3.5 py-2 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+            className="lh-btn-primary"
           >
             <Wand2 className="h-3.5 w-3.5" />
             {applying ? 'Aplicando...' : 'Aplicar template na semana'}
@@ -250,7 +249,7 @@ export const CalendarPage: React.FC = () => {
 
       <div className="grid gap-6 xl:grid-cols-4">
         {/* FullCalendar */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-3">
+        <div className="lh-card p-4 xl:col-span-3">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
@@ -286,7 +285,7 @@ export const CalendarPage: React.FC = () => {
         </div>
 
         {/* Tasks sidebar */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="lh-card p-4">
           <div className="mb-3 flex items-center justify-between">
             <h3 className="font-semibold">Tarefas</h3>
             <button

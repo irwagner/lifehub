@@ -129,10 +129,8 @@ export const IdeasPage: React.FC = () => {
     notify(`"${idea.title}" promovido para Portfólio TI (Estudos & TI).`);
   };
 
-  const cardClass =
-    'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
-  const inputClass =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950';
+  const cardClass = 'lh-card';
+  const inputClass = 'lh-input';
 
   const activeDoingCount = ideas.filter((i) => i.status === 'doing').length;
 

@@ -329,8 +329,7 @@ export const QuickActionsModal: React.FC = () => {
     idea: 'Capturar Ideia',
   };
 
-  const inputClass =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100';
+  const inputClass = 'lh-input';
 
   return (
     <Modal open={true} title={titles[quickAction]} onClose={close}>

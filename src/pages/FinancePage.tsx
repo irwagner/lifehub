@@ -366,17 +366,15 @@ export const FinancePage: React.FC = () => {
     }
   };
 
-  const cardClass =
-    'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
-  const inputClass =
-    'rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950';
+  const cardClass = 'lh-card';
+  const inputClass = 'lh-input';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Financeiro Pessoal</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="lh-page-title">Financeiro Pessoal</h2>
+          <p className="lh-page-subtitle">
             Previsto vs realizado, orçamentos, recorrências, parcelamentos e importação local CSV/OFX com prevenção de duplicidades.
           </p>
         </div>
@@ -386,7 +384,7 @@ export const FinancePage: React.FC = () => {
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className={inputClass}
+            className="lh-input w-auto"
           />
           <button
             type="button"
@@ -396,21 +394,21 @@ export const FinancePage: React.FC = () => {
               notify(`Relatório CSV de ${month} exportado.`);
             }}
             disabled={transactions.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:border-brand-500 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="lh-btn-secondary"
           >
             <Download className="h-4 w-4" /> Exportar CSV
           </button>
           <button
             type="button"
             onClick={() => setImportOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:border-brand-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="lh-btn-secondary"
           >
             <FileUp className="h-4 w-4" /> Importar CSV/OFX
           </button>
           <button
             type="button"
             onClick={() => openQuickAction('transaction')}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            className="lh-btn-primary"
           >
             <Plus className="h-4 w-4" /> Nova Transação
           </button>
@@ -473,18 +471,18 @@ export const FinancePage: React.FC = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-2.5 top-2 h-3.5 w-3.5 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Buscar descrição/categoria..."
-                className={`${inputClass} pl-8 text-xs`}
+                className="lh-input w-56 pl-8 text-xs"
               />
             </div>
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as 'all' | TransactionType)}
-              className={`${inputClass} text-xs`}
+              className="lh-input w-auto text-xs"
             >
               <option value="all">Todos tipos</option>
               <option value="income">Receitas</option>
@@ -494,7 +492,7 @@ export const FinancePage: React.FC = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value as 'all' | TransactionStatus)}
-              className={`${inputClass} text-xs`}
+              className="lh-input w-auto text-xs"
             >
               <option value="all">Todos status</option>
               <option value="realized">Realizado</option>
@@ -512,19 +510,19 @@ export const FinancePage: React.FC = () => {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="lh-table">
               <thead>
-                <tr className="border-b border-slate-200 text-xs text-slate-500 dark:border-slate-800">
-                  <th className="py-2 pr-3">Data</th>
-                  <th className="py-2 pr-3">Descrição</th>
-                  <th className="py-2 pr-3">Conta</th>
-                  <th className="py-2 pr-3">Categoria</th>
-                  <th className="py-2 pr-3">Status</th>
-                  <th className="py-2 pr-3 text-right">Valor</th>
-                  <th className="py-2 text-right">Ações</th>
+                <tr>
+                  <th className="py-2.5 pr-3">Data</th>
+                  <th className="py-2.5 pr-3">Descrição</th>
+                  <th className="py-2.5 pr-3">Conta</th>
+                  <th className="py-2.5 pr-3">Categoria</th>
+                  <th className="py-2.5 pr-3">Status</th>
+                  <th className="py-2.5 pr-3 text-right">Valor</th>
+                  <th className="py-2.5 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              <tbody>
                 {filteredTransactions.map((tx) => (
                   <tr key={tx.id}>
                     <td className="py-2.5 pr-3 font-mono text-xs">{formatDateBR(tx.date)}</td>

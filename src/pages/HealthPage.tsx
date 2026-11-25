@@ -84,10 +84,8 @@ export const HealthPage: React.FC = () => {
     }
   };
 
-  const cardClass =
-    'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
-  const inputClass =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950';
+  const cardClass = 'lh-card';
+  const inputClass = 'lh-input';
 
   const hasChildThisWeek = settings
     ? isChildWeekend(

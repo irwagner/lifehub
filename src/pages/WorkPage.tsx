@@ -218,17 +218,15 @@ export const WorkPage: React.FC = () => {
       ? sessions
       : sessions.filter((s) => s.platform === platformFilter);
 
-  const cardClass =
-    'rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900';
-  const inputClass =
-    'w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm dark:border-slate-700 dark:bg-slate-950';
+  const cardClass = 'lh-card';
+  const inputClass = 'lh-input';
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Trabalho por Aplicativos (Uber Moto / 99Moto)</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="lh-page-title">Trabalho por Aplicativos (Uber Moto / 99Moto)</h2>
+          <p className="lh-page-subtitle">
             Financeiro verdadeiro: bruto, combustível, pedágio, manutenção/km, depreciação e parcela do veículo sempre separados. (iFood fora do escopo).
           </p>
         </div>
@@ -242,14 +240,14 @@ export const WorkPage: React.FC = () => {
               downloadTextFile(csv, `lifehub-jornadas-${todayISO()}.csv`);
               notify('Relatório CSV de jornadas exportado.');
             }}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 hover:border-brand-500 disabled:opacity-40 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="lh-btn-secondary"
           >
             <Download className="h-4 w-4" /> Exportar CSV
           </button>
           <button
             type="button"
             onClick={() => openQuickAction('work_session')}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-brand-600 px-4 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            className="lh-btn-primary"
           >
             <Plus className="h-4 w-4" /> Registrar Jornada
           </button>
@@ -357,23 +355,23 @@ export const WorkPage: React.FC = () => {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="lh-table text-xs tabular-nums">
               <thead>
-                <tr className="border-b border-slate-200 text-slate-500 dark:border-slate-800">
-                  <th className="py-2 pr-3">Data</th>
-                  <th className="py-2 pr-3">Plataforma</th>
-                  <th className="py-2 pr-3">Horário</th>
-                  <th className="py-2 pr-3 text-right">Km</th>
-                  <th className="py-2 pr-3 text-right">Bruto</th>
-                  <th className="py-2 pr-3 text-right">Comb.</th>
-                  <th className="py-2 pr-3 text-right">Manut. est.</th>
-                  <th className="py-2 pr-3 text-right">Deprec.</th>
-                  <th className="py-2 pr-3 text-right">Líq. Oper.</th>
-                  <th className="py-2 pr-3 text-right">Líq./h</th>
-                  <th className="py-2 text-right">Ações</th>
+                <tr>
+                  <th className="py-2.5 pr-3">Data</th>
+                  <th className="py-2.5 pr-3">Plataforma</th>
+                  <th className="py-2.5 pr-3">Horário</th>
+                  <th className="py-2.5 pr-3 text-right">Km</th>
+                  <th className="py-2.5 pr-3 text-right">Bruto</th>
+                  <th className="py-2.5 pr-3 text-right">Comb.</th>
+                  <th className="py-2.5 pr-3 text-right">Manut. est.</th>
+                  <th className="py-2.5 pr-3 text-right">Deprec.</th>
+                  <th className="py-2.5 pr-3 text-right">Líq. Oper.</th>
+                  <th className="py-2.5 pr-3 text-right">Líq./h</th>
+                  <th className="py-2.5 text-right">Ações</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+              <tbody>
                 {filteredSessions.map((s) => {
                   const m = calculateWorkSessionMetrics(s);
                   return (
