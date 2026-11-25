@@ -12,6 +12,7 @@ import {
   Trash2,
   Upload,
 } from 'lucide-react';
+import { AutoUpdatePanel } from '../components/AutoUpdatePanel';
 import { CloudSyncPanel } from '../components/CloudSyncPanel';
 import { GeminiConfigPanel } from '../components/GeminiConfigPanel';
 import { useApp } from '../context/AppContext';
@@ -627,6 +628,9 @@ export const SettingsPage: React.FC = () => {
 
       {/* Optional Gemini AI Assistant */}
       <GeminiConfigPanel />
+
+      {/* GitHub Releases Auto-Updater */}
+      <AutoUpdatePanel />
 
       {/* Backup & Restore */}
       <section className={cardClass}>

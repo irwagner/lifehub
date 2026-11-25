@@ -2,10 +2,10 @@
 
 Aplicativo desktop **local-first para Windows** (Tauri 2 + React + TypeScript + Vite + Tailwind CSS + SQLite) com **App Mobile PWA (iPhone & Android)** e **sincronização gratuita opcional na Cloudflare com criptografia ponta a ponta AES-256-GCM**.
 
-## Baixar e Abrir com 1 Clique (Windows — sem instalar Node ou Rust)
-Acesse **[Releases (v0.1.0)](https://github.com/irwagner/lifehub/releases/tag/v0.1.0)** e baixe:
-- **`LifeHub.exe` (Portátil)**: compilado com CRT estático (`+crt-static`) — **é só baixar, dar duplo clique e usar** em qualquer Windows 10/11 (sem instalar dependências).
-- **`LifeHub-Instalador-Windows.exe` (Instalador 3,4 MB)**: cria atalho na Área de Trabalho e no Menu Iniciar e instala o WebView2 automaticamente caso falte em Windows 10 antigo.
+## Baixar e Abrir com 1 Clique (Windows — com Atualização Automática)
+Acesse **[Última Release (GitHub)](https://github.com/irwagner/lifehub/releases/latest)** e baixe:
+- **`LifeHub.exe` (Portátil)**: compilado com CRT estático (`+crt-static`) e **atualização automática pelo GitHub** — é só baixar, dar duplo clique e usar em qualquer Windows 10/11. Quando sair versão nova, basta clicar em **Atualizar** dentro do próprio app.
+- **`LifeHub-Instalador-Windows.exe` (Instalador ~3,4 MB)**: cria atalho na Área de Trabalho e no Menu Iniciar e instala o WebView2 automaticamente caso falte em Windows 10 antigo.
 
 ## App Celular (iPhone & Android)
 - **Link PWA:** `https://lifehub-sync.irwagneremanoel.workers.dev`

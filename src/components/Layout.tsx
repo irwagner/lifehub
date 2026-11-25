@@ -27,6 +27,7 @@ import { CloudSyncQuickButton } from './CloudSyncQuickButton';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { RemindersMenu } from './RemindersMenu';
 import { SkinSwitcher } from './SkinSwitcher';
+import { UpdateBadgeButton } from './UpdateBadgeButton';
 import { WindowTitleBar } from './WindowTitleBar';
 
 interface NavItemDef {
@@ -216,6 +217,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           Ctrl K
         </kbd>
       </button>
+
+      <UpdateBadgeButton />
 
       <button
         type="button"
