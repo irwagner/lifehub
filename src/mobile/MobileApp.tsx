@@ -40,6 +40,7 @@ import {
   listCategories,
   listRecurringRules,
   listTransactions,
+  markNextInstallmentPaid,
 } from '../repositories/financeRepo';
 import { logHabitSession } from '../repositories/habitsRepo';
 import { createIdea, listIdeas } from '../repositories/ideasRepo';
@@ -73,6 +74,18 @@ import {
   saveGoogleSheetsConfig,
   syncFinanceToGoogleSheets,
 } from '../services/googleSheetsSync';
+import {
+  buildLocalMemberSnapshot,
+  isFamilySyncReady,
+  loadCachedFamilyHub,
+  loadFamilyFinanceConfig,
+  parseFamilyInviteHash,
+  saveFamilyFinanceConfig,
+  syncFamilyFinanceHub,
+  type FamilyFinanceConfig,
+  type FamilyHubDocument,
+} from '../services/familyFinanceSync';
+import { groupInstallmentTransactions } from '../components/InstallmentsTabPanel';
 import { CURRENT_APP_VERSION } from '../services/updater';
 import {
   EVENT_CATEGORY_META,
@@ -119,7 +132,17 @@ export const MobileApp: React.FC = () => {
     return saved ? saved === 'dark' : true;
   });
   const [tab, setTab] = useState<MobileTab>('today');
+  const [finSubTab, setFinSubTab] = useState<'overview' | 'installments' | 'family'>('overview');
   const [sheet, setSheet] = useState<QuickSheetKind>(null);
+  const [familyCfg, setFamilyCfg] = useState<FamilyFinanceConfig>(() => loadFamilyFinanceConfig());
+  const [familyHub, setFamilyHub] = useState<FamilyHubDocument | null>(() => loadCachedFamilyHub());
+  const [familyBusy, setFamilyBusy] = useState(false);
+  const [instDesc, setInstDesc] = useState('');
+  const [instParcelVal, setInstParcelVal] = useState('');
+  const [instCount, setInstCount] = useState('6');
+  const [instKind, setInstKind] = useState<'[Cartão]' | '[Moto]' | '[Seguro]' | '[Parcelado]'>('[Cartão]');
+  const [famHouseDesc, setFamHouseDesc] = useState('');
+  const [famHouseAmt, setFamHouseAmt] = useState('');
   const [toast, setToast] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
 
   // Live SQLite snapshots
@@ -314,6 +337,37 @@ export const MobileApp: React.FC = () => {
         showToast('QR Code / link detectado! Sincronizando...');
         await runSync(database, nextCfg);
       }
+
+      const famInvite = parseFamilyInviteHash(window.location.hash);
+      if (famInvite) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        const curFam = loadFamilyFinanceConfig();
+        const nextFam: FamilyFinanceConfig = {
+          ...curFam,
+          enabled: true,
+          endpointUrl: famInvite.endpointUrl,
+          familyKey: famInvite.familyKey,
+        };
+        saveFamilyFinanceConfig(nextFam);
+        setFamilyCfg(nextFam);
+        setTab('finance');
+        setFinSubTab('family');
+        showToast('Convite da Família detectado! Sincronizando...');
+        try {
+          const res = await syncFamilyFinanceHub(database, nextFam);
+          setFamilyHub(res.hub);
+          const updatedFam = {
+            ...nextFam,
+            lastSyncedAt: res.syncedAt,
+            lastRevision: res.revision,
+          };
+          saveFamilyFinanceConfig(updatedFam);
+          setFamilyCfg(updatedFam);
+          showToast('Conectado ao Financeiro da Família!');
+        } catch (err) {
+          showToast(err instanceof Error ? err.message : 'Erro ao entrar na família.', 'err');
+        }
+      }
     })();
     return () => {
       active = false;
@@ -399,6 +453,18 @@ export const MobileApp: React.FC = () => {
         });
       } catch {
         // silent background mirror failure on mobile
+      }
+      const fam = loadFamilyFinanceConfig();
+      if (isFamilySyncReady(fam) && fam.autoSync) {
+        try {
+          const fRes = await syncFamilyFinanceHub(db, fam);
+          setFamilyHub(fRes.hub);
+          const nextF = { ...fam, enabled: true, lastSyncedAt: fRes.syncedAt, lastRevision: fRes.revision };
+          saveFamilyFinanceConfig(nextF);
+          setFamilyCfg(nextF);
+        } catch {
+          // silent
+        }
       }
     }, 2200);
   }, [db]);
@@ -1043,6 +1109,308 @@ export const MobileApp: React.FC = () => {
         {/* TAB 3: FINANÇAS */}
         {tab === 'finance' && (
           <>
+            <div className="grid grid-cols-3 gap-1.5 rounded-2xl bg-slate-200/70 p-1 text-xs font-bold dark:bg-white/[0.06]">
+              {[
+                { id: 'overview' as const, label: 'Geral' },
+                { id: 'installments' as const, label: 'Cartão / x' },
+                { id: 'family' as const, label: 'Família' },
+              ].map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setFinSubTab(st.id)}
+                  className={`rounded-xl py-2 transition ${
+                    finSubTab === st.id
+                      ? 'bg-indigo-600 text-white shadow-sm'
+                      : 'text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {st.label}
+                </button>
+              ))}
+            </div>
+
+            {finSubTab === 'installments' && (() => {
+              const groups = groupInstallmentTransactions(transactions);
+              const totalRemaining = groups.reduce((acc, g) => acc + g.remainingAmount, 0);
+              return (
+                <>
+                  <section className="rounded-2xl bg-gradient-to-br from-violet-600 to-indigo-700 p-5 text-white shadow-lg">
+                    <p className="text-xs font-medium opacity-85">Total Restante em Parcelados</p>
+                    <p className="mt-1 text-3xl font-bold tabular-nums">{formatBRL(totalRemaining)}</p>
+                    <p className="mt-1 text-xs opacity-80">
+                      {groups.filter((g) => g.remainingCount > 0).length} parcelamento(s) ativo(s)
+                    </p>
+                  </section>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!db) return;
+                      const parcelNum = Number(instParcelVal.replace(',', '.'));
+                      const countNum = Math.min(120, Math.max(2, Math.round(Number(instCount) || 2)));
+                      if (!(parcelNum > 0) || !instDesc.trim()) return;
+                      await createTransaction(db, {
+                        account_id: accounts[0]?.id ?? 'acc_principal',
+                        category_id: null,
+                        type: 'expense',
+                        source_type: 'outros',
+                        description: instDesc.trim(),
+                        amount: Math.round(parcelNum * countNum * 100) / 100,
+                        date: todayISO(),
+                        due_date: todayISO(),
+                        status: 'planned',
+                        installments: countNum,
+                        notes: instKind,
+                      });
+                      setInstDesc('');
+                      setInstParcelVal('');
+                      await refreshData(db);
+                      scheduleAutoSync();
+                      showToast(`Parcelamento ${countNum}x salvo!`);
+                    }}
+                    className={`${card} space-y-2.5`}
+                  >
+                    <h2 className="text-sm font-bold">+ Novo Parcelado (Cartão, Moto, Seguro)</h2>
+                    <input
+                      required
+                      value={instDesc}
+                      onChange={(e) => setInstDesc(e.target.value)}
+                      placeholder="Ex.: Roupa, Moto, Seguro..."
+                      className={input}
+                    />
+                    <div className="grid grid-cols-3 gap-2">
+                      <select
+                        value={instKind}
+                        onChange={(e) => setInstKind(e.target.value as '[Cartão]' | '[Moto]' | '[Seguro]' | '[Parcelado]')}
+                        className={input}
+                      >
+                        <option value="[Cartão]">Cartão</option>
+                        <option value="[Moto]">Moto</option>
+                        <option value="[Seguro]">Seguro</option>
+                        <option value="[Parcelado]">Outro</option>
+                      </select>
+                      <input
+                        required
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={instParcelVal}
+                        onChange={(e) => setInstParcelVal(e.target.value)}
+                        placeholder="Parcela R$"
+                        className={input}
+                      />
+                      <input
+                        required
+                        type="number"
+                        min="2"
+                        max="120"
+                        value={instCount}
+                        onChange={(e) => setInstCount(e.target.value)}
+                        placeholder="Vezes"
+                        className={input}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl bg-indigo-600 py-2.5 text-xs font-bold text-white"
+                    >
+                      Gerar Parcelas
+                    </button>
+                  </form>
+
+                  <section className={card}>
+                    <h2 className="mb-3 text-sm font-bold">Meus Parcelamentos ({groups.length})</h2>
+                    {groups.length === 0 ? (
+                      <p className="py-4 text-center text-xs text-slate-500">
+                        Nenhum parcelamento cadastrado ainda.
+                      </p>
+                    ) : (
+                      <ul className="space-y-2.5">
+                        {groups.map((g) => (
+                          <li
+                            key={g.groupId}
+                            className="rounded-xl bg-slate-50 p-3 dark:bg-white/[0.04]"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-bold">{g.title}</p>
+                                <p className="text-[11px] text-slate-500">
+                                  {formatBRL(g.parcelAmount)}/mês · {g.paidCount}/{g.totalCount} pagas · Falta {formatBRL(g.remainingAmount)}
+                                </p>
+                              </div>
+                              {g.remainingCount > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    if (!db) return;
+                                    await markNextInstallmentPaid(db, g.groupId);
+                                    await refreshData(db);
+                                    scheduleAutoSync();
+                                    showToast('Parcela marcada como paga!');
+                                  }}
+                                  className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white"
+                                >
+                                  Pagar 1
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </section>
+                </>
+              );
+            })()}
+
+            {finSubTab === 'family' && (() => {
+              const members = Object.values(familyHub?.members ?? {});
+              const combinedBal = members.reduce((acc, m) => acc + (m.totalBalance ?? 0), 0);
+              const houseExpenses = members.flatMap((m) => m.sharedExpenses);
+              return (
+                <>
+                  <section className="rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 p-5 text-white shadow-lg">
+                    <p className="text-xs font-medium opacity-85">Saldo Combinado da Família</p>
+                    <p className="mt-1 text-3xl font-bold tabular-nums">{formatBRL(combinedBal)}</p>
+                    <p className="mt-1 text-xs opacity-80">
+                      {members.length} pessoa(s) · Casa no mês: {formatBRL(houseExpenses.reduce((a, e) => a + e.amount, 0))}
+                    </p>
+                  </section>
+
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      if (!db) return;
+                      const amt = Number(famHouseAmt.replace(',', '.'));
+                      if (!(amt > 0) || !famHouseDesc.trim()) return;
+                      await createTransaction(db, {
+                        account_id: accounts[0]?.id ?? 'acc_principal',
+                        category_id: categories.some((c) => c.id === 'cat_moradia') ? 'cat_moradia' : null,
+                        type: 'expense',
+                        source_type: 'outros',
+                        description: famHouseDesc.trim(),
+                        amount: amt,
+                        date: todayISO(),
+                        status: 'realized',
+                        notes: '[Família] Despesa da casa',
+                      });
+                      setFamHouseDesc('');
+                      setFamHouseAmt('');
+                      await refreshData(db);
+                      scheduleAutoSync();
+                      showToast('Despesa da casa salva na Família!');
+                    }}
+                    className={`${card} space-y-2.5`}
+                  >
+                    <h2 className="text-sm font-bold">+ Despesa da Casa / Família</h2>
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        required
+                        value={famHouseDesc}
+                        onChange={(e) => setFamHouseDesc(e.target.value)}
+                        placeholder="Ex.: Mercado, Luz..."
+                        className={`${input} col-span-2`}
+                      />
+                      <input
+                        required
+                        type="number"
+                        step="0.01"
+                        inputMode="decimal"
+                        value={famHouseAmt}
+                        onChange={(e) => setFamHouseAmt(e.target.value)}
+                        placeholder="R$"
+                        className={input}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white"
+                    >
+                      Lançar na Família
+                    </button>
+                  </form>
+
+                  <section className={`${card} space-y-2.5`}>
+                    <h2 className="text-sm font-bold">Conexão da Família (E2EE)</h2>
+                    <input
+                      value={familyCfg.memberName}
+                      onChange={(e) => setFamilyCfg({ ...familyCfg, memberName: e.target.value })}
+                      placeholder="Seu nome"
+                      className={input}
+                    />
+                    <input
+                      value={familyCfg.familyKey}
+                      onChange={(e) => setFamilyCfg({ ...familyCfg, familyKey: e.target.value })}
+                      placeholder="Chave da Família (LH-FAM-...)"
+                      className={`${input} font-mono`}
+                    />
+                    <button
+                      type="button"
+                      disabled={familyBusy}
+                      onClick={async () => {
+                        if (!db) return;
+                        setFamilyBusy(true);
+                        try {
+                          saveFamilyFinanceConfig(familyCfg);
+                          if (!isFamilySyncReady(familyCfg)) {
+                            const localOnly = await buildLocalMemberSnapshot(db, familyCfg);
+                            setFamilyHub({ v: 1, updatedAt: new Date().toISOString(), members: { [localOnly.memberId]: localOnly } });
+                            showToast('Cole a Chave da Família (8+ chars) para conectar outra pessoa.', 'err');
+                          } else {
+                            const res = await syncFamilyFinanceHub(db, familyCfg);
+                            setFamilyHub(res.hub);
+                            const next = { ...familyCfg, enabled: true, lastSyncedAt: res.syncedAt, lastRevision: res.revision };
+                            saveFamilyFinanceConfig(next);
+                            setFamilyCfg(next);
+                            showToast(`Família sincronizada (rev. ${res.revision})!`);
+                          }
+                        } catch (err) {
+                          showToast(err instanceof Error ? err.message : 'Erro ao sincronizar família.', 'err');
+                        } finally {
+                          setFamilyBusy(false);
+                        }
+                      }}
+                      className="w-full rounded-xl bg-indigo-600 py-2.5 text-xs font-bold text-white disabled:opacity-50"
+                    >
+                      {familyBusy ? 'Sincronizando...' : 'Sincronizar Família Agora'}
+                    </button>
+                  </section>
+
+                  {members.length > 0 && (
+                    <section className={`${card} space-y-2`}>
+                      <h2 className="text-sm font-bold">Pessoas Conectadas ({members.length})</h2>
+                      {members.map((m) => (
+                        <div key={m.memberId} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-white/[0.04]">
+                          <span className="font-bold">{m.memberName}</span>
+                          <span className="font-bold text-emerald-500">
+                            {m.totalBalance !== null ? formatBRL(m.totalBalance) : 'Oculto'}
+                          </span>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+
+                  {houseExpenses.length > 0 && (
+                    <section className={`${card} space-y-2`}>
+                      <h2 className="text-sm font-bold">Despesas da Casa ({houseExpenses.length})</h2>
+                      {houseExpenses.map((e) => (
+                        <div key={`${e.memberId}_${e.id}`} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-xs dark:bg-white/[0.04]">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">{e.description}</p>
+                            <p className="text-[10px] text-slate-500">{e.memberName} · {formatDateBR(e.date)}</p>
+                          </div>
+                          <span className="font-bold text-rose-500">-{formatBRL(e.amount)}</span>
+                        </div>
+                      ))}
+                    </section>
+                  )}
+                </>
+              );
+            })()}
+
+            {finSubTab === 'overview' && (
+              <>
             <section className="rounded-2xl bg-gradient-to-br from-indigo-600 to-sky-600 p-5 text-white shadow-lg">
               <p className="text-xs font-medium opacity-85">Saldo Registrado Total</p>
               <p className="mt-1 text-3xl font-bold tabular-nums">
@@ -1155,6 +1523,8 @@ export const MobileApp: React.FC = () => {
                 </ul>
               )}
             </section>
+              </>
+            )}
           </>
         )}
 

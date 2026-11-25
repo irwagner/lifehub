@@ -15,6 +15,12 @@ import {
   saveGoogleSheetsConfig,
   syncFinanceToGoogleSheets,
 } from '../services/googleSheetsSync';
+import {
+  isFamilySyncReady,
+  loadFamilyFinanceConfig,
+  saveFamilyFinanceConfig,
+  syncFamilyFinanceHub,
+} from '../services/familyFinanceSync';
 import { getSkinDefinition } from '../services/skins';
 import type { Settings } from '../types/domain';
 
@@ -78,7 +84,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const autoSyncRef = useRef<AutoSyncController | null>(null);
   const sheetsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetsInFlightRef = useRef(false);
+  const familyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const familyInFlightRef = useRef(false);
   const lastFocusSyncAtRef = useRef(0);
+
+  const scheduleFamilyHubSync = useCallback(() => {
+    if (!db) return;
+    const cfg = loadFamilyFinanceConfig();
+    if (!isFamilySyncReady(cfg) || !cfg.autoSync) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if (familyTimerRef.current) clearTimeout(familyTimerRef.current);
+    familyTimerRef.current = setTimeout(async () => {
+      familyTimerRef.current = null;
+      if (familyInFlightRef.current) return;
+      const latest = loadFamilyFinanceConfig();
+      if (!isFamilySyncReady(latest) || !latest.autoSync) return;
+      familyInFlightRef.current = true;
+      try {
+        const res = await syncFamilyFinanceHub(db, latest);
+        saveFamilyFinanceConfig({
+          ...latest,
+          enabled: true,
+          lastSyncedAt: res.syncedAt,
+          lastRevision: res.revision,
+        });
+      } catch {
+        // Silent background failure
+      } finally {
+        familyInFlightRef.current = false;
+      }
+    }, 2000);
+  }, [db]);
 
   const scheduleGoogleSheetsSync = useCallback(() => {
     if (!db) return;
@@ -122,9 +158,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (!options?.skipAutoSync) {
         autoSyncRef.current?.schedule();
         scheduleGoogleSheetsSync();
+        scheduleFamilyHubSync();
       }
     },
-    [scheduleGoogleSheetsSync],
+    [scheduleGoogleSheetsSync, scheduleFamilyHubSync],
   );
 
   const reloadSettings = useCallback(async () => {

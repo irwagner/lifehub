@@ -51,10 +51,22 @@ export interface SyncedGoogleSheetsExtension {
   updatedAt: string;
 }
 
+export interface SyncedFamilyFinanceExtension {
+  endpointUrl: string;
+  familyKey: string;
+  memberId: string;
+  memberName: string;
+  shareBalance: boolean;
+  autoIncludeHousehold: boolean;
+  autoSync: boolean;
+  updatedAt: string;
+}
+
 export interface SyncedClientExtensions {
   geminiAi?: SyncedGeminiExtension;
   aiMemory?: SyncedAiMemoryItem[];
   googleSheets?: SyncedGoogleSheetsExtension;
+  familyFinance?: SyncedFamilyFinanceExtension;
 }
 
 export interface LifeHubBackup {
@@ -90,6 +102,18 @@ const clientExtensionsSchema = z
       .object({
         webhookUrl: z.string(),
         secretToken: z.string(),
+        autoSync: z.boolean(),
+        updatedAt: z.string(),
+      })
+      .optional(),
+    familyFinance: z
+      .object({
+        endpointUrl: z.string(),
+        familyKey: z.string(),
+        memberId: z.string(),
+        memberName: z.string(),
+        shareBalance: z.boolean(),
+        autoIncludeHousehold: z.boolean(),
         autoSync: z.boolean(),
         updatedAt: z.string(),
       })

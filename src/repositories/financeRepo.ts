@@ -243,6 +243,41 @@ export async function deleteTransaction(db: SqlExecutor, id: string): Promise<vo
   await db.execute('DELETE FROM transactions WHERE id = ?', [id]);
 }
 
+export async function deleteInstallmentGroup(db: SqlExecutor, groupId: string): Promise<number> {
+  const existing = await db.select<{ id: string }>(
+    'SELECT id FROM transactions WHERE installment_group_id = ?',
+    [groupId],
+  );
+  if (existing.length === 0) return 0;
+  await db.execute('DELETE FROM transactions WHERE installment_group_id = ?', [groupId]);
+  return existing.length;
+}
+
+export async function markNextInstallmentPaid(
+  db: SqlExecutor,
+  groupId: string,
+): Promise<Transaction | null> {
+  const rows = await db.select<Transaction>(
+    `SELECT * FROM transactions
+     WHERE installment_group_id = ? AND status = 'planned'
+     ORDER BY installment_number ASC, date ASC
+     LIMIT 1`,
+    [groupId],
+  );
+  if (rows.length === 0) return null;
+  const target = rows[0];
+  const now = new Date().toISOString();
+  await db.execute('UPDATE transactions SET status = ?, updated_at = ? WHERE id = ?', [
+    'realized',
+    now,
+    target.id,
+  ]);
+  const updated = await db.select<Transaction>('SELECT * FROM transactions WHERE id = ?', [
+    target.id,
+  ]);
+  return updated[0] ?? null;
+}
+
 export async function updateTransaction(
   db: SqlExecutor,
   id: string,

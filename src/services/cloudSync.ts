@@ -22,6 +22,11 @@ import {
   loadGoogleSheetsConfig,
   saveGoogleSheetsConfig,
 } from './googleSheetsSync';
+import {
+  isFamilySyncReady,
+  loadFamilyFinanceConfig,
+  saveFamilyFinanceConfig,
+} from './familyFinanceSync';
 
 export interface CloudSyncConfig {
   enabled: boolean;
@@ -382,11 +387,22 @@ function mergeClientExtensions(
     }
   }
 
-  if (!mergedGemini && mergedMemory.length === 0 && !mergedSheets) return undefined;
+  let mergedFamily = local?.familyFinance;
+  const rFam = remote?.familyFinance;
+  if (!mergedFamily?.familyKey?.trim() && rFam?.familyKey?.trim()) {
+    mergedFamily = rFam;
+  } else if (mergedFamily?.familyKey?.trim() && rFam?.familyKey?.trim()) {
+    if ((rFam.updatedAt || '') > (mergedFamily.updatedAt || '')) {
+      mergedFamily = rFam;
+    }
+  }
+
+  if (!mergedGemini && mergedMemory.length === 0 && !mergedSheets && !mergedFamily) return undefined;
   return {
     ...(mergedGemini ? { geminiAi: mergedGemini } : {}),
     ...(mergedMemory.length > 0 ? { aiMemory: mergedMemory } : {}),
     ...(mergedSheets ? { googleSheets: mergedSheets } : {}),
+    ...(mergedFamily ? { familyFinance: mergedFamily } : {}),
   };
 }
 
@@ -524,9 +540,11 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
   const aiCfg = loadGeminiAiConfig();
   const memories = loadAiMemory();
   const sheetsCfg = loadGoogleSheetsConfig();
+  const famCfg = loadFamilyFinanceConfig();
   const hasAiKey = aiCfg.apiKey.trim().length > 0;
   const hasSheets = isGoogleSheetsReady(sheetsCfg);
-  if (!hasAiKey && memories.length === 0 && !hasSheets) return undefined;
+  const hasFamily = isFamilySyncReady(famCfg);
+  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasFamily) return undefined;
   return {
     ...(hasAiKey
       ? {
@@ -547,6 +565,20 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
             secretToken: sheetsCfg.secretToken.trim(),
             autoSync: sheetsCfg.autoSync,
             updatedAt: sheetsCfg.updatedAt ?? new Date().toISOString(),
+          },
+        }
+      : {}),
+    ...(hasFamily
+      ? {
+          familyFinance: {
+            endpointUrl: famCfg.endpointUrl.trim(),
+            familyKey: famCfg.familyKey.trim(),
+            memberId: famCfg.memberId,
+            memberName: famCfg.memberName.trim(),
+            shareBalance: famCfg.shareBalance,
+            autoIncludeHousehold: famCfg.autoIncludeHousehold,
+            autoSync: famCfg.autoSync,
+            updatedAt: famCfg.updatedAt ?? new Date().toISOString(),
           },
         }
       : {}),
@@ -580,6 +612,21 @@ function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
       secretToken: ext.googleSheets.secretToken.trim(),
       autoSync: ext.googleSheets.autoSync,
       updatedAt: ext.googleSheets.updatedAt,
+    });
+  }
+  if (ext.familyFinance?.familyKey?.trim() && ext.familyFinance?.endpointUrl?.trim()) {
+    const currentFam = loadFamilyFinanceConfig();
+    saveFamilyFinanceConfig({
+      ...currentFam,
+      enabled: true,
+      endpointUrl: ext.familyFinance.endpointUrl.trim(),
+      familyKey: ext.familyFinance.familyKey.trim(),
+      memberId: ext.familyFinance.memberId || currentFam.memberId,
+      memberName: ext.familyFinance.memberName || currentFam.memberName,
+      shareBalance: ext.familyFinance.shareBalance,
+      autoIncludeHousehold: ext.familyFinance.autoIncludeHousehold,
+      autoSync: ext.familyFinance.autoSync,
+      updatedAt: ext.familyFinance.updatedAt,
     });
   }
 }

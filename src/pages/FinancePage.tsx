@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   CheckCircle2,
   Clock,
+  CreditCard,
   Download,
   FileSpreadsheet,
   FileUp,
@@ -10,9 +11,13 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  Users,
+  Wallet,
 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
+import { FamilyFinanceTabPanel } from '../components/FamilyFinanceTabPanel';
 import { GroupedBarChart } from '../components/GroupedBarChart';
+import { InstallmentsTabPanel } from '../components/InstallmentsTabPanel';
 import { Modal } from '../components/Modal';
 import { useApp } from '../context/AppContext';
 import {
@@ -69,6 +74,7 @@ import {
 
 export const FinancePage: React.FC = () => {
   const { db, dataVersion, bumpDataVersion, openQuickAction, setActiveSection, notify } = useApp();
+  const [financeTab, setFinanceTab] = useState<'overview' | 'installments' | 'family'>('overview');
   const [sheetsBusy, setSheetsBusy] = useState(false);
   const [month, setMonth] = useState(currentMonthISO());
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
@@ -455,6 +461,53 @@ export const FinancePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Sub-navigation Tabs: Visão Geral | Cartão & Parcelados | Família / Casal */}
+      <div className="flex flex-wrap items-center gap-2 border-b pb-3" style={{ borderColor: 'var(--lh-card-border)' }}>
+        <button
+          type="button"
+          onClick={() => setFinanceTab('overview')}
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+            financeTab === 'overview'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'lh-control-btn opacity-80 hover:opacity-100'
+          }`}
+        >
+          <Wallet className="h-3.5 w-3.5" /> Visão Geral
+        </button>
+        <button
+          type="button"
+          onClick={() => setFinanceTab('installments')}
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+            financeTab === 'installments'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'lh-control-btn opacity-80 hover:opacity-100'
+          }`}
+        >
+          <CreditCard className="h-3.5 w-3.5" /> Cartão &amp; Parcelados
+        </button>
+        <button
+          type="button"
+          onClick={() => setFinanceTab('family')}
+          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+            financeTab === 'family'
+              ? 'bg-brand-600 text-white shadow-sm'
+              : 'lh-control-btn opacity-80 hover:opacity-100'
+          }`}
+        >
+          <Users className="h-3.5 w-3.5" /> Família / Casal
+        </button>
+      </div>
+
+      {financeTab === 'installments' && (
+        <InstallmentsTabPanel accounts={accounts} categories={categories} month={month} />
+      )}
+
+      {financeTab === 'family' && (
+        <FamilyFinanceTabPanel accounts={accounts} categories={categories} month={month} />
+      )}
+
+      {financeTab === 'overview' && (
+        <>
       {/* Monthly KPIs */}
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -1108,6 +1161,8 @@ export const FinancePage: React.FC = () => {
           </button>
         </form>
       </section>
+        </>
+      )}
 
       {/* CSV / OFX Import Modal */}
       <Modal
