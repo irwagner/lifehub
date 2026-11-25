@@ -255,4 +255,31 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     for (const m of loadAiMemory()) removeAiMemoryFact(m.id);
     await db.close();
   });
+
+  it('aceita despesa fixa sem day_of_month explícito e já gera lançamento Previsto visível no Financeiro', async () => {
+    const db = await createInMemoryTestDatabase();
+    const settings = await getSettings(db);
+
+    const parsed = extractProposedActions(`Anotei sua despesa fixa mensal!
+\`\`\`
+{"type":"create_recurring_rule","summary":"Despesa fixa: Internet R$ 119,90","payload":{"description":"Internet Fibra","amount":"R$ 119,90"}}
+\`\`\``);
+
+    expect(parsed.actions).toHaveLength(1);
+    await executeProposedAiAction(db, settings, parsed.actions[0]);
+
+    const rules = await listRecurringRules(db);
+    expect(rules).toHaveLength(1);
+    expect(rules[0].description).toBe('Internet Fibra');
+    expect(rules[0].day_of_month).toBe(1);
+    expect(rules[0].type).toBe('expense');
+
+    const txs = await listTransactions(db);
+    expect(txs).toHaveLength(1);
+    expect(txs[0].description).toBe('Internet Fibra');
+    expect(txs[0].status).toBe('planned');
+    expect(txs[0].amount).toBe(119.9);
+
+    await db.close();
+  });
 });

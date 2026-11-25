@@ -38,6 +38,7 @@ import {
   createTransaction,
   listAccounts,
   listCategories,
+  listRecurringRules,
   listTransactions,
 } from '../repositories/financeRepo';
 import { logHabitSession } from '../repositories/habitsRepo';
@@ -75,6 +76,7 @@ import {
   type Category,
   type EventCategory,
   type IdeaItem,
+  type RecurringRule,
   type TaskItem,
   type TaskPriority,
   type Transaction,
@@ -119,6 +121,7 @@ export const MobileApp: React.FC = () => {
   const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
   const [allTasks, setAllTasks] = useState<TaskItem[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [recurringRules, setRecurringRules] = useState<RecurringRule[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sessions, setSessions] = useState<WorkSession[]>([]);
@@ -194,7 +197,7 @@ export const MobileApp: React.FC = () => {
 
   const refreshData = useCallback(async (database: SqlExecutor) => {
     const today = todayISO();
-    const [dash, events, tasks, txs, accs, cats, workList, ideaList] = await Promise.all([
+    const [dash, events, tasks, txs, rules, accs, cats, workList, ideaList] = await Promise.all([
       loadDashboardSnapshot(database, today),
       listCalendarEvents(database, {
         startISO: `${today}T00:00:00`,
@@ -202,6 +205,7 @@ export const MobileApp: React.FC = () => {
       }),
       listTasks(database),
       listTransactions(database),
+      listRecurringRules(database),
       listAccounts(database),
       listCategories(database),
       listWorkSessions(database),
@@ -212,6 +216,7 @@ export const MobileApp: React.FC = () => {
     setUpcomingEvents(events);
     setAllTasks(tasks);
     setTransactions(txs);
+    setRecurringRules(rules);
     setAccounts(accs);
     setCategories(cats);
     setSessions(workList);
@@ -1075,6 +1080,52 @@ export const MobileApp: React.FC = () => {
                       >
                         {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
                         {formatBRL(tx.amount)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* Contas Fixas Mensais (Recorrências) */}
+            <section className={card}>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-bold">
+                  Contas Fixas Mensais ({recurringRules.length})
+                </h2>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {formatBRL(
+                    recurringRules
+                      .filter((r) => r.type === 'expense')
+                      .reduce((acc, r) => acc + r.amount, 0),
+                  )}
+                  /mês
+                </span>
+              </div>
+              {recurringRules.length === 0 ? (
+                <p className="py-3 text-center text-xs text-slate-500">
+                  Nenhuma despesa/receita fixa cadastrada ainda. Você pode falar direto para a IA.
+                </p>
+              ) : (
+                <ul className="space-y-2">
+                  {recurringRules.map((rule) => (
+                    <li
+                      key={rule.id}
+                      className="flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-white/[0.04]"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold">{rule.description}</p>
+                        <p className="text-[11px] text-slate-500">
+                          Todo dia {String(rule.day_of_month).padStart(2, '0')} · Fixo mensal
+                        </p>
+                      </div>
+                      <span
+                        className={`shrink-0 text-sm font-bold tabular-nums ${
+                          rule.type === 'income' ? 'text-emerald-500' : 'text-rose-500'
+                        }`}
+                      >
+                        {rule.type === 'income' ? '+' : '-'}
+                        {formatBRL(rule.amount)}
                       </span>
                     </li>
                   ))}

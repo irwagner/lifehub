@@ -6,6 +6,7 @@ import {
   createRecurringRule,
   createTransaction,
   deleteTransaction,
+  generateMonthlyRecurringTransactions,
   listAccounts,
   listCategories,
   listRecurringRules,
@@ -202,10 +203,18 @@ const proposedActionSchema = z.discriminatedUnion('type', [
     type: z.literal('create_recurring_rule'),
     summary: z.string().min(1).max(160),
     payload: z.object({
-      txType: z.preprocess(normalizeTxType, z.enum(['income', 'expense'])),
+      txType: z.preprocess(
+        (v) => (v === undefined || v === null || v === '' ? 'expense' : normalizeTxType(v)),
+        z.enum(['income', 'expense']),
+      ),
       description: z.string().min(1).max(140),
       amount: flexiblePositiveNumber,
-      day_of_month: z.preprocess(parseFlexibleNumber, z.number().int().min(1).max(31)),
+      day_of_month: z.preprocess((v) => {
+        if (v === undefined || v === null || v === '') return 1;
+        const parsed = Number(parseFlexibleNumber(v));
+        if (!Number.isFinite(parsed) || parsed < 1) return 1;
+        return Math.min(31, Math.round(parsed));
+      }, z.number().int().min(1).max(31)),
       category_id: z.string().nullable().optional(),
       source_type: z.enum(['salario', 'aplicativos', 'servicos_ti', 'outros']).optional(),
       notes: z.string().max(400).optional(),
@@ -577,8 +586,8 @@ export function extractProposedActions(rawText: string): {
   });
 
   if (actions.length === 0) {
-    const jsonFenceRegex = /```json\s*([\s\S]*?)```/gi;
-    workingText = workingText.replace(jsonFenceRegex, (full, inner: string) => {
+    const anyFenceRegex = /```(?:json)?\s*([\s\S]*?)```/gi;
+    workingText = workingText.replace(anyFenceRegex, (full, inner: string) => {
       if (!KNOWN_ACTION_KEYWORDS.some((kw) => inner.includes(kw))) {
         return full;
       }
@@ -901,7 +910,21 @@ export async function executeProposedAiAction(
       day_of_month: action.payload.day_of_month,
       notes: action.payload.notes ?? '',
     });
-    return `Recorrência mensal salva: ${rule.description} (${formatBRL(rule.amount)} · dia ${String(rule.day_of_month).padStart(2, '0')}).`;
+
+    // Also generate the upcoming planned monthly transaction right away so it shows immediately in Financeiro (Desktop & Mobile)
+    const [yStr, mStr, dStr] = today.split('-');
+    const todayYear = Number(yStr);
+    const todayMonth = Number(mStr);
+    const todayDay = Number(dStr);
+    const targetMonth =
+      rule.day_of_month >= todayDay
+        ? `${todayYear}-${String(todayMonth).padStart(2, '0')}`
+        : todayMonth === 12
+          ? `${todayYear + 1}-01`
+          : `${todayYear}-${String(todayMonth + 1).padStart(2, '0')}`;
+    await generateMonthlyRecurringTransactions(db, targetMonth);
+
+    return `Despesa/receita fixa salva: ${rule.description} (${formatBRL(rule.amount)} · dia ${String(rule.day_of_month).padStart(2, '0')}, já prevista em ${targetMonth}).`;
   }
 
   if (action.type === 'save_memory') {
