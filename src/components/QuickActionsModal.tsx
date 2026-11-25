@@ -481,14 +481,14 @@ export const QuickActionsModal: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="lh-btn-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              className="lh-btn-primary px-5 py-2"
             >
               {submitting ? 'Salvando...' : 'Salvar'}
             </button>
@@ -688,14 +688,14 @@ export const QuickActionsModal: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="lh-btn-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              className="lh-btn-primary px-5 py-2"
             >
               {submitting ? 'Salvando...' : 'Registrar Jornada'}
             </button>
@@ -796,14 +796,14 @@ export const QuickActionsModal: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="lh-btn-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              className="lh-btn-primary px-5 py-2"
             >
               {submitting ? 'Salvando...' : 'Salvar Compromisso'}
             </button>
@@ -858,14 +858,14 @@ export const QuickActionsModal: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="lh-btn-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              className="lh-btn-primary px-5 py-2"
             >
               {submitting ? 'Salvando...' : 'Criar Tarefa'}
             </button>
@@ -931,14 +931,14 @@ export const QuickActionsModal: React.FC = () => {
             <button
               type="button"
               onClick={close}
-              className="rounded-lg px-4 py-2 text-sm text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+              className="lh-btn-secondary"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+              className="lh-btn-primary px-5 py-2"
             >
               {submitting ? 'Salvando...' : 'Capturar Ideia'}
             </button>

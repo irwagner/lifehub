@@ -463,7 +463,7 @@ export const SettingsPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-medium dark:border-slate-700"
+            className="lh-btn-secondary"
           >
             {theme === 'dark' ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
             Tema: {theme === 'dark' ? 'Escuro' : 'Claro'}
@@ -614,7 +614,7 @@ export const SettingsPage: React.FC = () => {
         <button
           type="submit"
           disabled={busy}
-          className="rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+          className="lh-btn-primary px-5 py-2.5 text-sm"
         >
           {busy ? 'Salvando...' : 'Salvar Preferências'}
         </button>
@@ -651,7 +651,7 @@ export const SettingsPage: React.FC = () => {
             type="button"
             disabled={busy}
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold hover:border-brand-500 dark:border-slate-700"
+            className="lh-btn-secondary"
           >
             <Upload className="h-4 w-4" /> Restaurar Backup JSON
           </button>
@@ -667,7 +667,7 @@ export const SettingsPage: React.FC = () => {
             type="button"
             disabled={busy}
             onClick={handleExportSqliteBinary}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold hover:border-brand-500 dark:border-slate-700"
+            className="lh-btn-secondary"
           >
             <Database className="h-4 w-4" /> Exportar SQLite (.sqlite)
           </button>
@@ -676,7 +676,7 @@ export const SettingsPage: React.FC = () => {
             type="button"
             disabled={busy}
             onClick={() => sqliteFileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold hover:border-brand-500 dark:border-slate-700"
+            className="lh-btn-secondary"
           >
             <Upload className="h-4 w-4" /> Restaurar SQLite (.sqlite)
           </button>
@@ -702,7 +702,7 @@ export const SettingsPage: React.FC = () => {
                   );
                 }
               }}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold hover:border-brand-500 dark:border-slate-700"
+              className="lh-btn-secondary"
             >
               <FolderOpen className="h-4 w-4" /> Abrir Pasta do Banco
             </button>

@@ -1218,7 +1218,21 @@ html.dark[data-skin='retro_classic'] {
     color: #f1f5f9;
   }
 
-  /* Sleek custom scrollbars */
+  /* Sleek custom scrollbars & native input integration */
+  ::selection {
+    background: rgb(var(--lh-brand-500) / 0.28);
+  }
+
+  input[type='checkbox'],
+  input[type='radio'] {
+    accent-color: rgb(var(--lh-brand-500));
+  }
+
+  select option {
+    background-color: var(--lh-card);
+    color: inherit;
+  }
+
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
@@ -1227,21 +1241,97 @@ html.dark[data-skin='retro_classic'] {
     background: transparent;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
+    background: rgb(var(--lh-brand-500) / 0.26);
     border-radius: 9999px;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
+    background: rgb(var(--lh-brand-500) / 0.48);
   }
   .dark ::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.18);
+    background: rgb(var(--lh-brand-400) / 0.24);
   }
   .dark ::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.32);
+    background: rgb(var(--lh-brand-400) / 0.44);
   }
 }
 
 @layer components {
+  .lh-app-shell {
+    border: 1px solid var(--lh-card-border);
+    background-color: var(--lh-canvas);
+    background-image: var(--lh-canvas-img);
+    background-attachment: fixed;
+  }
+
+  .lh-titlebar {
+    background-color: var(--lh-topbar);
+    border-color: var(--lh-card-border);
+    color: inherit;
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  .lh-winbtn {
+    color: inherit;
+    opacity: 0.72;
+    transition: background-color 140ms ease, opacity 140ms ease, color 140ms ease;
+  }
+  .lh-winbtn:hover {
+    opacity: 1;
+    background-color: rgba(148, 163, 184, 0.2);
+  }
+  .dark .lh-winbtn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  .lh-winbtn-close:hover {
+    opacity: 1;
+    background-color: #e81123 !important;
+    color: #ffffff !important;
+  }
+
+  .lh-titlebar-retro {
+    background: linear-gradient(90deg, rgb(var(--lh-brand-700)), rgb(var(--lh-brand-500)));
+    color: #ffffff;
+    border-bottom: 1px solid #000000;
+  }
+  .lh-winbtn-retro {
+    background-color: var(--lh-card);
+    color: #111827;
+    border: 1px solid #404040;
+    box-shadow: inset 1px 1px 0 #ffffff, inset -1px -1px 0 #707070;
+  }
+  .dark .lh-winbtn-retro {
+    color: #f1f5f9;
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.22), inset -1px -1px 0 rgba(0, 0, 0, 0.75);
+  }
+  .lh-winbtn-retro:active {
+    box-shadow: inset -1px -1px 0 #ffffff, inset 1px 1px 0 #404040;
+  }
+  .lh-winbtn-retro-close:hover {
+    background-color: #dc2626;
+    color: #ffffff;
+  }
+
+  .lh-popover,
+  .lh-modal-panel {
+    background-color: var(--lh-card);
+    border: var(--lh-card-border-width, 1px) solid var(--lh-card-border);
+    border-radius: var(--lh-radius-card);
+    box-shadow: 0 20px 50px -15px rgba(0, 0, 0, 0.45), var(--lh-card-shadow);
+    color: inherit;
+  }
+
+  .lh-control-btn {
+    background-color: var(--lh-card);
+    border: 1px solid var(--lh-card-border);
+    border-radius: var(--lh-radius-control);
+    color: inherit;
+    transition: border-color 140ms ease, background-color 140ms ease, transform 120ms ease;
+  }
+  .lh-control-btn:hover {
+    border-color: rgb(var(--lh-brand-500) / 0.6);
+  }
+
   .lh-sidebar {
     background-color: var(--lh-sidebar);
     border-color: var(--lh-card-border);
@@ -1270,7 +1360,9 @@ html.dark[data-skin='retro_classic'] {
 
   .lh-input {
     border-radius: var(--lh-radius-control);
-    @apply w-full border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:border-white/[0.09] dark:bg-slate-950/70 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400 dark:focus:bg-slate-950;
+    border: 1px solid var(--lh-card-border);
+    background-color: var(--lh-canvas);
+    @apply w-full px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 transition focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-brand-400;
   }
 
   .lh-btn-primary {
@@ -1281,7 +1373,9 @@ html.dark[data-skin='retro_classic'] {
 
   .lh-btn-secondary {
     border-radius: var(--lh-radius-control);
-    @apply inline-flex items-center justify-center gap-1.5 border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand-400/60 hover:bg-slate-50 dark:border-white/[0.09] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-brand-400/50 dark:hover:bg-white/[0.08] disabled:pointer-events-none disabled:opacity-45;
+    border: 1px solid var(--lh-card-border);
+    background-color: var(--lh-card);
+    @apply inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:border-brand-400/60 dark:text-slate-200 dark:hover:border-brand-400/50 disabled:pointer-events-none disabled:opacity-45;
   }
 
   .lh-btn-danger {
@@ -1499,9 +1593,24 @@ html.dark[data-skin='concept_thebean_ai'] .bg-brand-600 {
 /* Structural glassmorphism for QleanDesk acrylic widgets */
 html[data-skin='concept_qleandesk'] .lh-card,
 html[data-skin='concept_qleandesk'] .lh-topbar,
-html[data-skin='concept_qleandesk'] .lh-dock {
-  backdrop-filter: blur(18px) saturate(140%);
-  -webkit-backdrop-filter: blur(18px) saturate(140%);
+html[data-skin='concept_qleandesk'] .lh-dock,
+html[data-skin='concept_qleandesk'] .lh-popover,
+html[data-skin='concept_qleandesk'] .lh-modal-panel {
+  backdrop-filter: blur(20px) saturate(145%);
+  -webkit-backdrop-filter: blur(20px) saturate(145%);
+}
+
+/* Poster / Linhas do Dia integrated controls */
+html[data-skin='ref_linhas_dia']:not(.dark) .lh-control-btn {
+  border: 1.5px solid #141414;
+  background-color: #fffaf0;
+  color: #141414;
+}
+
+/* Retro 98 integrated buttons */
+html[data-skin='retro_classic'] .lh-control-btn,
+html[data-skin='retro_classic'] .lh-btn-secondary {
+  box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.35), inset -1px -1px 0 rgba(0, 0, 0, 0.45);
 }
 
 /* Figma Task Board subtle dot-grid canvas */

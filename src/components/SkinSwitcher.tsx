@@ -62,7 +62,7 @@ export const SkinSwitcher: React.FC = () => {
         onClick={() => setOpen((o) => !o)}
         title={`Skin ativa: ${currentSkin.name}`}
         aria-label="Trocar skin de design"
-        className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-brand-400/60 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:bg-white/[0.08]"
+        className="lh-control-btn inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium shadow-sm"
       >
         <Palette className="h-3.5 w-3.5 text-brand-500" />
         <span className="hidden sm:inline">Skins</span>
@@ -73,7 +73,7 @@ export const SkinSwitcher: React.FC = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 flex max-h-[78vh] w-[24rem] max-w-[92vw] flex-col rounded-2xl border border-slate-200/90 bg-white p-3 shadow-2xl animate-scale-in dark:border-white/[0.1] dark:bg-[#0f172a]">
+        <div className="lh-popover absolute right-0 z-50 mt-2 flex max-h-[76vh] w-[24rem] max-w-[92vw] flex-col p-3 animate-scale-in">
           <div className="mb-2 flex items-center justify-between px-1">
             <p className="text-xs font-bold text-slate-900 dark:text-white">
               Skins & Estruturas ({UI_SKINS.length})

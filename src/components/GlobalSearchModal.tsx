@@ -49,7 +49,7 @@ export const GlobalSearchModal: React.FC<{
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Digite ao menos 2 caracteres..."
-            className="w-full rounded-xl border border-slate-300 bg-white py-2 pl-9 pr-3 text-sm focus:border-brand-500 focus:outline-none dark:border-slate-700 dark:bg-slate-950"
+            className="lh-input pl-9"
           />
         </div>
 

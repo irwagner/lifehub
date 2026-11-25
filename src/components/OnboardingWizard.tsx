@@ -3,6 +3,7 @@ import { Bike, Briefcase, Building2, ShieldCheck, Sparkles } from 'lucide-react'
 import { useApp } from '../context/AppContext';
 import { loadDemoData } from '../services/demoSeed';
 import type { ChildWeekendMode, RoutineMode, WorkDaysPerWeek } from '../types/domain';
+import { WindowTitleBar } from './WindowTitleBar';
 
 const MODE_OPTIONS: Array<{
   id: RoutineMode;
@@ -84,11 +85,13 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#070b14] p-6 text-slate-100">
-      <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
+    <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-100">
+      <WindowTitleBar />
+      <div className="relative flex flex-1 items-center justify-center overflow-y-auto bg-[#070b14] p-6">
+        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-600/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
 
-      <div className="relative w-full max-w-2xl rounded-3xl border border-white/[0.09] bg-[#0d1425]/95 p-8 shadow-2xl backdrop-blur-xl animate-scale-in">
+        <div className="relative w-full max-w-2xl rounded-3xl border border-white/[0.09] bg-[#0d1425]/95 p-8 shadow-2xl backdrop-blur-xl animate-scale-in">
         <div className="mb-7 flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-700 text-white shadow-glow">
             <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -280,6 +283,7 @@ export const OnboardingWizard: React.FC = () => {
             </button>
           </div>
         </form>
+        </div>
       </div>
     </div>
   );

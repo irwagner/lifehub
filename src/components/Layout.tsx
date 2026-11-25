@@ -24,6 +24,7 @@ import { ROUTINE_MODE_LABELS } from '../types/domain';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { RemindersMenu } from './RemindersMenu';
 import { SkinSwitcher } from './SkinSwitcher';
+import { WindowTitleBar } from './WindowTitleBar';
 
 interface NavItemDef {
   id: NavSection;
@@ -197,11 +198,14 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         type="button"
         onClick={() => setSearchOpen(true)}
         title="Busca global (Ctrl+K)"
-        className="inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-slate-50/90 px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:border-brand-400/60 hover:text-slate-800 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-400 dark:hover:border-brand-400/50 dark:hover:text-slate-200"
+        className="lh-control-btn inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium opacity-85 hover:opacity-100"
       >
         <Search className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">Buscar...</span>
-        <kbd className="hidden rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-mono text-[10px] text-slate-500 dark:border-white/[0.1] dark:bg-slate-900 dark:text-slate-400 md:inline">
+        <kbd
+          className="hidden rounded-md border px-1.5 py-0.5 font-mono text-[10px] opacity-75 md:inline"
+          style={{ borderColor: 'var(--lh-card-border)' }}
+        >
           Ctrl K
         </kbd>
       </button>
@@ -213,7 +217,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         onClick={toggleTheme}
         title={settings?.theme === 'dark' ? 'Mudar para tema claro' : 'Mudar para tema escuro'}
         aria-label="Alternar tema"
-        className="rounded-xl border border-slate-200/90 bg-white p-2 text-slate-600 transition hover:border-brand-400/60 hover:text-brand-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.08]"
+        className="lh-control-btn p-2 opacity-85 hover:opacity-100"
       >
         {settings?.theme === 'dark' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
       </button>
@@ -230,9 +234,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           type="button"
           onClick={() => openQuickAction(pill.action)}
           title={`Novo: ${pill.label} (${pill.shortcut})`}
-          className={`inline-flex items-center gap-1.5 rounded-xl border border-slate-200/90 bg-white ${
+          className={`lh-control-btn inline-flex items-center gap-1.5 ${
             compact ? 'px-2 py-1 text-[11px]' : 'px-2.5 py-1.5 text-xs'
-          } font-medium text-slate-700 shadow-sm transition hover:-translate-y-[0.5px] hover:border-brand-400/60 hover:text-brand-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-200 dark:hover:border-brand-400/50 dark:hover:bg-white/[0.08] dark:hover:text-white`}
+          } font-medium shadow-sm hover:-translate-y-[0.5px]`}
         >
           <span className={`h-1.5 w-1.5 rounded-full ${pill.dotColor}`} />
           <Plus className="h-3 w-3 opacity-60" />
@@ -270,59 +274,66 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // =========================================================================
   if (shell === 'top-nav') {
     return (
-      <div className="flex min-h-screen flex-col text-slate-900 dark:text-slate-100">
-        <header className="lh-topbar sticky top-0 z-30 border-b backdrop-blur-xl">
-          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-            {renderBrandMark()}
+      <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+        <WindowTitleBar />
 
-            {/* Horizontal primary tabs */}
-            <nav
-              aria-label="Navegação principal"
-              className="flex items-center gap-1 overflow-x-auto rounded-2xl border border-slate-200/70 bg-slate-100/70 p-1 dark:border-white/[0.07] dark:bg-white/[0.03]"
-            >
-              {FLAT_NAV_ITEMS.map((item) => {
-                const Icon = item.icon;
-                const active = activeSection === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => handleSelectNav(item.id)}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
-                      active
-                        ? 'lh-nav-active bg-brand-600 text-white shadow-sm'
-                        : 'text-slate-600 hover:bg-white/80 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white'
-                    }`}
-                  >
-                    <Icon className="h-3.5 w-3.5" />
-                    <span>{item.shortLabel}</span>
-                  </button>
-                );
-              })}
-            </nav>
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <header className="lh-topbar sticky top-0 z-30 border-b backdrop-blur-xl">
+            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+              {renderBrandMark()}
 
-            {renderUtilities()}
-          </div>
+              <nav
+                aria-label="Navegação principal"
+                className="flex items-center gap-1 overflow-x-auto rounded-2xl border p-1"
+                style={{
+                  borderColor: 'var(--lh-card-border)',
+                  backgroundColor: 'var(--lh-canvas)',
+                }}
+              >
+                {FLAT_NAV_ITEMS.map((item) => {
+                  const Icon = item.icon;
+                  const active = activeSection === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => handleSelectNav(item.id)}
+                      className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition ${
+                        active
+                          ? 'lh-nav-active bg-brand-600 text-white shadow-sm'
+                          : 'text-slate-600 hover:bg-black/[0.05] hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.06] dark:hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      <span>{item.shortLabel}</span>
+                    </button>
+                  );
+                })}
+              </nav>
 
-          {/* Slim utility & quick actions sub-strip */}
-          <div className="border-t border-slate-200/60 dark:border-white/[0.05]">
-            <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
-              {renderQuickPills(true)}
-              {settings && (
-                <div className="hidden items-center gap-2 text-[11px] font-medium text-slate-500 dark:text-slate-400 md:flex">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  <span>
-                    {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}d/sem
-                  </span>
-                  <span className="opacity-40">|</span>
-                  <span>{db?.driverName === 'tauri-sqlite' ? 'SQLite nativo' : 'SQLite local'}</span>
-                </div>
-              )}
+              {renderUtilities()}
             </div>
-          </div>
-        </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 p-5 sm:p-7">{children}</main>
+            <div className="border-t" style={{ borderColor: 'var(--lh-card-border)' }}>
+              <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:px-6">
+                {renderQuickPills(true)}
+                {settings && (
+                  <div className="hidden items-center gap-2 text-[11px] font-medium text-slate-500 dark:text-slate-400 md:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                    <span>
+                      {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}d/sem
+                    </span>
+                    <span className="opacity-40">|</span>
+                    <span>{db?.driverName === 'tauri-sqlite' ? 'SQLite nativo' : 'SQLite local'}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </header>
+
+          <main className="mx-auto w-full max-w-7xl flex-1 p-5 sm:p-7">{children}</main>
+        </div>
+
         {renderOverlays()}
       </div>
     );
@@ -333,27 +344,30 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // =========================================================================
   if (shell === 'bottom-dock') {
     return (
-      <div className="flex min-h-screen flex-col text-slate-900 dark:text-slate-100">
-        <header className="lh-topbar sticky top-0 z-20 mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl">
-          <div className="flex items-center gap-3">
-            {renderBrandMark()}
-            {settings && (
-              <span className="hidden rounded-full border border-brand-500/30 bg-brand-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand-500 md:inline-flex">
-                {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}d/sem
-              </span>
-            )}
+      <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+        <WindowTitleBar />
+
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+          <header className="lh-topbar sticky top-3 z-20 mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl">
+            <div className="flex items-center gap-3">
+              {renderBrandMark()}
+              {settings && (
+                <span className="hidden rounded-full border border-brand-500/30 bg-brand-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand-500 md:inline-flex">
+                  {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}d/sem
+                </span>
+              )}
+            </div>
+
+            <div className="hidden xl:block">{renderQuickPills(true)}</div>
+            {renderUtilities()}
+          </header>
+
+          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-7xl justify-center xl:hidden">
+            {renderQuickPills(true)}
           </div>
 
-          <div className="hidden xl:block">{renderQuickPills(true)}</div>
-          {renderUtilities()}
-        </header>
-
-        {/* Quick pills row on medium/small screens */}
-        <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-7xl justify-center xl:hidden">
-          {renderQuickPills(true)}
+          <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-28 sm:px-6">{children}</main>
         </div>
-
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-28 sm:px-6">{children}</main>
 
         {/* Floating Windows/macOS style bottom dock */}
         <nav
@@ -372,7 +386,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 className={`group relative flex shrink-0 flex-col items-center gap-0.5 rounded-xl px-3 py-1.5 transition-all duration-150 hover:-translate-y-1 ${
                   active
                     ? 'lh-nav-active bg-brand-600 text-white shadow-md'
-                    : 'text-slate-600 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.09] dark:hover:text-white'
+                    : 'text-slate-600 hover:bg-black/[0.06] hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/[0.09] dark:hover:text-white'
                 }`}
               >
                 <Icon className="h-4 w-4" />
@@ -391,88 +405,91 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   }
 
   // =========================================================================
-  // SHELL 3: ICON-RAIL (rail vertical fino 76px estilo app nativo desktop)
+  // SHELL 3: ICON-RAIL (rail vertical fino 78px estilo app nativo desktop)
   // =========================================================================
   if (shell === 'icon-rail') {
     return (
-      <div className="flex min-h-screen text-slate-900 dark:text-slate-100">
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
+      <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+        <WindowTitleBar />
 
-        {/* Slim Desktop Icon Rail */}
-        <aside
-          className={`lh-sidebar ${
-            isDarkRail ? 'lh-rail-dark-tone' : ''
-          } fixed inset-y-0 left-0 z-40 flex w-[78px] shrink-0 flex-col items-center border-r py-4 backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          {renderBrandMark(true)}
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
+          {sidebarOpen && (
+            <div
+              className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
 
-          <nav
-            className="mt-5 flex flex-1 flex-col items-center gap-1.5 overflow-y-auto px-2"
-            aria-label="Navegação principal"
+          <aside
+            className={`lh-sidebar ${
+              isDarkRail ? 'lh-rail-dark-tone' : ''
+            } fixed inset-y-0 left-0 z-40 flex w-[78px] shrink-0 flex-col items-center border-r py-4 backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
+              sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+            }`}
           >
-            {FLAT_NAV_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = activeSection === item.id;
-              return (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => handleSelectNav(item.id)}
-                  title={item.label}
-                  className={`group relative flex h-12 w-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[9px] font-semibold transition ${
-                    active
-                      ? 'lh-nav-active bg-brand-600 text-white shadow-md'
-                      : isDarkRail
-                        ? 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
-                        : 'text-slate-500 hover:bg-slate-200/70 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.07] dark:hover:text-white'
-                  }`}
-                >
-                  {active && (
-                    <span className="absolute -left-2 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-400" />
-                  )}
-                  <Icon className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{item.shortLabel}</span>
-                </button>
-              );
-            })}
-          </nav>
+            {renderBrandMark(true)}
 
-          <div
-            className="mt-3 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400"
-            title={
-              db?.driverName === 'tauri-sqlite'
-                ? '100% Local-First · SQLite nativo'
-                : '100% Local-First · SQLite local'
-            }
-          >
-            <ShieldCheck className="h-4 w-4" />
-          </div>
-        </aside>
+            <nav
+              className="mt-5 flex flex-1 flex-col items-center gap-1.5 overflow-y-auto px-2"
+              aria-label="Navegação principal"
+            >
+              {FLAT_NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleSelectNav(item.id)}
+                    title={item.label}
+                    className={`group relative flex h-12 w-14 flex-col items-center justify-center gap-0.5 rounded-xl text-[9px] font-semibold transition ${
+                      active
+                        ? 'lh-nav-active bg-brand-600 text-white shadow-md'
+                        : isDarkRail
+                          ? 'text-slate-400 hover:bg-white/[0.08] hover:text-white'
+                          : 'text-slate-500 hover:bg-black/[0.05] hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.07] dark:hover:text-white'
+                    }`}
+                  >
+                    {active && (
+                      <span className="absolute -left-2 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-400" />
+                    )}
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{item.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </nav>
 
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="lh-topbar sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur-xl sm:px-6">
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="rounded-xl border border-slate-200 p-2 text-slate-700 dark:border-white/[0.09] dark:text-slate-200 lg:hidden"
-                aria-label="Abrir menu"
-              >
-                <Menu className="h-4 w-4" />
-              </button>
-              {renderQuickPills()}
+            <div
+              className="mt-3 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-400"
+              title={
+                db?.driverName === 'tauri-sqlite'
+                  ? '100% Local-First · SQLite nativo'
+                  : '100% Local-First · SQLite local'
+              }
+            >
+              <ShieldCheck className="h-4 w-4" />
             </div>
-            {renderUtilities()}
-          </header>
+          </aside>
 
-          <main className="mx-auto w-full max-w-[1440px] flex-1 p-5 sm:p-6">{children}</main>
+          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+            <header className="lh-topbar sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3 backdrop-blur-xl sm:px-6">
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSidebarOpen(true)}
+                  className="lh-control-btn p-2 lg:hidden"
+                  aria-label="Abrir menu"
+                >
+                  <Menu className="h-4 w-4" />
+                </button>
+                {renderQuickPills()}
+              </div>
+              {renderUtilities()}
+            </header>
+
+            <main className="mx-auto w-full max-w-[1440px] flex-1 p-5 sm:p-6">{children}</main>
+          </div>
         </div>
 
         {renderOverlays()}
@@ -486,172 +503,176 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isFloating = shell === 'floating-island';
 
   return (
-    <div className="flex min-h-screen text-slate-900 dark:text-slate-100">
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
+    <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+      <WindowTitleBar />
 
-      <aside
-        className={`lh-sidebar ${
-          isDualTone ? 'lh-sidebar-dark-tone' : ''
-        } fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:translate-x-0 ${
-          isFloating
-            ? 'border lg:sticky lg:top-4 lg:m-4 lg:mr-0 lg:h-[calc(100vh-2rem)] lg:rounded-3xl lg:shadow-xl'
-            : 'border-r lg:static'
-        } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
-      >
-        {/* Brand header */}
-        <div className="flex items-center justify-between px-5 pt-5 pb-4">
-          {renderBrandMark()}
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(false)}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] lg:hidden"
-            aria-label="Fechar menu"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
-        {/* Mode & Demo pills */}
-        {settings && (
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {sidebarOpen && (
           <div
-            className={`mx-4 mb-3 rounded-xl border p-2.5 ${
-              isDualTone
-                ? 'border-white/10 bg-white/[0.05]'
-                : 'border-slate-200/80 bg-slate-50/80 dark:border-white/[0.06] dark:bg-white/[0.03]'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                Modo ativo
-              </span>
-              {settings.demo_data_loaded === 1 && (
-                <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500 dark:text-amber-300">
-                  Demo
-                </span>
-              )}
-            </div>
-            <p
-              className={`mt-0.5 text-xs font-semibold ${
-                isDualTone ? 'text-brand-300' : 'text-brand-600 dark:text-brand-300'
-              }`}
-            >
-              {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}d/sem
-            </p>
-          </div>
+            className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
         )}
 
-        {/* Grouped Navigation */}
-        <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2" aria-label="Navegação principal">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              <p
-                className={`mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider ${
-                  isDualTone ? 'text-slate-400/80' : 'text-slate-400 dark:text-slate-500'
-                }`}
-              >
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  const active = activeSection === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleSelectNav(item.id)}
-                      className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all ${
-                        active
-                          ? isDualTone
-                            ? 'lh-nav-active bg-brand-500 text-white shadow-sm'
-                            : 'lh-nav-active bg-brand-600/12 text-brand-700 dark:bg-brand-500/15 dark:text-white'
-                          : isDualTone
-                            ? 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
-                            : 'text-slate-600 hover:bg-slate-100/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'
-                      }`}
-                    >
-                      {active && !isDualTone && (
-                        <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-500" />
-                      )}
-                      <Icon
-                        className={`h-4 w-4 shrink-0 transition-colors ${
-                          active
-                            ? isDualTone
-                              ? 'text-white'
-                              : 'text-brand-600 dark:text-brand-400'
-                            : isDualTone
-                              ? 'text-slate-400 group-hover:text-white'
-                              : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-200'
-                        }`}
-                      />
-                      <span>{item.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {/* Local-first status badge */}
-        <div
-          className={`border-t p-3 ${
-            isDualTone ? 'border-white/10' : 'border-slate-200/70 dark:border-white/[0.06]'
-          }`}
-        >
-          <div className="flex items-center gap-2.5 rounded-xl bg-emerald-500/[0.1] px-3 py-2.5 text-[11px] ring-1 ring-emerald-500/25">
-            <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
-            <div className="min-w-0">
-              <p
-                className={`font-semibold ${
-                  isDualTone ? 'text-emerald-300' : 'text-emerald-700 dark:text-emerald-300'
-                }`}
-              >
-                100% Local-First
-              </p>
-              <p
-                className={`truncate text-[10px] ${
-                  isDualTone ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'
-                }`}
-              >
-                {db?.driverName === 'tauri-sqlite'
-                  ? 'SQLite nativo no dispositivo'
-                  : 'SQLite local (Offline)'}
-              </p>
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main area */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header
-          className={`lh-topbar sticky z-20 flex flex-wrap items-center justify-between gap-3 backdrop-blur-xl ${
+        <aside
+          className={`lh-sidebar ${
+            isDualTone ? 'lh-sidebar-dark-tone' : ''
+          } fixed inset-y-0 left-0 z-40 flex w-64 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
             isFloating
-              ? 'top-4 mx-4 mt-4 rounded-2xl border px-4 py-2.5 shadow-sm sm:mx-6 sm:px-5'
-              : 'top-0 border-b px-4 py-3 sm:px-6'
-          }`}
+              ? 'border lg:m-4 lg:mr-0 lg:rounded-3xl lg:shadow-xl'
+              : 'border-r'
+          } ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
-          <div className="flex flex-wrap items-center gap-1.5">
+          {/* Brand header */}
+          <div className="flex items-center justify-between px-5 pt-5 pb-4">
+            {renderBrandMark()}
             <button
               type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="mr-1 rounded-xl border border-slate-200 p-2 text-slate-700 dark:border-white/[0.09] dark:text-slate-200 lg:hidden"
-              aria-label="Abrir menu"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06] lg:hidden"
+              aria-label="Fechar menu"
             >
-              <Menu className="h-4 w-4" />
+              <X className="h-4 w-4" />
             </button>
-            {renderQuickPills()}
           </div>
-          {renderUtilities()}
-        </header>
 
-        <main className="mx-auto w-full max-w-7xl flex-1 p-5 sm:p-7">{children}</main>
+          {/* Mode & Demo pills */}
+          {settings && (
+            <div
+              className={`mx-4 mb-3 rounded-xl border p-2.5 ${
+                isDualTone
+                  ? 'border-white/10 bg-white/[0.05]'
+                  : 'bg-black/[0.025] dark:bg-white/[0.03]'
+              }`}
+              style={!isDualTone ? { borderColor: 'var(--lh-card-border)' } : undefined}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                  Modo ativo
+                </span>
+                {settings.demo_data_loaded === 1 && (
+                  <span className="rounded-md bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-semibold text-amber-500 dark:text-amber-300">
+                    Demo
+                  </span>
+                )}
+              </div>
+              <p
+                className={`mt-0.5 text-xs font-semibold ${
+                  isDualTone ? 'text-brand-300' : 'text-brand-600 dark:text-brand-300'
+                }`}
+              >
+                {ROUTINE_MODE_LABELS[settings.routine_mode]} · {settings.work_days_per_week}d/sem
+              </p>
+            </div>
+          )}
+
+          {/* Grouped Navigation */}
+          <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-2" aria-label="Navegação principal">
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p
+                  className={`mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider ${
+                    isDualTone ? 'text-slate-400/80' : 'text-slate-400 dark:text-slate-500'
+                  }`}
+                >
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = activeSection === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectNav(item.id)}
+                        className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-2 text-[13px] font-medium transition-all ${
+                          active
+                            ? isDualTone
+                              ? 'lh-nav-active bg-brand-500 text-white shadow-sm'
+                              : 'lh-nav-active bg-brand-600/12 text-brand-700 dark:bg-brand-500/15 dark:text-white'
+                            : isDualTone
+                              ? 'text-slate-300 hover:bg-white/[0.07] hover:text-white'
+                              : 'text-slate-600 hover:bg-black/[0.04] hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.04] dark:hover:text-slate-100'
+                        }`}
+                      >
+                        {active && !isDualTone && (
+                          <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-brand-500" />
+                        )}
+                        <Icon
+                          className={`h-4 w-4 shrink-0 transition-colors ${
+                            active
+                              ? isDualTone
+                                ? 'text-white'
+                                : 'text-brand-600 dark:text-brand-400'
+                              : isDualTone
+                                ? 'text-slate-400 group-hover:text-white'
+                                : 'text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-200'
+                          }`}
+                        />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+
+          {/* Local-first status badge */}
+          <div
+            className="border-t p-3"
+            style={{ borderColor: isDualTone ? 'rgba(255,255,255,0.1)' : 'var(--lh-card-border)' }}
+          >
+            <div className="flex items-center gap-2.5 rounded-xl bg-emerald-500/[0.1] px-3 py-2.5 text-[11px] ring-1 ring-emerald-500/25">
+              <ShieldCheck className="h-4 w-4 shrink-0 text-emerald-400" />
+              <div className="min-w-0">
+                <p
+                  className={`font-semibold ${
+                    isDualTone ? 'text-emerald-300' : 'text-emerald-700 dark:text-emerald-300'
+                  }`}
+                >
+                  100% Local-First
+                </p>
+                <p
+                  className={`truncate text-[10px] ${
+                    isDualTone ? 'text-slate-400' : 'text-slate-500 dark:text-slate-400'
+                  }`}
+                >
+                  {db?.driverName === 'tauri-sqlite'
+                    ? 'SQLite nativo no dispositivo'
+                    : 'SQLite local (Offline)'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Main area */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          <header
+            className={`lh-topbar sticky z-20 flex flex-wrap items-center justify-between gap-3 backdrop-blur-xl ${
+              isFloating
+                ? 'top-4 mx-4 mt-4 rounded-2xl border px-4 py-2.5 shadow-sm sm:mx-6 sm:px-5'
+                : 'top-0 border-b px-4 py-3 sm:px-6'
+            }`}
+          >
+            <div className="flex flex-wrap items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="lh-control-btn mr-1 p-2 lg:hidden"
+                aria-label="Abrir menu"
+              >
+                <Menu className="h-4 w-4" />
+              </button>
+              {renderQuickPills()}
+            </div>
+            {renderUtilities()}
+          </header>
+
+          <main className="mx-auto w-full max-w-7xl flex-1 p-5 sm:p-7">{children}</main>
+        </div>
       </div>
 
       {renderOverlays()}
