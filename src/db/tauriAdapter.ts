@@ -55,11 +55,14 @@ export class TauriSqliteAdapter implements SqlExecutor {
   private writeQueue: Promise<unknown> = Promise.resolve();
   private inMutex = false;
 
-  private constructor(private readonly db: TauriDbLike) {}
+  private constructor(
+    private db: TauriDbLike,
+    private readonly dbUrl = 'sqlite:lifehub.db',
+  ) {}
 
   static async open(dbUrl = 'sqlite:lifehub.db'): Promise<TauriSqliteAdapter> {
     const db = await Database.load(dbUrl);
-    return new TauriSqliteAdapter(db);
+    return new TauriSqliteAdapter(db, dbUrl);
   }
 
   static fromInstance(db: TauriDbLike): TauriSqliteAdapter {
@@ -107,6 +110,17 @@ export class TauriSqliteAdapter implements SqlExecutor {
   async exportBinary(): Promise<Uint8Array | null> {
     const bytes = await invoke<number[]>('export_sqlite_bytes');
     return new Uint8Array(bytes);
+  }
+
+  async importBinary(bytes: Uint8Array): Promise<void> {
+    await this.transaction(async () => {
+      await this.db.close();
+      try {
+        await invoke<string>('import_sqlite_bytes', { bytes: Array.from(bytes) });
+      } finally {
+        this.db = await Database.load(this.dbUrl);
+      }
+    });
   }
 
   async close(): Promise<void> {

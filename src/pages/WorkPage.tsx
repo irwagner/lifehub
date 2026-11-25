@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bike, Calculator, Check, Download, Pencil, Plus, Trash2 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
+import { GroupedBarChart } from '../components/GroupedBarChart';
 import { Modal } from '../components/Modal';
 import { useApp } from '../context/AppContext';
 import {
@@ -299,6 +300,32 @@ export const WorkPage: React.FC = () => {
             </p>
           </div>
         </div>
+      )}
+
+      {/* Recent sessions visual chart */}
+      {sessions.length > 0 && (
+        <section className={cardClass}>
+          <h3 className="mb-3 font-semibold">
+            Evolução Recente (Bruto vs. Líquido Operacional — últimas jornadas)
+          </h3>
+          <GroupedBarChart
+            items={[...sessions]
+              .slice(0, 7)
+              .reverse()
+              .map((s) => {
+                const m = calculateWorkSessionMetrics(s);
+                return {
+                  label: formatDateBR(s.date).slice(0, 5),
+                  primaryValue: m.gross,
+                  secondaryValue: Math.max(0, m.operationalNet),
+                };
+              })}
+            primaryLabel="Bruto"
+            secondaryLabel="Líquido Operacional"
+            primaryColorClass="fill-indigo-500"
+            secondaryColorClass="fill-emerald-500"
+          />
+        </section>
       )}
 
       {/* Sessions table */}

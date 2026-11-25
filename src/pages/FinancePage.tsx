@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { EmptyState } from '../components/EmptyState';
+import { GroupedBarChart } from '../components/GroupedBarChart';
 import { Modal } from '../components/Modal';
 import { useApp } from '../context/AppContext';
 import {
@@ -817,6 +818,21 @@ export const FinancePage: React.FC = () => {
       {/* 6-month Comparison */}
       <section className={cardClass}>
         <h3 className="mb-3 font-semibold">Comparativo dos Últimos 6 Meses (Realizado)</h3>
+        {monthComparison.some((m) => m.income > 0 || m.expense > 0) && (
+          <div className="mb-4">
+            <GroupedBarChart
+              items={monthComparison.map((m) => ({
+                label: m.month.slice(5) + '/' + m.month.slice(2, 4),
+                primaryValue: m.income,
+                secondaryValue: m.expense,
+              }))}
+              primaryLabel="Receitas"
+              secondaryLabel="Despesas"
+              primaryColorClass="fill-emerald-500"
+              secondaryColorClass="fill-rose-500"
+            />
+          </div>
+        )}
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>

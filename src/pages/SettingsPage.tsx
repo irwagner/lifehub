@@ -3,6 +3,7 @@ import { invoke } from '@tauri-apps/api/core';
 import {
   Database,
   Download,
+  FolderOpen,
   Moon,
   Sparkles,
   Sun,
@@ -453,6 +454,26 @@ export const SettingsPage: React.FC = () => {
             onChange={handleImportSqliteFile}
             className="hidden"
           />
+
+          {isTauriRuntime() && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                try {
+                  await invoke('open_data_folder');
+                } catch (err) {
+                  notify(
+                    err instanceof Error ? err.message : 'Não foi possível abrir a pasta de dados.',
+                    'error',
+                  );
+                }
+              }}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-xs font-semibold hover:border-brand-500 dark:border-slate-700"
+            >
+              <FolderOpen className="h-4 w-4" /> Abrir Pasta do Banco
+            </button>
+          )}
 
           <button
             type="button"
