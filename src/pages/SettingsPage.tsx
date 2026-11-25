@@ -15,6 +15,7 @@ import {
 import { AutoUpdatePanel } from '../components/AutoUpdatePanel';
 import { CloudSyncPanel } from '../components/CloudSyncPanel';
 import { GeminiConfigPanel } from '../components/GeminiConfigPanel';
+import { GoogleSheetsSyncPanel } from '../components/GoogleSheetsSyncPanel';
 import { useApp } from '../context/AppContext';
 import { isTauriRuntime } from '../db/client';
 import { runMigrations } from '../db/migrations';
@@ -433,6 +434,7 @@ export const SettingsPage: React.FC = () => {
           {[
             { id: 'sec-updates', label: 'GitHub Updates' },
             { id: 'sec-mobile-qr', label: 'Celular & QR Code' },
+            { id: 'sec-sheets', label: 'Google Sheets' },
             { id: 'sec-ai', label: 'IA Gemini' },
             { id: 'sec-skins', label: `${UI_SKINS.length} Skins` },
             { id: 'sec-prefs', label: 'Rotina & Metas' },
@@ -458,6 +460,11 @@ export const SettingsPage: React.FC = () => {
       {/* Mobile PWA + Cloudflare Free E2EE Sync + Offline QR Code */}
       <div id="sec-mobile-qr">
         <CloudSyncPanel />
+      </div>
+
+      {/* Automatic Google Sheets Financial Backup */}
+      <div id="sec-sheets">
+        <GoogleSheetsSyncPanel />
       </div>
 
       {/* Optional Gemini AI Assistant */}

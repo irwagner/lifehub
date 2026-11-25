@@ -67,6 +67,12 @@ import {
   type GeminiAiConfig,
   type ProposedAiAction,
 } from '../services/geminiAi';
+import {
+  isGoogleSheetsReady,
+  loadGoogleSheetsConfig,
+  saveGoogleSheetsConfig,
+  syncFinanceToGoogleSheets,
+} from '../services/googleSheetsSync';
 import { CURRENT_APP_VERSION } from '../services/updater';
 import {
   EVENT_CATEGORY_META,
@@ -378,7 +384,24 @@ export const MobileApp: React.FC = () => {
 
   const scheduleAutoSync = useCallback(() => {
     autoSyncRef.current?.schedule();
-  }, []);
+    if (!db) return;
+    const sheetsCfg = loadGoogleSheetsConfig();
+    if (!isGoogleSheetsReady(sheetsCfg) || !sheetsCfg.autoSync) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    window.setTimeout(async () => {
+      try {
+        const res = await syncFinanceToGoogleSheets(db, sheetsCfg);
+        saveGoogleSheetsConfig({
+          ...sheetsCfg,
+          enabled: true,
+          lastSyncedAt: res.syncedAt,
+          lastRowCount: res.transactionsCount + res.recurringCount + res.workSessionsCount,
+        });
+      } catch {
+        // silent background mirror failure on mobile
+      }
+    }, 2200);
+  }, [db]);
 
   const handleToggleTask = async (id: string) => {
     if (!db) return;

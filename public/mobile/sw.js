@@ -1,4 +1,4 @@
-const CACHE_NAME = 'lifehub-mobile-v0.2.6';
+const CACHE_NAME = 'lifehub-mobile-v0.2.7';
 const PRECACHE_URLS = ['/manifest.webmanifest', '/icon.svg', '/sql-wasm.wasm'];
 
 self.addEventListener('install', (event) => {

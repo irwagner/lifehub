@@ -17,6 +17,11 @@ import {
   saveGeminiAiConfig,
   type GeminiModelId,
 } from './geminiAi';
+import {
+  isGoogleSheetsReady,
+  loadGoogleSheetsConfig,
+  saveGoogleSheetsConfig,
+} from './googleSheetsSync';
 
 export interface CloudSyncConfig {
   enabled: boolean;
@@ -367,10 +372,21 @@ function mergeClientExtensions(
   }
   const mergedMemory = Array.from(memMap.values()).slice(-15);
 
-  if (!mergedGemini && mergedMemory.length === 0) return undefined;
+  let mergedSheets = local?.googleSheets;
+  const rSheets = remote?.googleSheets;
+  if (!mergedSheets?.webhookUrl?.trim() && rSheets?.webhookUrl?.trim()) {
+    mergedSheets = rSheets;
+  } else if (mergedSheets?.webhookUrl?.trim() && rSheets?.webhookUrl?.trim()) {
+    if ((rSheets.updatedAt || '') > (mergedSheets.updatedAt || '')) {
+      mergedSheets = rSheets;
+    }
+  }
+
+  if (!mergedGemini && mergedMemory.length === 0 && !mergedSheets) return undefined;
   return {
     ...(mergedGemini ? { geminiAi: mergedGemini } : {}),
     ...(mergedMemory.length > 0 ? { aiMemory: mergedMemory } : {}),
+    ...(mergedSheets ? { googleSheets: mergedSheets } : {}),
   };
 }
 
@@ -507,8 +523,10 @@ function totalRowsInBackup(backup: LifeHubBackup): number {
 function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
   const aiCfg = loadGeminiAiConfig();
   const memories = loadAiMemory();
+  const sheetsCfg = loadGoogleSheetsConfig();
   const hasAiKey = aiCfg.apiKey.trim().length > 0;
-  if (!hasAiKey && memories.length === 0) return undefined;
+  const hasSheets = isGoogleSheetsReady(sheetsCfg);
+  if (!hasAiKey && memories.length === 0 && !hasSheets) return undefined;
   return {
     ...(hasAiKey
       ? {
@@ -522,6 +540,16 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
         }
       : {}),
     ...(memories.length > 0 ? { aiMemory: memories } : {}),
+    ...(hasSheets
+      ? {
+          googleSheets: {
+            webhookUrl: sheetsCfg.webhookUrl.trim(),
+            secretToken: sheetsCfg.secretToken.trim(),
+            autoSync: sheetsCfg.autoSync,
+            updatedAt: sheetsCfg.updatedAt ?? new Date().toISOString(),
+          },
+        }
+      : {}),
   };
 }
 
@@ -542,6 +570,17 @@ function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
   }
   if (ext.aiMemory && ext.aiMemory.length > 0) {
     saveAiMemoryList(ext.aiMemory);
+  }
+  if (ext.googleSheets?.webhookUrl?.trim() && ext.googleSheets?.secretToken?.trim()) {
+    const currentSheets = loadGoogleSheetsConfig();
+    saveGoogleSheetsConfig({
+      ...currentSheets,
+      enabled: true,
+      webhookUrl: ext.googleSheets.webhookUrl.trim(),
+      secretToken: ext.googleSheets.secretToken.trim(),
+      autoSync: ext.googleSheets.autoSync,
+      updatedAt: ext.googleSheets.updatedAt,
+    });
   }
 }
 

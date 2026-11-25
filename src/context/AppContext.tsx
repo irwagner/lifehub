@@ -9,6 +9,12 @@ import {
   syncDatabaseWithCloud,
   type AutoSyncStatus,
 } from '../services/cloudSync';
+import {
+  isGoogleSheetsReady,
+  loadGoogleSheetsConfig,
+  saveGoogleSheetsConfig,
+  syncFinanceToGoogleSheets,
+} from '../services/googleSheetsSync';
 import { getSkinDefinition } from '../services/skins';
 import type { Settings } from '../types/domain';
 
@@ -70,7 +76,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [autoSyncStatus, setAutoSyncStatus] = useState<AutoSyncStatus>('idle');
 
   const autoSyncRef = useRef<AutoSyncController | null>(null);
+  const sheetsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const sheetsInFlightRef = useRef(false);
   const lastFocusSyncAtRef = useRef(0);
+
+  const scheduleGoogleSheetsSync = useCallback(() => {
+    if (!db) return;
+    const cfg = loadGoogleSheetsConfig();
+    if (!isGoogleSheetsReady(cfg) || !cfg.autoSync) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if (sheetsTimerRef.current) clearTimeout(sheetsTimerRef.current);
+    sheetsTimerRef.current = setTimeout(async () => {
+      sheetsTimerRef.current = null;
+      if (sheetsInFlightRef.current) return;
+      const latestCfg = loadGoogleSheetsConfig();
+      if (!isGoogleSheetsReady(latestCfg) || !latestCfg.autoSync) return;
+      sheetsInFlightRef.current = true;
+      try {
+        const res = await syncFinanceToGoogleSheets(db, latestCfg);
+        saveGoogleSheetsConfig({
+          ...latestCfg,
+          enabled: true,
+          lastSyncedAt: res.syncedAt,
+          lastRowCount: res.transactionsCount + res.recurringCount + res.workSessionsCount,
+        });
+      } catch {
+        // Silent background mirror failure; user can retry manually in Settings
+      } finally {
+        sheetsInFlightRef.current = false;
+      }
+    }, 2200);
+  }, [db]);
 
   const notify = useCallback((text: string, kind: 'success' | 'error' | 'info' = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
@@ -80,12 +116,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 3800);
   }, []);
 
-  const bumpDataVersion = useCallback((options?: { skipAutoSync?: boolean }) => {
-    setDataVersion((v) => v + 1);
-    if (!options?.skipAutoSync) {
-      autoSyncRef.current?.schedule();
-    }
-  }, []);
+  const bumpDataVersion = useCallback(
+    (options?: { skipAutoSync?: boolean }) => {
+      setDataVersion((v) => v + 1);
+      if (!options?.skipAutoSync) {
+        autoSyncRef.current?.schedule();
+        scheduleGoogleSheetsSync();
+      }
+    },
+    [scheduleGoogleSheetsSync],
+  );
 
   const reloadSettings = useCallback(async () => {
     if (!db) return;

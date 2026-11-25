@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   Clock,
   Download,
+  FileSpreadsheet,
   FileUp,
   Pencil,
   Plus,
@@ -59,9 +60,16 @@ import type {
   TransactionType,
 } from '../types/domain';
 import { currentMonthISO, formatBRL, formatDateBR, formatNumber } from '../utils/format';
+import {
+  isGoogleSheetsReady,
+  loadGoogleSheetsConfig,
+  saveGoogleSheetsConfig,
+  syncFinanceToGoogleSheets,
+} from '../services/googleSheetsSync';
 
 export const FinancePage: React.FC = () => {
-  const { db, dataVersion, bumpDataVersion, openQuickAction, notify } = useApp();
+  const { db, dataVersion, bumpDataVersion, openQuickAction, setActiveSection, notify } = useApp();
+  const [sheetsBusy, setSheetsBusy] = useState(false);
   const [month, setMonth] = useState(currentMonthISO());
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -386,6 +394,38 @@ export const FinancePage: React.FC = () => {
             onChange={(e) => setMonth(e.target.value)}
             className="lh-input w-auto"
           />
+          <button
+            type="button"
+            disabled={sheetsBusy}
+            onClick={async () => {
+              const cfg = loadGoogleSheetsConfig();
+              if (!isGoogleSheetsReady(cfg)) {
+                setActiveSection('settings');
+                notify('Configure sua planilha em Configurações → Backup Financeiro no Google Sheets.', 'info');
+                return;
+              }
+              if (!db) return;
+              setSheetsBusy(true);
+              try {
+                const res = await syncFinanceToGoogleSheets(db, cfg);
+                saveGoogleSheetsConfig({
+                  ...cfg,
+                  enabled: true,
+                  lastSyncedAt: res.syncedAt,
+                  lastRowCount: res.transactionsCount + res.recurringCount + res.workSessionsCount,
+                });
+                notify(`Google Sheets atualizado (${res.transactionsCount} lançamentos + ${res.recurringCount} fixas)!`);
+              } catch (err) {
+                notify(err instanceof Error ? err.message : 'Erro ao enviar ao Google Sheets.', 'error');
+              } finally {
+                setSheetsBusy(false);
+              }
+            }}
+            className="lh-btn-secondary"
+          >
+            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+            {sheetsBusy ? 'Enviando...' : 'Google Sheets'}
+          </button>
           <button
             type="button"
             onClick={() => {

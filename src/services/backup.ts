@@ -44,9 +44,17 @@ export interface SyncedAiMemoryItem {
   createdAt: string;
 }
 
+export interface SyncedGoogleSheetsExtension {
+  webhookUrl: string;
+  secretToken: string;
+  autoSync: boolean;
+  updatedAt: string;
+}
+
 export interface SyncedClientExtensions {
   geminiAi?: SyncedGeminiExtension;
   aiMemory?: SyncedAiMemoryItem[];
+  googleSheets?: SyncedGoogleSheetsExtension;
 }
 
 export interface LifeHubBackup {
@@ -77,6 +85,14 @@ const clientExtensionsSchema = z
           createdAt: z.string(),
         }),
       )
+      .optional(),
+    googleSheets: z
+      .object({
+        webhookUrl: z.string(),
+        secretToken: z.string(),
+        autoSync: z.boolean(),
+        updatedAt: z.string(),
+      })
       .optional(),
   })
   .optional();
