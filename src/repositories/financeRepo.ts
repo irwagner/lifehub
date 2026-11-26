@@ -1,5 +1,6 @@
 import type { SqlExecutor } from '../db/types';
 import { generateInstallmentPlan } from '../services/calculations';
+import { recordTombstone, recordTombstones } from '../services/syncTombstones';
 import type { ParsedStatementItem } from '../services/importParser';
 import { createTransactionSchema } from '../services/validation';
 import type {
@@ -110,6 +111,7 @@ export async function deleteCategory(db: SqlExecutor, id: string): Promise<void>
     throw new Error('Categorias padrão do sistema não podem ser excluídas.');
   }
   await db.execute('DELETE FROM categories WHERE id = ?', [id]);
+  recordTombstone('categories', id);
 }
 
 export interface TransactionFilters {
@@ -241,6 +243,7 @@ export async function toggleTransactionStatus(
 
 export async function deleteTransaction(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM transactions WHERE id = ?', [id]);
+  recordTombstone('transactions', id);
 }
 
 export async function deleteInstallmentGroup(db: SqlExecutor, groupId: string): Promise<number> {
@@ -250,6 +253,10 @@ export async function deleteInstallmentGroup(db: SqlExecutor, groupId: string): 
   );
   if (existing.length === 0) return 0;
   await db.execute('DELETE FROM transactions WHERE installment_group_id = ?', [groupId]);
+  recordTombstones(
+    'transactions',
+    existing.map((r) => r.id),
+  );
   return existing.length;
 }
 
@@ -439,6 +446,7 @@ export async function addGoalContribution(
 
 export async function deleteGoal(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM goals WHERE id = ?', [id]);
+  recordTombstone('goals', id);
 }
 
 export interface StatementImportSummary {
@@ -568,6 +576,7 @@ export async function createRecurringRule(
 
 export async function deleteRecurringRule(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM recurring_rules WHERE id = ?', [id]);
+  recordTombstone('recurring_rules', id);
 }
 
 /**
@@ -700,6 +709,7 @@ export async function upsertCategoryBudget(
 
 export async function deleteCategoryBudget(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM budgets WHERE id = ?', [id]);
+  recordTombstone('budgets', id);
 }
 
 export async function getMultiMonthComparison(

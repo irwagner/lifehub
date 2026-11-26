@@ -27,6 +27,11 @@ import {
   loadFamilyFinanceConfig,
   saveFamilyFinanceConfig,
 } from './familyFinanceSync';
+import {
+  loadTombstones,
+  mergeTombstoneMaps,
+  saveTombstones,
+} from './syncTombstones';
 
 export interface CloudSyncConfig {
   enabled: boolean;
@@ -246,6 +251,10 @@ function rowKey(table: BackupTableName, row: Record<string, SqlValue>): string {
 export function mergeBackups(local: LifeHubBackup, remote: LifeHubBackup): LifeHubBackup {
   const mergedTables = {} as Record<BackupTableName, Array<Record<string, SqlValue>>>;
   const tableCounts = {} as Record<BackupTableName, number>;
+  const mergedTombstones = mergeTombstoneMaps(
+    local.clientExtensions?.tombstones,
+    remote.clientExtensions?.tombstones,
+  );
 
   for (const table of BACKUP_TABLES) {
     const localRows = local.tables[table] ?? [];
@@ -291,6 +300,14 @@ export function mergeBackups(local: LifeHubBackup, remote: LifeHubBackup): LifeH
         if (rTs > lTs) {
           byId.set(key, rRow);
         }
+      }
+    }
+
+    // Apply tombstones: if a record was explicitly deleted at or after its last update, do NOT resurrect it
+    for (const [key, row] of Array.from(byId.entries())) {
+      const deletedAt = mergedTombstones[`${table}:${key}`];
+      if (deletedAt && deletedAt >= rowTimestamp(row)) {
+        byId.delete(key);
       }
     }
 
@@ -397,12 +414,18 @@ function mergeClientExtensions(
     }
   }
 
-  if (!mergedGemini && mergedMemory.length === 0 && !mergedSheets && !mergedFamily) return undefined;
+  const mergedTombstones = mergeTombstoneMaps(local?.tombstones, remote?.tombstones);
+  const hasTombstones = Object.keys(mergedTombstones).length > 0;
+
+  if (!mergedGemini && mergedMemory.length === 0 && !mergedSheets && !mergedFamily && !hasTombstones) {
+    return undefined;
+  }
   return {
     ...(mergedGemini ? { geminiAi: mergedGemini } : {}),
     ...(mergedMemory.length > 0 ? { aiMemory: mergedMemory } : {}),
     ...(mergedSheets ? { googleSheets: mergedSheets } : {}),
     ...(mergedFamily ? { familyFinance: mergedFamily } : {}),
+    ...(hasTombstones ? { tombstones: mergedTombstones } : {}),
   };
 }
 
@@ -541,10 +564,12 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
   const memories = loadAiMemory();
   const sheetsCfg = loadGoogleSheetsConfig();
   const famCfg = loadFamilyFinanceConfig();
+  const tombstones = loadTombstones();
   const hasAiKey = aiCfg.apiKey.trim().length > 0;
   const hasSheets = isGoogleSheetsReady(sheetsCfg);
   const hasFamily = isFamilySyncReady(famCfg);
-  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasFamily) return undefined;
+  const hasTombstones = Object.keys(tombstones).length > 0;
+  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasFamily && !hasTombstones) return undefined;
   return {
     ...(hasAiKey
       ? {
@@ -582,6 +607,7 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
           },
         }
       : {}),
+    ...(hasTombstones ? { tombstones } : {}),
   };
 }
 
@@ -628,6 +654,9 @@ function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
       autoSync: ext.familyFinance.autoSync,
       updatedAt: ext.familyFinance.updatedAt,
     });
+  }
+  if (ext.tombstones && Object.keys(ext.tombstones).length > 0) {
+    saveTombstones(mergeTombstoneMaps(loadTombstones(), ext.tombstones));
   }
 }
 

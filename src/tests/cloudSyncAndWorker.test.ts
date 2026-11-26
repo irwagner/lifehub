@@ -5,7 +5,8 @@ import {
 } from '../../cloudflare-sync/src/handler';
 import { createInMemoryTestDatabase } from '../db/client';
 import { createTask, listTasks } from '../repositories/calendarRepo';
-import { createTransaction, listTransactions } from '../repositories/financeRepo';
+import { createTransaction, deleteTransaction, listTransactions } from '../repositories/financeRepo';
+import { clearTombstones } from '../services/syncTombstones';
 import { getSettings, updateSettings } from '../repositories/settingsRepo';
 import { createWorkSession, listWorkSessions } from '../repositories/workRepo';
 import { exportBackupJson } from '../services/backup';
@@ -213,6 +214,34 @@ describe('App Mobile + Cloudflare Sync Zero-Knowledge (E2EE)', () => {
     });
     expect(badRes.status).toBe(401);
 
+    // Delete a synced expense on Desktop -> must NOT resurrect on Desktop sync AND must delete on Mobile!
+    clearTombstones();
+    const txsBeforeDelete = await listTransactions(desktopDb);
+    const fuelTx = txsBeforeDelete.find((t) => t.description === 'Gasolina lançada no iPhone');
+    expect(fuelTx).toBeDefined();
+
+    await deleteTransaction(desktopDb, fuelTx!.id);
+    await syncDatabaseWithCloud(
+      desktopDb,
+      { endpointUrl, passphrase, deviceName: 'Windows Desktop' },
+      workerFetch,
+    );
+    expect(
+      (await listTransactions(desktopDb)).some((t) => t.id === fuelTx!.id),
+    ).toBe(false);
+
+    // Clear local memory tombstones to simulate a separate device (iPhone) syncing from the cloud vault
+    clearTombstones();
+    await syncDatabaseWithCloud(
+      mobileDb,
+      { endpointUrl, passphrase, deviceName: 'iPhone' },
+      workerFetch,
+    );
+    expect(
+      (await listTransactions(mobileDb)).some((t) => t.id === fuelTx!.id),
+    ).toBe(false);
+
+    clearTombstones();
     await desktopDb.close();
     await mobileDb.close();
   });

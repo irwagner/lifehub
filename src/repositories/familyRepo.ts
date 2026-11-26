@@ -1,4 +1,5 @@
 import type { SqlExecutor } from '../db/types';
+import { recordTombstone } from '../services/syncTombstones';
 import type { FamilyChecklistItem, FamilyPlan } from '../types/domain';
 import { createId, round2 } from '../utils/format';
 
@@ -50,4 +51,5 @@ export async function updateFamilyPlanChecklist(
 
 export async function deleteFamilyPlan(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM family_plans WHERE id = ?', [id]);
+  recordTombstone('family_plans', id);
 }

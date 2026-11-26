@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isTauriRuntime } from '../db/client';
 
-export const CURRENT_APP_VERSION = '0.2.8';
+export const CURRENT_APP_VERSION = '0.2.9';
 export const GITHUB_REPO_OWNER = 'irwagner';
 export const GITHUB_REPO_NAME = 'lifehub';
 export const GITHUB_RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`;

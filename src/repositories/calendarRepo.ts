@@ -1,5 +1,6 @@
 import type { SqlExecutor } from '../db/types';
 import { isChildWeekend } from '../services/recurrence';
+import { recordTombstone } from '../services/syncTombstones';
 import {
   buildWeekEventsFromTemplate,
   type ScheduleTemplateId,
@@ -197,6 +198,7 @@ export async function createRecurringWeeklyEvents(
 
 export async function deleteCalendarEvent(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM calendar_events WHERE id = ?', [id]);
+  recordTombstone('calendar_events', id);
 }
 
 export async function applyScheduleTemplateToWeek(
@@ -330,6 +332,7 @@ export async function toggleTaskStatus(db: SqlExecutor, id: string): Promise<Tas
 
 export async function deleteTask(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM tasks WHERE id = ?', [id]);
+  recordTombstone('tasks', id);
 }
 
 export async function updateTask(

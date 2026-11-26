@@ -1,4 +1,5 @@
 import type { SqlExecutor } from '../db/types';
+import { recordTombstone } from '../services/syncTombstones';
 import type { Habit, HabitCategory, HabitLog } from '../types/domain';
 import { addDaysISO, createId, startOfWeekISO } from '../utils/format';
 
@@ -75,6 +76,7 @@ export async function logHabitSession(
 
 export async function deleteHabitLog(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM habit_logs WHERE id = ?', [id]);
+  recordTombstone('habit_logs', id);
 }
 
 export interface HabitWeekConsistency {

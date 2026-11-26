@@ -1,4 +1,5 @@
 import type { SqlExecutor } from '../db/types';
+import { recordTombstone } from '../services/syncTombstones';
 import { createIdeaSchema } from '../services/validation';
 import type { IdeaItem, IdeaStatus, WeeklyReview } from '../types/domain';
 import { addDaysISO, createId, round2, startOfWeekISO } from '../utils/format';
@@ -70,6 +71,7 @@ export async function updateIdeaChecklist(
 
 export async function deleteIdea(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM ideas WHERE id = ?', [id]);
+  recordTombstone('ideas', id);
 }
 
 export async function listWeeklyReviews(db: SqlExecutor): Promise<WeeklyReview[]> {

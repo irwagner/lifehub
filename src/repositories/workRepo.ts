@@ -1,5 +1,6 @@
 import type { SqlExecutor } from '../db/types';
 import { resolveSessionKm, summarizeWorkSessions, type WorkPeriodSummary } from '../services/calculations';
+import { recordTombstone } from '../services/syncTombstones';
 import { createVehicleSchema, createWorkSessionSchema } from '../services/validation';
 import type {
   Settings,
@@ -81,6 +82,7 @@ export async function setActiveVehicle(db: SqlExecutor, vehicleId: string): Prom
 
 export async function deleteVehicle(db: SqlExecutor, vehicleId: string): Promise<void> {
   await db.execute('DELETE FROM vehicles WHERE id = ?', [vehicleId]);
+  recordTombstone('vehicles', vehicleId);
 }
 
 export async function listVehicleExpenses(
@@ -135,6 +137,7 @@ export async function createVehicleExpense(
 
 export async function deleteVehicleExpense(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM vehicle_expenses WHERE id = ?', [id]);
+  recordTombstone('vehicle_expenses', id);
 }
 
 export async function listWorkSessions(
@@ -251,6 +254,7 @@ export async function getLastRecordedOdometer(db: SqlExecutor): Promise<number |
 
 export async function deleteWorkSession(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM work_sessions WHERE id = ?', [id]);
+  recordTombstone('work_sessions', id);
 }
 
 export async function updateWorkSession(

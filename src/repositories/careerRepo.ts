@@ -1,4 +1,5 @@
 import type { SqlExecutor } from '../db/types';
+import { recordTombstone } from '../services/syncTombstones';
 import type {
   JobApplication,
   JobApplicationStatus,
@@ -61,6 +62,7 @@ export async function createStudySession(
 
 export async function deleteStudySession(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM study_sessions WHERE id = ?', [id]);
+  recordTombstone('study_sessions', id);
 }
 
 export async function updateStudyTrackStatus(
@@ -163,4 +165,5 @@ export async function updateJobApplicationStatus(
 
 export async function deleteJobApplication(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM job_applications WHERE id = ?', [id]);
+  recordTombstone('job_applications', id);
 }

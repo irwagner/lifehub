@@ -1,4 +1,5 @@
 import type { SqlExecutor } from '../db/types';
+import { recordTombstone } from '../services/syncTombstones';
 import type { ProjectCategory, ProjectItem, ProjectStatus, ProjectTask } from '../types/domain';
 import { createId } from '../utils/format';
 
@@ -97,6 +98,7 @@ export async function updateProjectStatus(
 
 export async function deleteProject(db: SqlExecutor, id: string): Promise<void> {
   await db.execute('DELETE FROM projects WHERE id = ?', [id]);
+  recordTombstone('projects', id);
 }
 
 export async function addProjectTask(
@@ -125,4 +127,5 @@ export async function toggleProjectTask(db: SqlExecutor, taskId: string): Promis
 
 export async function deleteProjectTask(db: SqlExecutor, taskId: string): Promise<void> {
   await db.execute('DELETE FROM project_tasks WHERE id = ?', [taskId]);
+  recordTombstone('project_tasks', taskId);
 }

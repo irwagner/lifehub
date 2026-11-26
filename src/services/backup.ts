@@ -67,6 +67,7 @@ export interface SyncedClientExtensions {
   aiMemory?: SyncedAiMemoryItem[];
   googleSheets?: SyncedGoogleSheetsExtension;
   familyFinance?: SyncedFamilyFinanceExtension;
+  tombstones?: Record<string, string>;
 }
 
 export interface LifeHubBackup {
@@ -118,6 +119,7 @@ const clientExtensionsSchema = z
         updatedAt: z.string(),
       })
       .optional(),
+    tombstones: z.record(z.string()).optional(),
   })
   .optional();
 
