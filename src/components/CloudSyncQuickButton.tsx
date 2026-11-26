@@ -40,7 +40,7 @@ export const CloudSyncQuickButton: React.FC = () => {
       onClick={() => void triggerCloudSync({ manual: true })}
       title={statusTitle}
       aria-label="Sincronizar com celular"
-      className="lh-control-btn relative inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium shadow-sm"
+      className="lh-control-btn relative inline-flex h-10 items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium shadow-sm lg:h-auto"
     >
       {busy ? (
         <RefreshCw className="h-3.5 w-3.5 animate-spin text-brand-500" />

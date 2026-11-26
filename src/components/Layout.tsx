@@ -102,6 +102,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [mobileQuickOpen, setMobileQuickOpen] = useState(false);
+
+  const activeNavMeta = FLAT_NAV_ITEMS.find((i) => i.id === activeSection) ?? FLAT_NAV_ITEMS[0];
 
   const activeSkin = getSkinDefinition(settings?.ui_skin);
   const shell = activeSkin.shell;
@@ -275,6 +278,113 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
   );
 
+  const renderMobileHeader = () => (
+    <header
+      className="lh-topbar lh-safe-top sticky top-0 z-30 flex items-center justify-between gap-2 border-b px-3.5 py-2.5 backdrop-blur-xl lg:hidden"
+      style={{ borderColor: 'var(--lh-card-border)' }}
+    >
+      <button
+        type="button"
+        onClick={() => handleSelectNav('dashboard')}
+        className="flex min-w-0 items-center gap-2.5 text-left"
+      >
+        <div className="lh-brand-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-indigo-700 text-white shadow-sm">
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <circle cx="12" cy="12" r="8" className="opacity-40" />
+            <circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none" />
+            <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeLinecap="round" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-[10px] font-bold uppercase tracking-wider text-brand-500">
+            LifeHub v{CURRENT_APP_VERSION}
+          </p>
+          <h1 className="truncate text-base font-bold leading-tight text-slate-900 dark:text-white">
+            {activeNavMeta.label}
+          </h1>
+        </div>
+      </button>
+
+      <div className="flex shrink-0 items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setMobileQuickOpen(true)}
+          aria-label="Lançamento rápido"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm active:scale-95"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setAiOpen(true)}
+          aria-label="Abrir Assistente IA"
+          className="lh-control-btn inline-flex h-10 items-center justify-center gap-1 px-2.5 text-xs font-bold active:scale-95"
+        >
+          <Sparkles className="h-4 w-4 text-brand-500" />
+          <span>IA</span>
+        </button>
+
+        <CloudSyncQuickButton />
+
+        <button
+          type="button"
+          onClick={() => setSearchOpen(true)}
+          aria-label="Buscar"
+          className="lh-control-btn inline-flex h-10 w-10 items-center justify-center active:scale-95"
+        >
+          <Search className="h-4 w-4" />
+        </button>
+      </div>
+    </header>
+  );
+
+  const renderMobileQuickSheet = () =>
+    mobileQuickOpen ? (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/70 backdrop-blur-sm lg:hidden"
+        onMouseDown={(e) => {
+          if (e.target === e.currentTarget) setMobileQuickOpen(false);
+        }}
+      >
+        <div
+          className="lh-safe-bottom w-full max-w-lg rounded-t-3xl border-t p-4 shadow-2xl animate-scale-in"
+          style={{
+            backgroundColor: 'var(--lh-card)',
+            borderColor: 'var(--lh-card-border)',
+          }}
+        >
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-base font-bold">Novo Lançamento Rápido</h2>
+            <button
+              type="button"
+              onClick={() => setMobileQuickOpen(false)}
+              aria-label="Fechar"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {QUICK_PILLS.map((pill) => (
+              <button
+                key={pill.action}
+                type="button"
+                onClick={() => {
+                  setMobileQuickOpen(false);
+                  openQuickAction(pill.action);
+                }}
+                className="lh-control-btn flex min-h-[48px] items-center gap-2.5 rounded-2xl px-3.5 py-3 text-left text-sm font-semibold active:scale-95"
+              >
+                <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${pill.dotColor}`} />
+                <span>+ {pill.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    ) : null;
+
   const renderMobileBottomBar = () => {
     const mobileTabs: Array<{
       id: NavSection;
@@ -290,7 +400,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     return (
       <nav
         aria-label="Navegação mobile"
-        className="lh-safe-bottom lh-sidebar fixed inset-x-0 bottom-0 z-30 border-t px-2 pt-1.5 backdrop-blur-2xl lg:hidden"
+        className="lh-safe-bottom lh-sidebar fixed inset-x-0 bottom-0 z-30 border-t px-2 pt-2 backdrop-blur-2xl lg:hidden"
         style={{ borderColor: 'var(--lh-card-border)' }}
       >
         <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
@@ -302,13 +412,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                 key={item.id}
                 type="button"
                 onClick={() => handleSelectNav(item.id)}
-                className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold transition ${
+                className={`flex min-h-[50px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition active:scale-95 ${
                   active
                     ? 'bg-brand-600/15 text-brand-500'
                     : 'text-slate-500 dark:text-slate-400'
                 }`}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-5 w-5" />
                 <span>{item.label}</span>
               </button>
             );
@@ -316,13 +426,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
-            className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold transition ${
+            className={`flex min-h-[50px] flex-col items-center justify-center gap-1 rounded-xl py-1.5 text-[11px] font-semibold transition active:scale-95 ${
               !mobileTabs.some((t) => t.id === activeSection)
                 ? 'bg-brand-600/15 text-brand-500'
                 : 'text-slate-500 dark:text-slate-400'
             }`}
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-5 w-5" />
             <span>Menu</span>
           </button>
         </div>
@@ -332,9 +442,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const renderMobileDrawerForAltShells = () =>
     sidebarOpen ? (
-      <div className="fixed inset-0 z-40 flex lg:hidden">
+      <div className="fixed inset-0 z-50 flex lg:hidden">
         <div
-          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm"
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-sm"
           onClick={() => setSidebarOpen(false)}
         />
         <aside
@@ -389,9 +499,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const renderOverlays = () => (
     <>
       {renderMobileBottomBar()}
+      {renderMobileQuickSheet()}
       <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AiAssistantDrawer open={aiOpen} onClose={() => setAiOpen(false)} />
-      <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-2 lg:bottom-5 lg:right-5">
+      <div className="fixed bottom-24 right-4 z-[60] flex flex-col gap-2 lg:bottom-5 lg:right-5">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -420,7 +531,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <WindowTitleBar />
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <header className="lh-topbar lh-safe-top sticky top-0 z-30 border-b backdrop-blur-xl">
+          {renderMobileHeader()}
+          <header className="lh-topbar sticky top-0 z-30 hidden border-b backdrop-blur-xl lg:block">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
               {renderBrandMark()}
 
@@ -491,7 +603,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <WindowTitleBar />
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <header className="lh-topbar lh-safe-top sticky top-0 z-20 mx-auto mt-2 flex w-[calc(100%-1.5rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl sm:top-3 sm:mt-3 sm:w-[calc(100%-2rem)]">
+          {renderMobileHeader()}
+          <header className="lh-topbar sticky top-3 z-20 mx-auto mt-3 hidden w-[calc(100%-2rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl lg:flex">
             <div className="flex items-center gap-3">
               {renderBrandMark()}
               {settings && (
@@ -505,7 +618,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {renderUtilities()}
           </header>
 
-          <div className="mx-auto mt-3 flex w-[calc(100%-1.5rem)] max-w-7xl justify-center sm:w-[calc(100%-2rem)] xl:hidden">
+          <div className="mx-auto mt-3 hidden w-[calc(100%-2rem)] max-w-7xl justify-center lg:flex xl:hidden">
             {renderQuickPills(true)}
           </div>
 
@@ -617,7 +730,8 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-            <header className="lh-topbar lh-safe-top sticky top-0 z-20 flex flex-nowrap items-center justify-between gap-2 border-b px-3.5 py-2 backdrop-blur-xl sm:px-5">
+            {renderMobileHeader()}
+            <header className="lh-topbar sticky top-0 z-20 hidden flex-nowrap items-center justify-between gap-2 border-b px-3.5 py-2 backdrop-blur-xl sm:px-5 lg:flex">
               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <button
                   type="button"
@@ -653,7 +767,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {sidebarOpen && (
           <div
-            className="fixed inset-0 z-30 bg-slate-950/70 backdrop-blur-sm lg:hidden"
+            className="fixed inset-0 z-40 bg-slate-950/75 backdrop-blur-sm lg:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -661,7 +775,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <aside
           className={`lh-sidebar lh-safe-top ${
             isDualTone ? 'lh-sidebar-dark-tone' : ''
-          } fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:w-56 lg:translate-x-0 ${
+          } fixed inset-y-0 left-0 z-50 flex w-64 max-w-[82vw] shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:z-auto lg:w-56 lg:translate-x-0 ${
             isFloating
               ? 'border lg:m-3 lg:mr-0 lg:rounded-2xl lg:shadow-xl'
               : 'border-r'
@@ -763,6 +877,18 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             ))}
           </nav>
 
+          {/* Mobile quick theme & settings strip inside drawer */}
+          <div className="flex items-center gap-2 px-3 pb-2 lg:hidden">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="lh-control-btn flex h-10 flex-1 items-center justify-center gap-1.5 px-3 text-xs font-semibold"
+            >
+              {settings?.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              <span>{settings?.theme === 'dark' ? 'Tema Claro' : 'Tema Escuro'}</span>
+            </button>
+          </div>
+
           {/* Local-first status badge */}
           <div
             className="border-t p-3"
@@ -794,11 +920,12 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
         {/* Main area */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
+          {renderMobileHeader()}
           <header
-            className={`lh-topbar lh-safe-top sticky z-20 flex flex-nowrap items-center justify-between gap-2 backdrop-blur-xl ${
+            className={`lh-topbar sticky z-20 hidden flex-nowrap items-center justify-between gap-2 backdrop-blur-xl lg:flex ${
               isFloating
-                ? 'top-2 mx-3 mt-2 rounded-2xl border px-3.5 py-2 shadow-sm sm:top-3 sm:mx-5 sm:mt-3'
-                : 'top-0 border-b px-3.5 py-2 sm:px-5'
+                ? 'top-3 mx-5 mt-3 rounded-2xl border px-3.5 py-2 shadow-sm'
+                : 'top-0 border-b px-5 py-2'
             }`}
           >
             <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">

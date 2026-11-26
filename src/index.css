@@ -1205,6 +1205,11 @@ html.dark[data-skin='retro_classic'] {
       font-size: 13px;
     }
   }
+  @media (max-width: 1023px) {
+    html {
+      font-size: 15.5px;
+    }
+  }
   @media (min-width: 1720px) and (min-height: 980px) {
     html {
       font-size: 15px;
@@ -1723,6 +1728,43 @@ body {
 
 .lh-safe-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+/* Ergonomic touch targets and crisp mobile layout on phones & tablets (< 1024px) */
+@media (max-width: 1023px) {
+  .lh-app-shell {
+    border: none;
+    height: 100dvh;
+  }
+
+  .lh-btn-primary,
+  .lh-btn-secondary {
+    min-height: 2.5rem;
+    padding-top: 0.55rem;
+    padding-bottom: 0.55rem;
+    padding-left: 0.9rem;
+    padding-right: 0.9rem;
+    font-size: 0.875rem;
+  }
+
+  .lh-control-btn {
+    min-height: 2.5rem;
+    min-width: 2.5rem;
+  }
+
+  .lh-input {
+    min-height: 2.75rem;
+    font-size: 16px;
+  }
+
+  .lh-page-title {
+    font-size: 1.35rem;
+    line-height: 1.25;
+  }
+
+  .lh-card {
+    padding: 1rem;
+  }
 }
 
 @media (max-width: 640px) {

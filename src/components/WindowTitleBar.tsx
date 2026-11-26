@@ -131,6 +131,11 @@ export const WindowTitleBar: React.FC = () => {
     return null;
   }
 
+  // In browser/mobile preview (outside Tauri desktop), hide Windows window controls on narrow screens
+  if (!tauri && typeof window !== 'undefined' && window.innerWidth < 1024) {
+    return null;
+  }
+
   const sectionLabel = SECTION_TITLES[activeSection] ?? 'LifeHub';
 
   // Style 1: macOS / Fluent floating dots integrated on the left, centered title
