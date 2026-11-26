@@ -20,7 +20,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -35,7 +35,7 @@ jobs:
           java-version: '21'
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
       - name: Build mobile web bundle & sync Capacitor Android
         run: |
@@ -99,7 +99,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: 11
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -108,7 +108,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
       - name: Build mobile web bundle & sync Capacitor iOS
         run: |
