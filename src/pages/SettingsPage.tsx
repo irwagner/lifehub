@@ -446,7 +446,7 @@ export const SettingsPage: React.FC = () => {
               key={tab.id}
               type="button"
               onClick={() => document.getElementById(tab.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-              className="lh-control-btn px-2.5 py-1 text-[11px] font-semibold"
+              className="lh-control-btn px-2.5 py-1.5 text-[11px] font-semibold"
             >
               {tab.label}
             </button>

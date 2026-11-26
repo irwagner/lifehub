@@ -223,11 +223,11 @@ export const CalendarPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <select
             value={selectedTemplate}
             onChange={(e) => setSelectedTemplate(e.target.value as ScheduleTemplateId)}
-            className="lh-input w-auto text-xs font-medium"
+            className="lh-input w-full text-xs font-medium sm:w-auto"
           >
             {SCHEDULE_TEMPLATES.map((t) => (
               <option key={t.id} value={t.id}>
@@ -239,9 +239,9 @@ export const CalendarPage: React.FC = () => {
             type="button"
             disabled={applying}
             onClick={handleApplyTemplate}
-            className="lh-btn-primary"
+            className="lh-btn-primary w-full sm:w-auto"
           >
-            <Wand2 className="h-3.5 w-3.5" />
+            <Wand2 className="h-3.5 w-3.5 shrink-0" />
             {applying ? 'Aplicando...' : 'Aplicar template na semana'}
           </button>
         </div>
@@ -249,10 +249,10 @@ export const CalendarPage: React.FC = () => {
 
       <div className="grid gap-4 xl:grid-cols-4">
         {/* FullCalendar */}
-        <div className="lh-card h-[calc(100vh-195px)] min-h-[420px] p-3.5 xl:col-span-3">
+        <div className="lh-card h-[calc(100vh-220px)] min-h-[420px] overflow-hidden p-3 sm:p-3.5 xl:col-span-3">
           <FullCalendar
             plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
+            initialView={typeof window !== 'undefined' && window.innerWidth < 640 ? 'timeGridDay' : 'timeGridWeek'}
             locale={ptBrLocale}
             firstDay={1}
             slotMinTime="05:00:00"
@@ -262,6 +262,11 @@ export const CalendarPage: React.FC = () => {
             selectable={false}
             nowIndicator={true}
             height="100%"
+            dayHeaderFormat={
+              typeof window !== 'undefined' && window.innerWidth < 640
+                ? { weekday: 'short', day: 'numeric' }
+                : { weekday: 'short', day: '2-digit', month: '2-digit' }
+            }
             slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
             headerToolbar={{

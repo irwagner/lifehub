@@ -797,20 +797,20 @@ export const DashboardPage: React.FC = () => {
             </h2>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={() => setReportOpen(true)}
-              className="lh-btn-secondary"
+              className="lh-btn-secondary w-full sm:w-auto"
             >
-              <FileBarChart2 className="h-3.5 w-3.5 text-brand-500" /> Relatório do Mês
+              <FileBarChart2 className="h-3.5 w-3.5 shrink-0 text-brand-500" /> Relatório
             </button>
             <button
               type="button"
               onClick={() => setActiveSection('settings')}
-              className="lh-btn-primary"
+              className="lh-btn-primary w-full sm:w-auto"
             >
-              <SlidersHorizontal className="h-3.5 w-3.5" /> Configurar Modo
+              <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" /> Configurar
             </button>
           </div>
         </div>

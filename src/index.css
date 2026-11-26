@@ -1715,11 +1715,26 @@ html[data-skin='retro_classic'] .rounded-lg {
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.18);
 }
 
-/* Mobile & Native APK/iOS safe areas and touch polish */
+/* Mobile & Native APK/iOS safe areas, locked viewport and touch polish */
 html,
-body {
-  overscroll-behavior-y: none;
+body,
+#root {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+}
+
+.lh-scroll-region {
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: none;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lh-safe-top {
@@ -1734,45 +1749,61 @@ body {
 @media (max-width: 1023px) {
   .lh-app-shell {
     border: none;
-    height: 100dvh;
+    height: 100%;
+    max-width: 100vw;
+    overflow: hidden;
+  }
+
+  .lh-scroll-region {
+    scrollbar-width: none !important;
+  }
+
+  .lh-scroll-region::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   .lh-btn-primary,
   .lh-btn-secondary {
     min-height: 2.5rem;
-    padding-top: 0.55rem;
-    padding-bottom: 0.55rem;
-    padding-left: 0.9rem;
-    padding-right: 0.9rem;
-    font-size: 0.875rem;
-  }
-
-  .lh-control-btn {
-    min-height: 2.5rem;
-    min-width: 2.5rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+    line-height: 1.2;
+    justify-content: center;
+    text-align: center;
+    max-width: 100%;
   }
 
   .lh-input {
-    min-height: 2.75rem;
+    min-height: 2.65rem;
     font-size: 16px;
   }
 
   .lh-page-title {
-    font-size: 1.35rem;
-    line-height: 1.25;
+    font-size: 1.3rem;
+    line-height: 1.22;
   }
 
   .lh-card {
-    padding: 1rem;
+    padding: 0.95rem;
   }
 }
 
 @media (max-width: 640px) {
   .fc .fc-header-toolbar {
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 0.4rem;
   }
   .fc .fc-toolbar-title {
-    font-size: 0.92rem;
+    font-size: 0.9rem;
+  }
+  .fc .fc-col-header-cell-cushion {
+    font-size: 0.68rem;
+    padding: 3px 1px;
+    white-space: nowrap;
+  }
+  .fc .fc-timegrid-slot-label-cushion {
+    font-size: 0.7rem;
   }
 }

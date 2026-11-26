@@ -2,7 +2,9 @@ package com.lifehub.mobile;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.view.View;
 import android.view.Window;
+import android.webkit.WebView;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 import com.getcapacitor.BridgeActivity;
@@ -12,6 +14,7 @@ public class MainActivity extends BridgeActivity {
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(AppUpdaterPlugin.class);
         super.onCreate(savedInstanceState);
+
         Window window = getWindow();
         if (window != null) {
             int darkBg = Color.parseColor("#070b14");
@@ -24,6 +27,14 @@ public class MainActivity extends BridgeActivity {
                 controller.setAppearanceLightStatusBars(false);
                 controller.setAppearanceLightNavigationBars(false);
             }
+        }
+
+        // Disable Android 12+ elastic overscroll stretch and horizontal scrollbar inside WebView
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            WebView webView = getBridge().getWebView();
+            webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
+            webView.setHorizontalScrollBarEnabled(false);
+            webView.setVerticalScrollBarEnabled(false);
         }
     }
 }

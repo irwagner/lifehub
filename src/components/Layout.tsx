@@ -281,13 +281,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const renderMobileHeader = () => (
     <header
-      className="lh-topbar lh-safe-top sticky top-0 z-30 flex items-center justify-between gap-2 border-b px-3.5 py-2.5 backdrop-blur-xl lg:hidden"
+      className="lh-topbar lh-safe-top z-30 flex shrink-0 items-center justify-between gap-2 border-b px-3 py-2 backdrop-blur-xl lg:hidden"
       style={{ borderColor: 'var(--lh-card-border)' }}
     >
       <button
         type="button"
         onClick={() => handleSelectNav('dashboard')}
-        className="flex min-w-0 items-center gap-2.5 text-left"
+        className="flex min-w-0 flex-1 items-center gap-2 text-left"
       >
         <div className="lh-brand-badge flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 via-brand-600 to-indigo-700 text-white shadow-sm">
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -296,22 +296,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <path d="M12 2v3M12 19v3M2 12h3M19 12h3" strokeLinecap="round" />
           </svg>
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-[10px] font-bold uppercase tracking-wider text-brand-500">
-            LifeHub v{CURRENT_APP_VERSION}
+            LifeHub
           </p>
-          <h1 className="truncate text-base font-bold leading-tight text-slate-900 dark:text-white">
+          <h1 className="truncate text-[15px] font-bold leading-tight text-slate-900 dark:text-white">
             {activeNavMeta.label}
           </h1>
         </div>
       </button>
 
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
           onClick={() => setMobileQuickOpen(true)}
           aria-label="Lançamento rápido"
-          className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm active:scale-95"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-brand-600 text-white shadow-sm active:scale-95"
         >
           <Plus className="h-5 w-5" />
         </button>
@@ -320,7 +320,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           type="button"
           onClick={() => setAiOpen(true)}
           aria-label="Abrir Assistente IA"
-          className="lh-control-btn inline-flex h-10 items-center justify-center gap-1 px-2.5 text-xs font-bold active:scale-95"
+          className="lh-control-btn inline-flex h-9 items-center justify-center gap-1 px-2.5 text-xs font-bold active:scale-95"
         >
           <Sparkles className="h-4 w-4 text-brand-500" />
           <span>IA</span>
@@ -332,7 +332,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           type="button"
           onClick={() => setSearchOpen(true)}
           aria-label="Buscar"
-          className="lh-control-btn inline-flex h-10 w-10 items-center justify-center active:scale-95"
+          className="lh-control-btn inline-flex h-9 w-9 items-center justify-center active:scale-95"
         >
           <Search className="h-4 w-4" />
         </button>
@@ -529,11 +529,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // =========================================================================
   if (shell === 'top-nav') {
     return (
-      <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+      <div className="lh-app-shell flex h-full flex-col overflow-hidden text-slate-900 dark:text-slate-100">
         <WindowTitleBar />
+        {renderMobileHeader()}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {renderMobileHeader()}
+        <div className="lh-scroll-region flex min-h-0 flex-1 flex-col">
           <header className="lh-topbar sticky top-0 z-30 hidden border-b backdrop-blur-xl lg:block">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
               {renderBrandMark()}
@@ -601,11 +601,11 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // =========================================================================
   if (shell === 'bottom-dock') {
     return (
-      <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+      <div className="lh-app-shell flex h-full flex-col overflow-hidden text-slate-900 dark:text-slate-100">
         <WindowTitleBar />
+        {renderMobileHeader()}
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          {renderMobileHeader()}
+        <div className="lh-scroll-region flex min-h-0 flex-1 flex-col">
           <header className="lh-topbar sticky top-3 z-20 mx-auto mt-3 hidden w-[calc(100%-2rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl lg:flex">
             <div className="flex items-center gap-3">
               {renderBrandMark()}
@@ -668,8 +668,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   // =========================================================================
   if (shell === 'icon-rail') {
     return (
-      <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+      <div className="lh-app-shell flex h-full flex-col overflow-hidden text-slate-900 dark:text-slate-100">
         <WindowTitleBar />
+        {renderMobileHeader()}
 
         <div className="relative flex min-h-0 flex-1 overflow-hidden">
           {sidebarOpen && (
@@ -731,8 +732,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
           </aside>
 
-          <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-            {renderMobileHeader()}
+          <div className="lh-scroll-region flex min-w-0 flex-1 flex-col">
             <header className="lh-topbar sticky top-0 z-20 hidden flex-nowrap items-center justify-between gap-2 border-b px-3.5 py-2 backdrop-blur-xl sm:px-5 lg:flex">
               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <button
@@ -763,8 +763,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const isFloating = shell === 'floating-island';
 
   return (
-    <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+    <div className="lh-app-shell flex h-full flex-col overflow-hidden text-slate-900 dark:text-slate-100">
       <WindowTitleBar />
+      {renderMobileHeader()}
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         {sidebarOpen && (
@@ -921,8 +922,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         </aside>
 
         {/* Main area */}
-        <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-          {renderMobileHeader()}
+        <div className="lh-scroll-region flex min-w-0 flex-1 flex-col">
           <header
             className={`lh-topbar sticky z-20 hidden flex-nowrap items-center justify-between gap-2 backdrop-blur-xl lg:flex ${
               isFloating
@@ -944,7 +944,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {renderUtilities()}
           </header>
 
-          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 pb-24 sm:p-5 lg:pb-5">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 overflow-x-hidden p-3.5 pb-24 sm:p-5 lg:pb-5">{children}</main>
         </div>
       </div>
 

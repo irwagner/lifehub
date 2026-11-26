@@ -446,13 +446,14 @@ export const FinancePage: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="month"
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="lh-input w-auto"
+            className="lh-input w-full sm:w-auto"
           />
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
           <button
             type="button"
             disabled={sheetsBusy}
@@ -480,9 +481,9 @@ export const FinancePage: React.FC = () => {
                 setSheetsBusy(false);
               }
             }}
-            className="lh-btn-secondary"
+            className="lh-btn-secondary w-full sm:w-auto"
           >
-            <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+            <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-500" />
             {sheetsBusy ? 'Enviando...' : 'Google Sheets'}
           </button>
           <button
@@ -493,61 +494,62 @@ export const FinancePage: React.FC = () => {
               notify(`Relatório CSV de ${month} exportado.`);
             }}
             disabled={transactions.length === 0}
-            className="lh-btn-secondary"
+            className="lh-btn-secondary w-full sm:w-auto"
           >
-            <Download className="h-4 w-4" /> Exportar CSV
+            <Download className="h-4 w-4 shrink-0" /> Exportar CSV
           </button>
           <button
             type="button"
             onClick={() => setImportOpen(true)}
-            className="lh-btn-secondary"
+            className="lh-btn-secondary w-full sm:w-auto"
           >
-            <FileUp className="h-4 w-4" /> Importar CSV/OFX
+            <FileUp className="h-4 w-4 shrink-0" /> Importar
           </button>
           <button
             type="button"
             onClick={() => openQuickAction('transaction')}
-            className="lh-btn-primary"
+            className="lh-btn-primary w-full sm:w-auto"
           >
-            <Plus className="h-4 w-4" /> Nova Transação
+            <Plus className="h-4 w-4 shrink-0" /> Transação
           </button>
+          </div>
         </div>
       </div>
 
       {/* Sub-navigation Tabs: Visão Geral | Cartão & Parcelados | Família / Casal */}
-      <div className="flex flex-wrap items-center gap-2 border-b pb-3" style={{ borderColor: 'var(--lh-card-border)' }}>
+      <div className="grid w-full grid-cols-3 gap-1.5 border-b pb-3 sm:flex sm:w-auto sm:flex-wrap sm:items-center sm:gap-2" style={{ borderColor: 'var(--lh-card-border)' }}>
         <button
           type="button"
           onClick={() => setFinanceTab('overview')}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11.5px] font-semibold transition sm:px-3.5 sm:text-xs ${
             financeTab === 'overview'
               ? 'bg-brand-600 text-white shadow-sm'
               : 'lh-control-btn opacity-80 hover:opacity-100'
           }`}
         >
-          <Wallet className="h-3.5 w-3.5" /> Visão Geral
+          <Wallet className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Visão Geral</span>
         </button>
         <button
           type="button"
           onClick={() => setFinanceTab('installments')}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11.5px] font-semibold transition sm:px-3.5 sm:text-xs ${
             financeTab === 'installments'
               ? 'bg-brand-600 text-white shadow-sm'
               : 'lh-control-btn opacity-80 hover:opacity-100'
           }`}
         >
-          <CreditCard className="h-3.5 w-3.5" /> Cartão &amp; Parcelados
+          <CreditCard className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Cartão</span>
         </button>
         <button
           type="button"
           onClick={() => setFinanceTab('family')}
-          className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+          className={`inline-flex items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-[11.5px] font-semibold transition sm:px-3.5 sm:text-xs ${
             financeTab === 'family'
               ? 'bg-brand-600 text-white shadow-sm'
               : 'lh-control-btn opacity-80 hover:opacity-100'
           }`}
         >
-          <Users className="h-3.5 w-3.5" /> Família / Casal
+          <Users className="h-3.5 w-3.5 shrink-0" /> <span className="truncate">Família</span>
         </button>
       </div>
 

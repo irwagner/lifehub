@@ -77,23 +77,23 @@ export const AutoUpdatePanel: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <a
             href={GITHUB_RELEASES_PAGE}
             target="_blank"
             rel="noreferrer"
-            className="lh-btn-secondary"
+            className="lh-btn-secondary w-full sm:w-auto"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> GitHub Releases
+            <ExternalLink className="h-3.5 w-3.5 shrink-0" /> Releases
           </a>
           <button
             type="button"
             disabled={checking || installing}
             onClick={handleCheck}
-            className="lh-btn-primary"
+            className="lh-btn-primary w-full sm:w-auto"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${checking ? 'animate-spin' : ''}`} />
-            {checking ? 'Verificando...' : 'Verificar Atualizações'}
+            <RefreshCw className={`h-3.5 w-3.5 shrink-0 ${checking ? 'animate-spin' : ''}`} />
+            {checking ? 'Checando...' : 'Atualizar'}
           </button>
         </div>
       </div>

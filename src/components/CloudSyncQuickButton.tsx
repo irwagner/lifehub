@@ -40,15 +40,15 @@ export const CloudSyncQuickButton: React.FC = () => {
       onClick={() => void triggerCloudSync({ manual: true })}
       title={statusTitle}
       aria-label="Sincronizar com celular"
-      className="lh-control-btn relative inline-flex h-10 items-center justify-center gap-1.5 px-2.5 py-1.5 text-xs font-medium shadow-sm lg:h-auto"
+      className="lh-control-btn relative inline-flex h-9 w-9 items-center justify-center gap-1.5 text-xs font-medium shadow-sm active:scale-95 md:w-auto md:px-2.5 md:py-1.5 lg:h-auto"
     >
       {busy ? (
-        <RefreshCw className="h-3.5 w-3.5 animate-spin text-brand-500" />
+        <RefreshCw className="h-4 w-4 animate-spin text-brand-500 lg:h-3.5 lg:w-3.5" />
       ) : autoSyncStatus === 'offline' ? (
-        <CloudOff className="h-3.5 w-3.5 text-amber-500" />
+        <CloudOff className="h-4 w-4 text-amber-500 lg:h-3.5 lg:w-3.5" />
       ) : (
         <Cloud
-          className={`h-3.5 w-3.5 ${
+          className={`h-4 w-4 lg:h-3.5 lg:w-3.5 ${
             autoSyncStatus === 'error'
               ? 'text-rose-500'
               : configured
@@ -68,7 +68,7 @@ export const CloudSyncQuickButton: React.FC = () => {
       </span>
       {autoEnabled && !busy && autoSyncStatus !== 'error' && autoSyncStatus !== 'offline' && (
         <span
-          className="h-1.5 w-1.5 rounded-full bg-emerald-500"
+          className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-slate-900 md:static md:h-1.5 md:w-1.5 md:ring-0"
           title="Auto-sync ativo a cada ação"
         />
       )}

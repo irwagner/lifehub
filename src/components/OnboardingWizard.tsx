@@ -279,11 +279,13 @@ export const OnboardingWizard: React.FC = () => {
   };
 
   return (
-    <div className="lh-app-shell flex h-screen flex-col overflow-hidden text-slate-100">
+    <div className="lh-app-shell flex h-full flex-col overflow-hidden text-slate-100">
       <WindowTitleBar />
-      <div className="lh-safe-top lh-safe-bottom relative flex flex-1 items-start justify-center overflow-y-auto bg-[#070b14] p-4 sm:items-center sm:p-6">
-        <div className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
+      <div className="lh-scroll-region lh-safe-top lh-safe-bottom relative flex flex-1 items-start justify-center bg-[#070b14] p-4 sm:items-center sm:p-6">
+        <div className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-brand-600/20 blur-3xl" />
+          <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-emerald-500/15 blur-3xl" />
+        </div>
 
         <div className="relative my-2 w-full max-w-2xl rounded-3xl border border-white/[0.09] bg-[#0d1425]/95 p-5 shadow-2xl backdrop-blur-xl animate-scale-in sm:p-8">
           {/* Header */}

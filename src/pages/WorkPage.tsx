@@ -223,15 +223,15 @@ export const WorkPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="lh-page-title">Trabalho por Aplicativos (Uber Moto / 99Moto)</h2>
           <p className="lh-page-subtitle">
-            Financeiro verdadeiro: bruto, combustível, pedágio, manutenção/km, depreciação e parcela do veículo sempre separados. (iFood fora do escopo).
+            Financeiro verdadeiro: bruto, combustível, pedágio, manutenção/km, depreciação e parcela do veículo sempre separados.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:items-center">
           <button
             type="button"
             disabled={sessions.length === 0}
@@ -240,16 +240,16 @@ export const WorkPage: React.FC = () => {
               downloadTextFile(csv, `lifehub-jornadas-${todayISO()}.csv`);
               notify('Relatório CSV de jornadas exportado.');
             }}
-            className="lh-btn-secondary"
+            className="lh-btn-secondary w-full sm:w-auto"
           >
-            <Download className="h-4 w-4" /> Exportar CSV
+            <Download className="h-4 w-4 shrink-0" /> Exportar CSV
           </button>
           <button
             type="button"
             onClick={() => openQuickAction('work_session')}
-            className="lh-btn-primary"
+            className="lh-btn-primary w-full sm:w-auto"
           >
-            <Plus className="h-4 w-4" /> Registrar Jornada
+            <Plus className="h-4 w-4 shrink-0" /> Nova Jornada
           </button>
         </div>
       </div>

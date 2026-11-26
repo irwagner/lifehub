@@ -11,7 +11,7 @@ Organize finanças reais, trabalho por aplicativos (Uber Moto / 99Moto), agenda,
 [![Privacidade E2EE](https://img.shields.io/badge/Sync%20Zero--Knowledge-AES--256--GCM-22c55e?style=for-the-badge)](https://github.com/irwagner/lifehub#-app-celular-iphone--android--qr-code-offline)
 
 <p>
-  <a href="https://github.com/irwagner/lifehub/releases/latest"><strong>⬇️ Baixar para Windows (v0.5.3)</strong></a>
+  <a href="https://github.com/irwagner/lifehub/releases/latest"><strong>⬇️ Baixar para Windows (v0.5.4)</strong></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-Android.apk"><strong>🤖 Baixar Android (.apk)</strong></a>
   &nbsp;·&nbsp;
