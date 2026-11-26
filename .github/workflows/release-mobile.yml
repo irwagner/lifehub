@@ -42,7 +42,7 @@ jobs:
           pnpm run build
           npx cap sync android
 
-      - name: Build & sign Android APK (Gradle V1+V2+V3)
+      - name: Build & sign Android APK + AAB (Play Store ready)
         shell: bash
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -75,26 +75,35 @@ jobs:
             export LIFEHUB_KEY_PASS="lifehub2026"
           fi
 
-          ./gradlew assembleRelease
+          ./gradlew assembleRelease bundleRelease
           APK_OUT=$(find app/build/outputs/apk/release -name "app-release.apk" | head -n 1)
           if [ -z "$APK_OUT" ]; then
             APK_OUT=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           fi
+          AAB_OUT=$(find app/build/outputs/bundle/release -name "app-release.aab" | head -n 1)
+          if [ -z "$AAB_OUT" ]; then
+            AAB_OUT=$(find app/build/outputs/bundle/release -name "*.aab" | head -n 1)
+          fi
           echo "Built signed APK: $APK_OUT"
+          echo "Built signed AAB: $AAB_OUT"
           mkdir -p "$GITHUB_WORKSPACE/dist-mobile-release"
           cp "$APK_OUT" "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
+          cp "$AAB_OUT" "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.aab"
 
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
           "$BUILD_TOOLS/zipalign" -c -p 4 "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
           "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 24 "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
+          jarsigner -verify "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.aab"
           rm -f "$KS_ABS"
-          ls -lh "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
+          ls -lh "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk" "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.aab"
 
-      - name: Upload Android APK artifact
+      - name: Upload Android APK & AAB artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: LifeHub-Android-APK
-          path: dist-mobile-release/LifeHub-Android.apk
+          name: LifeHub-Android-Artifacts
+          path: |
+            dist-mobile-release/LifeHub-Android.apk
+            dist-mobile-release/LifeHub-Android.aab
 
   build-ios:
     name: Build iOS App (.ipa)
@@ -173,15 +182,15 @@ jobs:
           path: dist-mobile-release/LifeHub-iOS.ipa
 
   publish-mobile-release:
-    name: Attach APK & IPA to GitHub Release
+    name: Attach APK, AAB & IPA to GitHub Release
     needs: [build-android, build-ios]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Download Android APK
+      - name: Download Android APK & AAB
         uses: actions/download-artifact@v4
         with:
-          name: LifeHub-Android-APK
+          name: LifeHub-Android-Artifacts
           path: release-assets
 
       - name: Download iOS IPA
@@ -195,4 +204,5 @@ jobs:
         with:
           files: |
             release-assets/LifeHub-Android.apk
+            release-assets/LifeHub-Android.aab
             release-assets/LifeHub-iOS.ipa
