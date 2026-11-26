@@ -62,10 +62,20 @@ export interface SyncedFamilyFinanceExtension {
   updatedAt: string;
 }
 
+export interface SyncedGoogleDriveExtension {
+  mode: 'oauth' | 'apps_script';
+  oauthClientId: string;
+  appsScriptUrl: string;
+  appsScriptSecret: string;
+  autoSync: boolean;
+  updatedAt: string;
+}
+
 export interface SyncedClientExtensions {
   geminiAi?: SyncedGeminiExtension;
   aiMemory?: SyncedAiMemoryItem[];
   googleSheets?: SyncedGoogleSheetsExtension;
+  googleDrive?: SyncedGoogleDriveExtension;
   familyFinance?: SyncedFamilyFinanceExtension;
   tombstones?: Record<string, string>;
 }
@@ -103,6 +113,16 @@ const clientExtensionsSchema = z
       .object({
         webhookUrl: z.string(),
         secretToken: z.string(),
+        autoSync: z.boolean(),
+        updatedAt: z.string(),
+      })
+      .optional(),
+    googleDrive: z
+      .object({
+        mode: z.enum(['oauth', 'apps_script']),
+        oauthClientId: z.string(),
+        appsScriptUrl: z.string(),
+        appsScriptSecret: z.string(),
         autoSync: z.boolean(),
         updatedAt: z.string(),
       })

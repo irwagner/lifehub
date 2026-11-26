@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Eye, EyeOff, ShieldCheck, Sparkles, Wifi } from 'lucide-react';
+import { ChevronDown, ChevronUp, Cpu, Eye, EyeOff, ShieldCheck, Sparkles, Wifi } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
+  GEMINI_MODEL_ROUTING_GUIDE,
   GEMINI_MODELS,
   loadGeminiAiConfig,
   saveGeminiAiConfig,
@@ -18,6 +19,7 @@ export const GeminiConfigPanel: React.FC = () => {
   const [shareFinancialContext, setShareFinancialContext] = useState(config.shareFinancialContext);
   const [autoExecuteActions, setAutoExecuteActions] = useState(config.autoExecuteActions);
   const [showKey, setShowKey] = useState(false);
+  const [showRoutingGuide, setShowRoutingGuide] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -165,13 +167,49 @@ export const GeminiConfigPanel: React.FC = () => {
           >
             <Wifi className="h-3.5 w-3.5" /> {busy ? 'Testando...' : 'Testar Conexão Gemini'}
           </button>
+          <button
+            type="button"
+            onClick={() => setShowRoutingGuide((v) => !v)}
+            className="lh-btn-secondary"
+          >
+            <Cpu className="h-3.5 w-3.5" />
+            Mapa: Qual modelo é melhor para quê
+            {showRoutingGuide ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
         </div>
       </form>
+
+      {showRoutingGuide && (
+        <div className="space-y-2 rounded-2xl border border-brand-500/25 bg-brand-500/[0.04] p-3">
+          <p className="text-xs font-semibold text-brand-500">
+            Roteamento Inteligente Gemini (modo recomendado: &ldquo;Inteligente por Tarefa&rdquo;)
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {GEMINI_MODEL_ROUTING_GUIDE.map((item) => (
+              <div
+                key={item.id}
+                className="rounded-xl border border-slate-200/70 bg-white/60 p-2.5 text-[11px] dark:border-white/10 dark:bg-white/[0.03]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <strong className="text-xs">{item.name}</strong>
+                  <span className="rounded-full bg-brand-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-brand-500">
+                    {item.dailyQuota}
+                  </span>
+                </div>
+                <p className="mt-0.5 text-[10.5px] opacity-70">{item.tier}</p>
+                <p className="mt-1 leading-snug text-slate-600 dark:text-slate-300">
+                  <strong>Melhor para:</strong> {item.bestFor}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex items-start gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/[0.06] p-2.5 text-[11px] text-slate-600 dark:text-slate-300">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
         <span>
-          A IA só envia dados quando você envia uma mensagem no painel <strong>IA (Alt+A)</strong>. Toda ação sugerida (gasto, jornada, tarefa ou evento) exige sua confirmação em 1 clique antes de gravar no SQLite.
+          A IA agora cria e edita <strong>avulsos, fixos mensais, parcelamentos 1x–120x (cartão/moto), rotina semanal no calendário, ideias, hábitos, metas, orçamentos, projetos e vagas de TI</strong>.
         </span>
       </div>
     </section>

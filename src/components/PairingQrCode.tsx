@@ -225,15 +225,16 @@ export const PairingQrCode: React.FC<PairingQrCodeProps> = ({
 
           <ol className="list-decimal space-y-1.5 pl-4">
             <li>
-              Abra a <strong>Câmera do iPhone</strong> (ou Android) e aponte para o QR Code ao lado.
+              <strong>No app instalado (Android APK ou iPhone):</strong> abra o LifeHub no celular →{' '}
+              <strong>Configurações</strong> → toque em <strong>Escanear QR Code do PC</strong> e aponte para este código.
+              {activeMode === 'pair' && ' URL, Chave E2EE, Chave IA e dados sincronizam na hora!'}
             </li>
             <li>
-              Toque no link que aparecer para abrir no <strong>Safari (iPhone)</strong> ou{' '}
-              <strong>Chrome (Android)</strong>.
-              {activeMode === 'pair' && ' A URL e a Chave Secreta serão configuradas automaticamente.'}
+              <strong>Ou pelo navegador:</strong> aponte a câmera nativa do celular para abrir no{' '}
+              <strong>Safari (iPhone)</strong> ou <strong>Chrome (Android)</strong>.
             </li>
             <li>
-              Para instalar como app no iPhone: toque em <strong>Compartilhar</strong> (quadrado com seta ↑) →{' '}
+              Para usar como ícone no Safari (iPhone): toque em <strong>Compartilhar ↑</strong> →{' '}
               <strong>Adicionar à Tela de Início</strong>.
             </li>
           </ol>

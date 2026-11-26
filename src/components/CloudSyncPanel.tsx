@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Camera,
   Cloud,
   Copy,
   Eye,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { PairingQrCode } from './PairingQrCode';
+import { QrCodeScannerModal, type ScannedPairingResult } from './QrCodeScannerModal';
 import {
   buildMobilePairingUrl,
   generateSyncPassphrase,
@@ -22,7 +24,7 @@ import {
   testCloudSyncConnection,
   type CloudSyncConfig,
 } from '../services/cloudSync';
-import { loadGeminiAiConfig } from '../services/geminiAi';
+import { loadGeminiAiConfig, saveGeminiAiConfig } from '../services/geminiAi';
 
 const DEFAULT_SYNC_URL = 'https://lifehub-sync.irwagneremanoel.workers.dev';
 
@@ -54,6 +56,7 @@ export const CloudSyncPanel: React.FC = () => {
   const [autoSync, setAutoSync] = useState(config.autoSync !== false);
   const [showKey, setShowKey] = useState(false);
   const [showQr, setShowQr] = useState(true);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const geminiApiKey = useMemo(() => {
@@ -117,6 +120,57 @@ export const CloudSyncPanel: React.FC = () => {
       );
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro durante a sincronização.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleQrPaired = async (paired: ScannedPairingResult) => {
+    setScannerOpen(false);
+    setBusy(true);
+    try {
+      setEndpointUrl(paired.endpointUrl);
+      setPassphrase(paired.passphrase);
+      setAutoSync(true);
+      const nextCfg = persistForm({
+        enabled: true,
+        autoSync: true,
+        endpointUrl: paired.endpointUrl,
+        passphrase: paired.passphrase,
+      });
+
+      if (paired.geminiApiKey) {
+        const currentAi = loadGeminiAiConfig();
+        saveGeminiAiConfig({
+          ...currentAi,
+          apiKey: paired.geminiApiKey,
+          updatedAt: new Date().toISOString(),
+        });
+      }
+
+      const result = await syncDatabaseWithCloud(db, nextCfg);
+      persistForm({
+        enabled: true,
+        autoSync: true,
+        endpointUrl: paired.endpointUrl,
+        passphrase: paired.passphrase,
+        lastSyncedAt: result.syncedAt,
+        lastRevision: result.revision,
+      });
+      await reloadSettings();
+      bumpDataVersion({ skipAutoSync: true });
+      notify(
+        paired.geminiApiKey
+          ? `Pareado via QR Code (Sync + Chave IA) e sincronizado (rev. ${result.revision} · ${result.mergedRowCount} registros)!`
+          : `Pareado via QR Code e sincronizado (rev. ${result.revision} · ${result.mergedRowCount} registros)!`,
+      );
+    } catch (err) {
+      notify(
+        err instanceof Error
+          ? `QR lido, mas falhou ao sincronizar: ${err.message}`
+          : 'Erro ao sincronizar após ler QR Code.',
+        'error',
+      );
     } finally {
       setBusy(false);
     }
@@ -263,6 +317,15 @@ export const CloudSyncPanel: React.FC = () => {
         <button
           type="button"
           disabled={busy}
+          onClick={() => setScannerOpen(true)}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-500 transition hover:bg-emerald-500/25"
+        >
+          <Camera className="h-3.5 w-3.5" /> Escanear QR Code do PC
+        </button>
+
+        <button
+          type="button"
+          disabled={busy}
           onClick={() => setShowQr((v) => !v)}
           className="lh-btn-secondary"
         >
@@ -310,6 +373,11 @@ export const CloudSyncPanel: React.FC = () => {
           </p>
         </div>
       </div>
+      <QrCodeScannerModal
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onPaired={handleQrPaired}
+      />
     </section>
   );
 };

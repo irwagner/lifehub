@@ -404,6 +404,20 @@ function mergeClientExtensions(
     }
   }
 
+  let mergedDrive = local?.googleDrive;
+  const rDrive = remote?.googleDrive;
+  const hasLocalDrive = Boolean(
+    mergedDrive?.appsScriptUrl?.trim() || mergedDrive?.oauthClientId?.trim(),
+  );
+  const hasRemoteDrive = Boolean(rDrive?.appsScriptUrl?.trim() || rDrive?.oauthClientId?.trim());
+  if (!hasLocalDrive && hasRemoteDrive) {
+    mergedDrive = rDrive;
+  } else if (hasLocalDrive && hasRemoteDrive && rDrive && mergedDrive) {
+    if ((rDrive.updatedAt || '') > (mergedDrive.updatedAt || '')) {
+      mergedDrive = rDrive;
+    }
+  }
+
   let mergedFamily = local?.familyFinance;
   const rFam = remote?.familyFinance;
   if (!mergedFamily?.familyKey?.trim() && rFam?.familyKey?.trim()) {
@@ -417,13 +431,21 @@ function mergeClientExtensions(
   const mergedTombstones = mergeTombstoneMaps(local?.tombstones, remote?.tombstones);
   const hasTombstones = Object.keys(mergedTombstones).length > 0;
 
-  if (!mergedGemini && mergedMemory.length === 0 && !mergedSheets && !mergedFamily && !hasTombstones) {
+  if (
+    !mergedGemini &&
+    mergedMemory.length === 0 &&
+    !mergedSheets &&
+    !mergedDrive &&
+    !mergedFamily &&
+    !hasTombstones
+  ) {
     return undefined;
   }
   return {
     ...(mergedGemini ? { geminiAi: mergedGemini } : {}),
     ...(mergedMemory.length > 0 ? { aiMemory: mergedMemory } : {}),
     ...(mergedSheets ? { googleSheets: mergedSheets } : {}),
+    ...(mergedDrive ? { googleDrive: mergedDrive } : {}),
     ...(mergedFamily ? { familyFinance: mergedFamily } : {}),
     ...(hasTombstones ? { tombstones: mergedTombstones } : {}),
   };
@@ -516,7 +538,7 @@ export function buildMobilePairingUrl(
 export function parseMobilePairingHash(
   hash: string,
 ): { endpointUrl: string; passphrase: string; geminiApiKey?: string } | null {
-  const match = hash.match(/pair=([^&]+)/);
+  const match = hash.match(/pair=([^&\s]+)/);
   if (!match) return null;
   try {
     const decoded = decodeURIComponent(escape(atob(decodeURIComponent(match[1]))));
@@ -531,6 +553,40 @@ export function parseMobilePairingHash(
     }
   } catch {
     return null;
+  }
+  return null;
+}
+
+/**
+ * Parses QR Code content or pasted pairing text in any supported form:
+ * - Full HTTPS pairing URL: https://lifehub-sync.../#pair=...
+ * - Native deep link: lifehub://pair#pair=...
+ * - Fragment only: #pair=... or pair=...
+ * - Raw JSON payload: {"u":"...","k":"...","a":"..."}
+ */
+export function parseScannedPairingText(
+  rawText: string,
+): { endpointUrl: string; passphrase: string; geminiApiKey?: string } | null {
+  const clean = rawText.trim();
+  if (!clean) return null;
+
+  const fromHash = parseMobilePairingHash(clean);
+  if (fromHash) return fromHash;
+
+  if (clean.startsWith('{') && clean.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(clean) as { u?: string; k?: string; a?: string };
+      if (typeof parsed.u === 'string' && typeof parsed.k === 'string' && parsed.k.trim().length >= 8) {
+        const cleanAi = typeof parsed.a === 'string' && parsed.a.trim().length > 0 ? parsed.a.trim() : undefined;
+        return {
+          endpointUrl: normalizeEndpointUrl(parsed.u),
+          passphrase: parsed.k.trim(),
+          ...(cleanAi ? { geminiApiKey: cleanAi } : {}),
+        };
+      }
+    } catch {
+      return null;
+    }
   }
   return null;
 }
@@ -555,21 +611,55 @@ export async function testCloudSyncConnection(
   };
 }
 
-function totalRowsInBackup(backup: LifeHubBackup): number {
+export const GOOGLE_DRIVE_STORAGE_KEY = 'lifehub_google_drive_sync_v1';
+
+export function totalRowsInBackup(backup: LifeHubBackup): number {
   return Object.values(backup.tableCounts).reduce((acc, n) => acc + n, 0);
 }
 
-function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
+function readSyncedGoogleDriveMeta(): SyncedClientExtensions['googleDrive'] | undefined {
+  try {
+    const raw = localStorage.getItem(GOOGLE_DRIVE_STORAGE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as {
+      mode?: 'oauth' | 'apps_script';
+      oauthClientId?: string;
+      appsScriptUrl?: string;
+      appsScriptSecret?: string;
+      autoSync?: boolean;
+      updatedAt?: string;
+    };
+    const hasScript = Boolean(parsed.appsScriptUrl?.trim() && parsed.appsScriptSecret?.trim());
+    const hasOauth = Boolean(parsed.oauthClientId?.trim());
+    if (!hasScript && !hasOauth) return undefined;
+    return {
+      mode: parsed.mode === 'oauth' ? 'oauth' : 'apps_script',
+      oauthClientId: parsed.oauthClientId?.trim() ?? '',
+      appsScriptUrl: parsed.appsScriptUrl?.trim() ?? '',
+      appsScriptSecret: parsed.appsScriptSecret?.trim() ?? '',
+      autoSync: parsed.autoSync !== false,
+      updatedAt: parsed.updatedAt ?? new Date().toISOString(),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
+export function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
   const aiCfg = loadGeminiAiConfig();
   const memories = loadAiMemory();
   const sheetsCfg = loadGoogleSheetsConfig();
+  const driveMeta = readSyncedGoogleDriveMeta();
   const famCfg = loadFamilyFinanceConfig();
   const tombstones = loadTombstones();
   const hasAiKey = aiCfg.apiKey.trim().length > 0;
   const hasSheets = isGoogleSheetsReady(sheetsCfg);
+  const hasDrive = Boolean(driveMeta);
   const hasFamily = isFamilySyncReady(famCfg);
   const hasTombstones = Object.keys(tombstones).length > 0;
-  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasFamily && !hasTombstones) return undefined;
+  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasDrive && !hasFamily && !hasTombstones) {
+    return undefined;
+  }
   return {
     ...(hasAiKey
       ? {
@@ -593,6 +683,7 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
           },
         }
       : {}),
+    ...(driveMeta ? { googleDrive: driveMeta } : {}),
     ...(hasFamily
       ? {
           familyFinance: {
@@ -611,7 +702,7 @@ function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
   };
 }
 
-function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
+export function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
   if (!ext) return;
   if (ext.geminiAi?.apiKey?.trim()) {
     const current = loadGeminiAiConfig();
@@ -639,6 +730,27 @@ function applyMergedClientExtensions(ext?: SyncedClientExtensions): void {
       autoSync: ext.googleSheets.autoSync,
       updatedAt: ext.googleSheets.updatedAt,
     });
+  }
+  if (ext.googleDrive && (ext.googleDrive.appsScriptUrl.trim() || ext.googleDrive.oauthClientId.trim())) {
+    try {
+      const existingRaw = localStorage.getItem(GOOGLE_DRIVE_STORAGE_KEY);
+      const existing = existingRaw ? (JSON.parse(existingRaw) as Record<string, unknown>) : {};
+      localStorage.setItem(
+        GOOGLE_DRIVE_STORAGE_KEY,
+        JSON.stringify({
+          ...existing,
+          enabled: true,
+          mode: ext.googleDrive.mode,
+          oauthClientId: ext.googleDrive.oauthClientId.trim(),
+          appsScriptUrl: ext.googleDrive.appsScriptUrl.trim(),
+          appsScriptSecret: ext.googleDrive.appsScriptSecret.trim(),
+          autoSync: ext.googleDrive.autoSync,
+          updatedAt: ext.googleDrive.updatedAt,
+        }),
+      );
+    } catch {
+      // ignore storage errors
+    }
   }
   if (ext.familyFinance?.familyKey?.trim() && ext.familyFinance?.endpointUrl?.trim()) {
     const currentFam = loadFamilyFinanceConfig();

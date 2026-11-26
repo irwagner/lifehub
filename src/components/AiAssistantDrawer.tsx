@@ -28,9 +28,10 @@ import {
 } from '../services/geminiAi';
 
 const QUICK_PROMPTS = [
-  'Resuma meu dia e diga minhas 3 prioridades agora',
-  'Analise minhas finanças e rendimento Uber/99 da semana',
-  'Monte um plano prático de estudos de TI para esta semana',
+  'Monte minha rotina semanal de academia seg/qua/sex 14:30 e estudos TI seg a sex 19:00',
+  'Comprei um fone de R$ 180 em 1x no cartão Nubank para pagar no próximo mês',
+  'Adicione gasto fixo mensal de R$ 119,90 de internet todo dia 10',
+  'Anote a ideia: criar script de backup automático com impacto 4 e esforço 2',
   'Rodei 85 km na Uber Moto hoje, fiz 190 bruto e gastei 32 de gasolina',
 ];
 
@@ -217,9 +218,11 @@ export const AiAssistantDrawer: React.FC<{
               <h2 className="text-sm font-bold leading-tight">Assistente IA · Gemini</h2>
               <p className="text-[10.5px] opacity-70">
                 {config.apiKey
-                  ? config.model === 'auto'
-                    ? 'Melhores modelos primeiro · fallback auto'
-                    : `${config.model} · fallback automático`
+                  ? config.model === 'smart'
+                    ? 'Roteamento inteligente por tarefa · economiza cota'
+                    : config.model === 'auto'
+                      ? 'Melhores modelos primeiro · fallback auto'
+                      : `${config.model} · fallback automático`
                   : 'Configure sua chave abaixo'}
               </p>
             </div>

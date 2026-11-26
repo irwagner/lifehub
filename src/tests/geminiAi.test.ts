@@ -1,17 +1,30 @@
 import { describe, expect, it } from 'vitest';
 import { createInMemoryTestDatabase } from '../db/client';
 import { listCalendarEvents, listTasks } from '../repositories/calendarRepo';
-import { listRecurringRules, listTransactions } from '../repositories/financeRepo';
+import { listJobApplications } from '../repositories/careerRepo';
+import {
+  listBudgetsForMonth,
+  listGoals,
+  listRecurringRules,
+  listTransactions,
+} from '../repositories/financeRepo';
+import { listHabitsWithProgress } from '../repositories/habitsRepo';
 import { listIdeas } from '../repositories/ideasRepo';
+import { listProjectsWithTasks } from '../repositories/projectsRepo';
 import { getSettings } from '../repositories/settingsRepo';
 import { listWorkSessions } from '../repositories/workRepo';
 import {
   askLifeHubAssistant,
   buildCompactLifeHubContext,
   buildModelChain,
+  classifyPromptTask,
   executeProposedAiAction,
   extractProposedActions,
+  GEMINI_MODEL_ROUTING_GUIDE,
   loadAiMemory,
+  normalizeEventCategory,
+  normalizeFlexibleTime,
+  normalizeWeekdays,
   removeAiMemoryFact,
   type GeminiAiConfig,
 } from '../services/geminiAi';
@@ -281,5 +294,121 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     expect(txs[0].amount).toBe(119.9);
 
     await db.close();
+  });
+
+  it('executa cenários reais completos: cartão 1x próx. mês, parcelado 6x, editar/apagar recorrência, rotina semanal, template, hábitos, metas, orçamento, projetos e vagas TI', async () => {
+    const db = await createInMemoryTestDatabase();
+    const settings = await getSettings(db);
+
+    // 1. Parcelamentos (cartão 1x próximo mês + moto 6x por parcela), fixo, meta, orçamento, rotina semanal, hábito, projeto e vaga
+    const batch1 = extractProposedActions(`Tudo pronto! Lancei sua rotina, parcelamentos e carreira TI:
+\`\`\`lifehub_actions
+[
+  {"type":"create_installment","summary":"Cartão 1x próx. mês: Fone R$ 180","payload":{"kind":"cartão","description":"Fone Bluetooth","amount":"R$ 180,00","amount_mode":"total","installments":1,"next_month":true,"issuer":"Nubank","first_paid":false}},
+  {"type":"create_installment","summary":"Moto 6x R$ 350/mês","payload":{"kind":"moto","description":"Seguro anual moto","amount":350,"amount_mode":"parcela","installments":6,"first_date":"2026-12-05","first_paid":true}},
+  {"type":"create_recurring_rule","summary":"Internet fixa","payload":{"description":"Internet Casa","amount":110,"day_of_month":10}},
+  {"type":"create_goal","summary":"Meta reserva","payload":{"name":"Reserva Emergência","target_amount":5000,"current_amount":800,"target_date":"2027-06-01"}},
+  {"type":"upsert_budget","summary":"Orçamento alimentação","payload":{"month":"2026-11","category_id":"cat_alimentacao","limit_amount":650}},
+  {"type":"create_event","summary":"Dentista com horário flexível","payload":{"title":"Consulta Dentista","category":"saúde","date":"2026-11-27","start_time":"9h30"}},
+  {"type":"create_routine_schedule","summary":"Rotina Academia Seg/Qua/Sex","payload":{"title":"Academia","category":"treino","weekdays":["seg","qua","sex"],"start_time":"14h30","weeks":2,"start_date":"2026-11-30"}},
+  {"type":"log_habit","summary":"Treino feito","payload":{"habit_name":"Academia","date":"2026-11-26","duration_minutes":55}},
+  {"type":"create_project","summary":"Projeto Lab Linux","payload":{"title":"Homelab Redes TI","category":"portfolio_ti","deliverable":"Repositório GitHub","initial_tasks":["Instalar Ubuntu Server","Configurar WireGuard"]}},
+  {"type":"create_job_application","summary":"Vaga Suporte N2","payload":{"company":"TechCorp","role":"Suporte TI N2","status":"applied","salary_info":"R$ 3.600"}}
+]
+\`\`\``);
+
+    expect(batch1.actions).toHaveLength(10);
+    for (const act of batch1.actions) {
+      await executeProposedAiAction(db, settings, act);
+    }
+
+    const txs = await listTransactions(db);
+    // 1x cartão + 6x moto + 1 prevista gerada pela recorrência Internet = 8
+    expect(txs).toHaveLength(8);
+    const foneTx = txs.find((t) => t.description.includes('Fone Bluetooth'));
+    expect(foneTx?.installment_group_id).toBeTruthy();
+    expect(foneTx?.installment_number).toBe(1);
+    expect(foneTx?.installment_total).toBe(1);
+    expect(foneTx?.notes).toContain('[Cartão]');
+    expect(foneTx?.notes).toContain('[Nubank]');
+    expect(foneTx?.status).toBe('planned');
+
+    const motoTxs = txs.filter((t) => t.description.includes('Seguro anual moto'));
+    expect(motoTxs).toHaveLength(6);
+    expect(motoTxs.every((t) => t.amount === 350)).toBe(true);
+    expect(motoTxs.filter((t) => t.status === 'realized')).toHaveLength(1);
+
+    // 2. Edit recurring rule + sync planned, then delete event & complete task
+    const rulesBefore = await listRecurringRules(db);
+    expect(rulesBefore).toHaveLength(1);
+
+    const taskBatch = extractProposedActions(`\`\`\`lifehub_actions
+[
+  {"type":"update_recurring_rule","summary":"Ajustar Internet para 129,90","payload":{"rule_id":"${rulesBefore[0].id}","amount":129.9,"day_of_month":15,"sync_planned":true}},
+  {"type":"create_task","summary":"Enviar currículo","payload":{"title":"Enviar currículo TechCorp","priority":"high"}},
+  {"type":"apply_schedule_template","summary":"Aplicar rotina Apps 5d","payload":{"template_id":"apps_5d","date":"2026-12-07"}}
+]
+\`\`\``);
+    expect(taskBatch.actions).toHaveLength(3);
+    for (const act of taskBatch.actions) {
+      await executeProposedAiAction(db, settings, act);
+    }
+
+    const rulesAfterEdit = await listRecurringRules(db);
+    expect(rulesAfterEdit[0].amount).toBe(129.9);
+    expect(rulesAfterEdit[0].day_of_month).toBe(15);
+
+    // Complete task + delete dentist event + delete recurring rule
+    const cleanupBatch = extractProposedActions(`\`\`\`lifehub_actions
+[
+  {"type":"complete_task","summary":"Concluir currículo","payload":{"match_title":"TechCorp"}},
+  {"type":"delete_event","summary":"Cancelar dentista","payload":{"match_title":"Dentista"}},
+  {"type":"delete_recurring_rule","summary":"Remover internet","payload":{"rule_id":"${rulesBefore[0].id}"}}
+]
+\`\`\``);
+    expect(cleanupBatch.actions).toHaveLength(3);
+    for (const act of cleanupBatch.actions) {
+      await executeProposedAiAction(db, settings, act);
+    }
+
+    expect(await listRecurringRules(db)).toHaveLength(0);
+    expect((await listTasks(db, 'done')).some((t) => t.title.includes('TechCorp'))).toBe(true);
+
+    const eventsAll = await listCalendarEvents(db);
+    expect(eventsAll.some((e) => e.title.includes('Dentista'))).toBe(false);
+    // 6 Academia routine events (3 days x 2 weeks) + template blocks for week 2026-12-07
+    expect(eventsAll.filter((e) => e.title === 'Academia' && e.recurrence_rule === 'WEEKLY:2')).toHaveLength(6);
+    expect(eventsAll.some((e) => e.source_template === 'apps_5d')).toBe(true);
+
+    expect((await listGoals(db)).some((g) => g.name === 'Reserva Emergência')).toBe(true);
+    expect((await listBudgetsForMonth(db, '2026-11')).some((b) => b.limit_amount === 650)).toBe(true);
+    expect((await listHabitsWithProgress(db, '2026-11-26')).some((h) => h.completedThisWeek >= 1)).toBe(true);
+    expect((await listProjectsWithTasks(db)).some((p) => p.title === 'Homelab Redes TI' && p.tasks.length === 2)).toBe(true);
+    expect((await listJobApplications(db)).some((j) => j.company === 'TechCorp')).toBe(true);
+
+    await db.close();
+  });
+
+  it('mapeia corretamente o melhor modelo Gemini para cada tipo de tarefa no modo smart e normaliza entradas PT-BR', () => {
+    expect(GEMINI_MODEL_ROUTING_GUIDE).toHaveLength(6);
+    expect(normalizeFlexibleTime('7h')).toBe('07:00');
+    expect(normalizeFlexibleTime('7h30')).toBe('07:30');
+    expect(normalizeFlexibleTime('19:05:00')).toBe('19:05');
+    expect(normalizeEventCategory('saúde')).toBe('saude');
+    expect(normalizeEventCategory('treino musculação')).toBe('academia');
+    expect(normalizeWeekdays(['seg', 'qua', 'sex'])).toEqual([1, 3, 5]);
+    expect(normalizeWeekdays('seg a sex')).toEqual([1, 2, 3, 4, 5]);
+
+    // Quick everyday entry -> Flash Lite (500/day, fast, preserves flagship quota)
+    expect(classifyPromptTask('Gastei 35 reais de gasolina hoje')).toBe('quick_entry');
+    expect(buildModelChain('smart', 'Gastei 35 reais de gasolina hoje')[0]).toBe('gemini-3.5-flash-lite');
+
+    // Routine / calendar planning -> Gemini 3.8 Flash
+    expect(classifyPromptTask('Monte minha rotina semanal de academia e estudos de TI')).toBe('routine_planning');
+    expect(buildModelChain('smart', 'Monte minha rotina semanal de academia e estudos de TI')[0]).toBe('gemini-3.8-flash');
+
+    // Deep financial analysis -> Gemini 4 Hydrogen
+    expect(classifyPromptTask('Analise minhas finanças e compare CLT vs Uber Moto este mês')).toBe('deep_analysis');
+    expect(buildModelChain('smart', 'Analise minhas finanças e compare CLT vs Uber Moto este mês')[0]).toBe('gemini-4-hydrogen');
   });
 });

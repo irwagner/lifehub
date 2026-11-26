@@ -25,6 +25,12 @@ import {
   syncFinanceToGoogleSheets,
 } from '../services/googleSheetsSync';
 import {
+  isGoogleDriveReady,
+  loadGoogleDriveConfig,
+  saveGoogleDriveConfig,
+  syncDatabaseWithGoogleDrive,
+} from '../services/googleDriveSync';
+import {
   isFamilySyncReady,
   loadFamilyFinanceConfig,
   parseFamilyInviteHash,
@@ -101,6 +107,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const autoSyncRef = useRef<AutoSyncController | null>(null);
   const sheetsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sheetsInFlightRef = useRef(false);
+  const driveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const driveInFlightRef = useRef(false);
   const familyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const familyInFlightRef = useRef(false);
   const lastFocusSyncAtRef = useRef(0);
@@ -161,6 +169,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 2200);
   }, [db]);
 
+  const scheduleGoogleDriveSync = useCallback(() => {
+    if (!db) return;
+    const cfg = loadGoogleDriveConfig();
+    if (!isGoogleDriveReady(cfg) || !cfg.autoSync) return;
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    if (driveTimerRef.current) clearTimeout(driveTimerRef.current);
+    driveTimerRef.current = setTimeout(async () => {
+      driveTimerRef.current = null;
+      if (driveInFlightRef.current) return;
+      const latestCfg = loadGoogleDriveConfig();
+      if (!isGoogleDriveReady(latestCfg) || !latestCfg.autoSync) return;
+      driveInFlightRef.current = true;
+      try {
+        const res = await syncDatabaseWithGoogleDrive(db, latestCfg, {
+          deviceName: resolveDeviceName(),
+        });
+        saveGoogleDriveConfig({
+          ...latestCfg,
+          enabled: true,
+          driveFileId: res.fileId ?? latestCfg.driveFileId,
+          lastSyncedAt: res.syncedAt,
+          lastRevision: res.revision,
+        });
+        if (res.remoteHadData) {
+          const fresh = await getSettings(db);
+          setSettings(fresh);
+          setDataVersion((v) => v + 1);
+        }
+      } catch {
+        // Silent background redundancy failure; user can retry manually in Settings
+      } finally {
+        driveInFlightRef.current = false;
+      }
+    }, 2800);
+  }, [db]);
+
   const notify = useCallback((text: string, kind: 'success' | 'error' | 'info' = 'success') => {
     const id = Date.now() + Math.floor(Math.random() * 1000);
     setToasts((prev) => [...prev, { id, kind, text }]);
@@ -174,11 +218,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDataVersion((v) => v + 1);
       if (!options?.skipAutoSync) {
         autoSyncRef.current?.schedule();
+        scheduleGoogleDriveSync();
         scheduleGoogleSheetsSync();
         scheduleFamilyHubSync();
       }
     },
-    [scheduleGoogleSheetsSync, scheduleFamilyHubSync],
+    [scheduleGoogleDriveSync, scheduleGoogleSheetsSync, scheduleFamilyHubSync],
   );
 
   const reloadSettings = useCallback(async () => {
