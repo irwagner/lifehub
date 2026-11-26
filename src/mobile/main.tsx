@@ -1,9 +1,11 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Capacitor } from '@capacitor/core';
 import { MobileApp } from './MobileApp';
 import './mobile.css';
 
 if (
+  !Capacitor.isNativePlatform() &&
   'serviceWorker' in navigator &&
   window.location.hostname !== 'localhost' &&
   window.location.hostname !== '127.0.0.1'

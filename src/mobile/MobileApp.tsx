@@ -1,4 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import {
   Bike,
   CalendarDays,
@@ -122,7 +125,18 @@ import {
 type MobileTab = 'today' | 'agenda' | 'finance' | 'work' | 'sync';
 type QuickSheetKind = null | 'transaction' | 'work' | 'task' | 'event' | 'idea';
 
+const DEFAULT_CLOUD_SYNC_URL = 'https://lifehub-sync.irwagneremanoel.workers.dev';
+const IS_NATIVE_APP = Capacitor.isNativePlatform();
+const NATIVE_PLATFORM_LABEL =
+  Capacitor.getPlatform() === 'ios'
+    ? 'iOS'
+    : Capacitor.getPlatform() === 'android'
+      ? 'Android'
+      : 'PWA';
+
 function detectMobileDeviceName(): string {
+  if (Capacitor.getPlatform() === 'ios') return 'iPhone App';
+  if (Capacitor.getPlatform() === 'android') return 'Android App';
   const ua = navigator.userAgent || '';
   if (/iPhone/i.test(ua)) return 'iPhone';
   if (/iPad/i.test(ua)) return 'iPad';
@@ -182,9 +196,11 @@ export const MobileApp: React.FC = () => {
   const lastFocusSyncRef = useRef(0);
   const [syncUrlInput, setSyncUrlInput] = useState(() =>
     loadCloudSyncConfig(detectMobileDeviceName()).endpointUrl ||
-    (window.location.origin.startsWith('http') && !window.location.hostname.includes('localhost')
+    (!IS_NATIVE_APP &&
+    window.location.origin.startsWith('http') &&
+    !window.location.hostname.includes('localhost')
       ? window.location.origin
-      : ''),
+      : DEFAULT_CLOUD_SYNC_URL),
   );
   const [syncKeyInput, setSyncKeyInput] = useState(
     () => loadCloudSyncConfig(detectMobileDeviceName()).passphrase,
@@ -236,6 +252,12 @@ export const MobileApp: React.FC = () => {
     localStorage.setItem('lifehub_mobile_theme', dark ? 'dark' : 'light');
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) metaTheme.setAttribute('content', dark ? '#0b1120' : '#f8fafc');
+    if (IS_NATIVE_APP) {
+      StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light }).catch(() => {});
+      if (Capacitor.getPlatform() === 'android') {
+        StatusBar.setBackgroundColor({ color: dark ? '#0b1120' : '#f8fafc' }).catch(() => {});
+      }
+    }
   }, [dark]);
 
   const refreshData = useCallback(async (database: SqlExecutor) => {
@@ -307,19 +329,17 @@ export const MobileApp: React.FC = () => {
     [refreshData, showToast],
   );
 
-  // Initialize local SQLite + handle magic pairing link (#pair=...)
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      const database = await getDatabase();
-      if (!active) return;
-      setDb(database);
-      await refreshData(database);
-      setLoading(false);
+  const handleIncomingLinkOrHash = useCallback(
+    async (raw: string, database: SqlExecutor) => {
+      const hashIndex = raw.indexOf('#');
+      const hashPart = hashIndex >= 0 ? raw.slice(hashIndex) : raw;
+      if (!hashPart) return false;
 
-      const paired = parseMobilePairingHash(window.location.hash);
+      const paired = parseMobilePairingHash(hashPart);
       if (paired) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        if (!IS_NATIVE_APP && window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
         const nextCfg: CloudSyncConfig = {
           enabled: true,
           endpointUrl: paired.endpointUrl,
@@ -343,6 +363,7 @@ export const MobileApp: React.FC = () => {
           setAiKeyInput(nextAi.apiKey);
         }
         const isStandalonePwa =
+          IS_NATIVE_APP ||
           window.matchMedia?.('(display-mode: standalone)').matches ||
           Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
         if (!isStandalonePwa) {
@@ -350,11 +371,14 @@ export const MobileApp: React.FC = () => {
         }
         showToast('QR Code / link detectado! Sincronizando...');
         await runSync(database, nextCfg);
+        return true;
       }
 
-      const famInvite = parseFamilyInviteHash(window.location.hash);
+      const famInvite = parseFamilyInviteHash(hashPart);
       if (famInvite) {
-        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        if (!IS_NATIVE_APP && window.location.hash) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
         const curFam = loadFamilyFinanceConfig();
         const nextFam: FamilyFinanceConfig = {
           ...curFam,
@@ -381,12 +405,50 @@ export const MobileApp: React.FC = () => {
         } catch (err) {
           showToast(err instanceof Error ? err.message : 'Erro ao entrar na família.', 'err');
         }
+        return true;
+      }
+
+      return false;
+    },
+    [runSync, showToast],
+  );
+
+  // Initialize local SQLite + handle magic pairing link (#pair=...) and native deep links (lifehub://)
+  useEffect(() => {
+    let active = true;
+    let urlListenerHandle: { remove: () => Promise<void> } | null = null;
+    (async () => {
+      const database = await getDatabase();
+      if (!active) return;
+      setDb(database);
+      await refreshData(database);
+      setLoading(false);
+
+      if (window.location.hash) {
+        await handleIncomingLinkOrHash(window.location.hash, database);
+      }
+
+      if (IS_NATIVE_APP) {
+        try {
+          const launchUrl = await CapApp.getLaunchUrl();
+          if (launchUrl?.url) {
+            await handleIncomingLinkOrHash(launchUrl.url, database);
+          }
+          urlListenerHandle = await CapApp.addListener('appUrlOpen', ({ url }) => {
+            if (url) void handleIncomingLinkOrHash(url, database);
+          });
+        } catch {
+          // Deep link listener optional
+        }
       }
     })();
     return () => {
       active = false;
+      if (urlListenerHandle) {
+        void urlListenerHandle.remove();
+      }
     };
-  }, [refreshData, runSync, showToast]);
+  }, [handleIncomingLinkOrHash, refreshData]);
 
   // Auto-Sync controller on Mobile PWA (syncs every action + startup + returning to app)
   useEffect(() => {
@@ -638,6 +700,10 @@ export const MobileApp: React.FC = () => {
   const handleSaveAndSync = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db) return;
+    if (syncKeyInput.includes('#pair=') || syncKeyInput.includes('#family=')) {
+      const handled = await handleIncomingLinkOrHash(syncKeyInput.trim(), db);
+      if (handled) return;
+    }
     const nextCfg: CloudSyncConfig = {
       ...syncConfig,
       enabled: true,
@@ -1871,43 +1937,55 @@ export const MobileApp: React.FC = () => {
               )}
             </section>
 
-            {/* Install guide iPhone + Android */}
+            {/* Install guide iPhone + Android (or Native App info) */}
             <section className={card}>
               <div className="mb-2 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Smartphone className="h-4 w-4 text-indigo-500" />
-                  <h2 className="text-sm font-bold">Instalar / Atualizar App (v{CURRENT_APP_VERSION})</h2>
+                  <h2 className="text-sm font-bold">
+                    {IS_NATIVE_APP
+                      ? `LifeHub Nativo (${NATIVE_PLATFORM_LABEL}) · v${CURRENT_APP_VERSION}`
+                      : `Instalar / Atualizar App (v${CURRENT_APP_VERSION})`}
+                  </h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      if ('caches' in window) {
-                        const keys = await caches.keys();
-                        await Promise.all(keys.map((k) => caches.delete(k)));
+                {!IS_NATIVE_APP && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        if ('caches' in window) {
+                          const keys = await caches.keys();
+                          await Promise.all(keys.map((k) => caches.delete(k)));
+                        }
+                        if ('serviceWorker' in navigator) {
+                          const regs = await navigator.serviceWorker.getRegistrations();
+                          await Promise.all(regs.map((r) => r.update()));
+                        }
+                      } catch {
+                        // ignore
                       }
-                      if ('serviceWorker' in navigator) {
-                        const regs = await navigator.serviceWorker.getRegistrations();
-                        await Promise.all(regs.map((r) => r.update()));
-                      }
-                    } catch {
-                      // ignore
-                    }
-                    window.location.reload();
-                  }}
-                  className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300"
-                >
-                  Atualizar agora
-                </button>
+                      window.location.reload();
+                    }}
+                    className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-300"
+                  >
+                    Atualizar agora
+                  </button>
+                )}
               </div>
-              <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-                <li>
-                  <strong>iPhone (Safari):</strong> toque no ícone <em>Compartilhar</em> (quadrado com seta) → <strong>Adicionar à Tela de Início</strong>.
-                </li>
-                <li>
-                  <strong>Android (Chrome):</strong> toque no menu <em>⋮</em> → <strong>Instalar aplicativo</strong>.
-                </li>
-              </ul>
+              {IS_NATIVE_APP ? (
+                <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  Você está usando o aplicativo nativo instalado no <strong>{NATIVE_PLATFORM_LABEL}</strong> com SQLite local e sincronização criptografada automática. Você também pode colar o link de pareamento do Desktop diretamente no campo Chave Secreta acima.
+                </p>
+              ) : (
+                <ul className="space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                  <li>
+                    <strong>iPhone (Safari):</strong> toque no ícone <em>Compartilhar</em> (quadrado com seta) → <strong>Adicionar à Tela de Início</strong> (ou use o <strong>LifeHub-iOS.ipa</strong> nas Releases do GitHub).
+                  </li>
+                  <li>
+                    <strong>Android:</strong> baixe o <strong>LifeHub-Android.apk</strong> nas Releases do GitHub ou toque no menu <em>⋮</em> do Chrome → <strong>Instalar aplicativo</strong>.
+                  </li>
+                </ul>
+              )}
             </section>
           </>
         )}

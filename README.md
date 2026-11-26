@@ -11,13 +11,13 @@ Organize finanças reais, trabalho por aplicativos (Uber Moto / 99Moto), agenda,
 [![Privacidade E2EE](https://img.shields.io/badge/Sync%20Zero--Knowledge-AES--256--GCM-22c55e?style=for-the-badge)](https://github.com/irwagner/lifehub#-app-celular-iphone--android--qr-code-offline)
 
 <p>
-  <a href="https://github.com/irwagner/lifehub/releases/latest"><strong>⬇️ Baixar para Windows (v0.2.10)</strong></a>
+  <a href="https://github.com/irwagner/lifehub/releases/latest"><strong>⬇️ Baixar para Windows (v0.3.0)</strong></a>
   &nbsp;·&nbsp;
-  <a href="https://lifehub-sync.irwagneremanoel.workers.dev"><strong>📱 Abrir App Mobile (iPhone / Android)</strong></a>
+  <a href="https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-Android.apk"><strong>🤖 Baixar Android (.apk)</strong></a>
   &nbsp;·&nbsp;
-  <a href="#-tour-visual"><strong>🖼️ Ver Prints</strong></a>
+  <a href="https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-iOS.ipa"><strong>🍎 Baixar iOS (.ipa)</strong></a>
   &nbsp;·&nbsp;
-  <a href="#-rodar-em-desenvolvimento"><strong>🛠️ Rodar Localmente</strong></a>
+  <a href="https://lifehub-sync.irwagneremanoel.workers.dev"><strong>📱 App Web / PWA</strong></a>
 </p>
 
 <br />
@@ -34,8 +34,10 @@ Acesse a [**Última Release no GitHub**](https://github.com/irwagner/lifehub/rel
 
 | Arquivo | Tamanho | Ideal para |
 | :--- | :---: | :--- |
-| **[`LifeHub.exe`](https://github.com/irwagner/lifehub/releases/latest/download/LifeHub.exe)** *(Portátil)* | ~12 MB | **Duplo clique e pronto** — sem instalador, CRT estático (`+crt-static`) e atualização automática em 1 clique pelo próprio app. |
-| **[`LifeHub-Instalador-Windows.exe`](https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-Instalador-Windows.exe)** *(NSIS)* | ~3,4 MB | Instala com atalho na Área de Trabalho e Menu Iniciar (e baixa o WebView2 automaticamente se faltar no Windows 10). |
+| **[`LifeHub.exe`](https://github.com/irwagner/lifehub/releases/latest/download/LifeHub.exe)** *(Windows Portátil)* | ~12 MB | **Duplo clique e pronto** — sem instalador, CRT estático (`+crt-static`) e atualização automática em 1 clique pelo próprio app. |
+| **[`LifeHub-Instalador-Windows.exe`](https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-Instalador-Windows.exe)** *(Windows NSIS)* | ~3,5 MB | Instala com atalho na Área de Trabalho e Menu Iniciar (e baixa o WebView2 automaticamente se faltar no Windows 10). |
+| **[`LifeHub-Android.apk`](https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-Android.apk)** *(Android Nativo)* | ~5 MB | App Android instalável diretamente no celular com SQLite offline, Auto-Sync E2EE, Cartão 1x-120x, Família e IA Gemini. |
+| **[`LifeHub-iOS.ipa`](https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-iOS.ipa)** *(iOS Nativo)* | ~5 MB | App iPhone nativo compilado em Xcode (instalável via AltStore / SideStore / Sideloadly ou assinável para TestFlight / App Store via `ios/App/`). |
 
 > **Atualização automática integrada:** ao abrir, o LifeHub verifica novas releases em `irwagner/lifehub`, exibe o botão verde **`Atualizar vX.Y.Z`** na barra superior e substitui o binário preservando 100% do seu banco SQLite local.
 

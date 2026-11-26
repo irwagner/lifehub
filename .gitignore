@@ -13,3 +13,12 @@ src-tauri/target/
 *.db-journal
 *.sqlite
 *.sqlite3
+dist-mobile-release/
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/*.keystore
+android/app/*.keystore
+ios/App/build/
+ios/App/DerivedData/
