@@ -14,6 +14,7 @@ import {
   Home,
   Lightbulb,
   Moon,
+  Pencil,
   Plus,
   RefreshCw,
   Send,
@@ -21,6 +22,7 @@ import {
   Smartphone,
   Sparkles,
   Sun,
+  Trash2,
   Wallet,
   X,
 } from 'lucide-react';
@@ -36,11 +38,14 @@ import {
 import { loadDashboardSnapshot, type DashboardSnapshot } from '../repositories/dashboardRepo';
 import {
   createTransaction,
+  deleteInstallmentGroup,
+  deleteRecurringRule,
   listAccounts,
   listCategories,
   listRecurringRules,
   listTransactions,
   markNextInstallmentPaid,
+  updateRecurringRule,
 } from '../repositories/financeRepo';
 import { logHabitSession } from '../repositories/habitsRepo';
 import { createIdea, listIdeas } from '../repositories/ideasRepo';
@@ -105,6 +110,7 @@ import {
 } from '../types/domain';
 import {
   addDaysISO,
+  addMonthsISO,
   formatBRL,
   formatDateBR,
   formatNumber,
@@ -140,7 +146,15 @@ export const MobileApp: React.FC = () => {
   const [instDesc, setInstDesc] = useState('');
   const [instParcelVal, setInstParcelVal] = useState('');
   const [instCount, setInstCount] = useState('6');
+  const [instDate, setInstDate] = useState(todayISO());
   const [instKind, setInstKind] = useState<'[Cartão]' | '[Moto]' | '[Seguro]' | '[Parcelado]'>('[Cartão]');
+  const [editingRec, setEditingRec] = useState<RecurringRule | null>(null);
+  const [editRecDesc, setEditRecDesc] = useState('');
+  const [editRecType, setEditRecType] = useState<'income' | 'expense'>('expense');
+  const [editRecAmount, setEditRecAmount] = useState('');
+  const [editRecDay, setEditRecDay] = useState('10');
+  const [editRecCategory, setEditRecCategory] = useState('');
+  const [editRecSyncPlanned, setEditRecSyncPlanned] = useState(true);
   const [famHouseDesc, setFamHouseDesc] = useState('');
   const [famHouseAmt, setFamHouseAmt] = useState('');
   const [toast, setToast] = useState<{ text: string; kind: 'ok' | 'err' } | null>(null);
@@ -1148,7 +1162,8 @@ export const MobileApp: React.FC = () => {
                       e.preventDefault();
                       if (!db) return;
                       const parcelNum = Number(instParcelVal.replace(',', '.'));
-                      const countNum = Math.min(120, Math.max(2, Math.round(Number(instCount) || 2)));
+                      const countNum = Math.min(120, Math.max(1, Math.round(Number(instCount) || 1)));
+                      const due = instDate || todayISO();
                       if (!(parcelNum > 0) || !instDesc.trim()) return;
                       await createTransaction(db, {
                         account_id: accounts[0]?.id ?? 'acc_principal',
@@ -1157,26 +1172,43 @@ export const MobileApp: React.FC = () => {
                         source_type: 'outros',
                         description: instDesc.trim(),
                         amount: Math.round(parcelNum * countNum * 100) / 100,
-                        date: todayISO(),
-                        due_date: todayISO(),
+                        date: due,
+                        due_date: due,
                         status: 'planned',
                         installments: countNum,
+                        force_installment_group: true,
                         notes: instKind,
                       });
                       setInstDesc('');
                       setInstParcelVal('');
                       await refreshData(db);
                       scheduleAutoSync();
-                      showToast(`Parcelamento ${countNum}x salvo!`);
+                      showToast(
+                        countNum === 1
+                          ? `Conta 1x no cartão salva (venc. ${formatDateBR(due)})!`
+                          : `Parcelamento ${countNum}x salvo!`,
+                      );
                     }}
                     className={`${card} space-y-2.5`}
                   >
-                    <h2 className="text-sm font-bold">+ Novo Parcelado (Cartão, Moto, Seguro)</h2>
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="text-sm font-bold">+ Novo Cartão / Parcelado</h2>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInstCount('1');
+                          setInstDate(addMonthsISO(todayISO(), 1));
+                        }}
+                        className="rounded-lg bg-indigo-500/15 px-2 py-1 text-[10px] font-bold text-indigo-500"
+                      >
+                        1x Próx. mês
+                      </button>
+                    </div>
                     <input
                       required
                       value={instDesc}
                       onChange={(e) => setInstDesc(e.target.value)}
-                      placeholder="Ex.: Roupa, Moto, Seguro..."
+                      placeholder="Ex.: Conta cartão, Roupa, Moto, Seguro..."
                       className={input}
                     />
                     <div className="grid grid-cols-3 gap-2">
@@ -1197,25 +1229,40 @@ export const MobileApp: React.FC = () => {
                         inputMode="decimal"
                         value={instParcelVal}
                         onChange={(e) => setInstParcelVal(e.target.value)}
-                        placeholder="Parcela R$"
+                        placeholder="Valor R$"
                         className={input}
                       />
                       <input
                         required
                         type="number"
-                        min="2"
+                        min="1"
                         max="120"
                         value={instCount}
                         onChange={(e) => setInstCount(e.target.value)}
-                        placeholder="Vezes"
+                        placeholder="1 a 120x"
                         className={input}
                       />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="date"
+                        value={instDate}
+                        onChange={(e) => setInstDate(e.target.value)}
+                        className={`${input} flex-1`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setInstDate((prev) => addMonthsISO(prev || todayISO(), 1))}
+                        className="shrink-0 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold dark:border-white/10"
+                      >
+                        +1 mês
+                      </button>
                     </div>
                     <button
                       type="submit"
                       className="w-full rounded-xl bg-indigo-600 py-2.5 text-xs font-bold text-white"
                     >
-                      Gerar Parcelas
+                      {Math.round(Number(instCount) || 1) === 1 ? 'Salvar 1x no Cartão' : 'Gerar Parcelas'}
                     </button>
                   </form>
 
@@ -1223,7 +1270,7 @@ export const MobileApp: React.FC = () => {
                     <h2 className="mb-3 text-sm font-bold">Meus Parcelamentos ({groups.length})</h2>
                     {groups.length === 0 ? (
                       <p className="py-4 text-center text-xs text-slate-500">
-                        Nenhum parcelamento cadastrado ainda.
+                        Nenhum lançamento no cartão ou parcelado ainda.
                       </p>
                     ) : (
                       <ul className="space-y-2.5">
@@ -1236,24 +1283,48 @@ export const MobileApp: React.FC = () => {
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-bold">{g.title}</p>
                                 <p className="text-[11px] text-slate-500">
-                                  {formatBRL(g.parcelAmount)}/mês · {g.paidCount}/{g.totalCount} pagas · Falta {formatBRL(g.remainingAmount)}
+                                  {g.totalCount === 1
+                                    ? `1x · ${formatBRL(g.parcelAmount)} · ${g.paidCount === 1 ? 'Pago!' : g.nextDueDate ? `Venc. ${formatDateBR(g.nextDueDate)}` : 'Em aberto'}`
+                                    : `${formatBRL(g.parcelAmount)}/mês · ${g.paidCount}/${g.totalCount} pagas · Falta ${formatBRL(g.remainingAmount)}`}
                                 </p>
                               </div>
-                              {g.remainingCount > 0 && (
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                {g.remainingCount > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={async () => {
+                                      if (!db) return;
+                                      await markNextInstallmentPaid(db, g.groupId);
+                                      await refreshData(db);
+                                      scheduleAutoSync();
+                                      showToast(g.totalCount === 1 ? 'Conta marcada como paga!' : 'Parcela marcada como paga!');
+                                    }}
+                                    className="rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white"
+                                  >
+                                    {g.totalCount === 1 ? 'Pagar' : 'Pagar 1'}
+                                  </button>
+                                )}
                                 <button
                                   type="button"
+                                  aria-label={`Excluir ${g.title}`}
                                   onClick={async () => {
                                     if (!db) return;
-                                    await markNextInstallmentPaid(db, g.groupId);
+                                    const ok = window.confirm(
+                                      g.totalCount === 1
+                                        ? `Excluir "${g.title}"?`
+                                        : `Excluir todas as ${g.totalCount} parcelas de "${g.title}"?`,
+                                    );
+                                    if (!ok) return;
+                                    await deleteInstallmentGroup(db, g.groupId);
                                     await refreshData(db);
                                     scheduleAutoSync();
-                                    showToast('Parcela marcada como paga!');
+                                    showToast(`"${g.title}" removido.`);
                                   }}
-                                  className="shrink-0 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white"
+                                  className="rounded-lg p-1.5 text-slate-400 hover:text-rose-500"
                                 >
-                                  Pagar 1
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </button>
-                              )}
+                              </div>
                             </div>
                           </li>
                         ))}
@@ -1510,14 +1581,47 @@ export const MobileApp: React.FC = () => {
                           Todo dia {String(rule.day_of_month).padStart(2, '0')} · Fixo mensal
                         </p>
                       </div>
-                      <span
-                        className={`shrink-0 text-sm font-bold tabular-nums ${
-                          rule.type === 'income' ? 'text-emerald-500' : 'text-rose-500'
-                        }`}
-                      >
-                        {rule.type === 'income' ? '+' : '-'}
-                        {formatBRL(rule.amount)}
-                      </span>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span
+                          className={`text-sm font-bold tabular-nums ${
+                            rule.type === 'income' ? 'text-emerald-500' : 'text-rose-500'
+                          }`}
+                        >
+                          {rule.type === 'income' ? '+' : '-'}
+                          {formatBRL(rule.amount)}
+                        </span>
+                        <button
+                          type="button"
+                          aria-label={`Editar ${rule.description}`}
+                          onClick={() => {
+                            setEditingRec(rule);
+                            setEditRecDesc(rule.description);
+                            setEditRecType(rule.type);
+                            setEditRecAmount(String(rule.amount));
+                            setEditRecDay(String(rule.day_of_month));
+                            setEditRecCategory(rule.category_id ?? '');
+                            setEditRecSyncPlanned(true);
+                          }}
+                          className="rounded-lg p-1.5 text-slate-400 hover:text-indigo-500"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          aria-label={`Excluir ${rule.description}`}
+                          onClick={async () => {
+                            if (!db) return;
+                            if (!window.confirm(`Excluir conta fixa "${rule.description}"?`)) return;
+                            await deleteRecurringRule(db, rule.id);
+                            await refreshData(db);
+                            scheduleAutoSync();
+                            showToast(`"${rule.description}" removida.`);
+                          }}
+                          className="rounded-lg p-1.5 text-slate-400 hover:text-rose-500"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -2268,6 +2372,126 @@ export const MobileApp: React.FC = () => {
                 </form>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Edit Recurring Rule Sheet */}
+      {editingRec && (
+        <div
+          className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 backdrop-blur-sm"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setEditingRec(null);
+          }}
+        >
+          <div className="safe-bottom animate-sheet-up w-full max-w-lg rounded-t-3xl border-t border-slate-200 bg-white p-4 shadow-2xl dark:border-white/10 dark:bg-slate-900">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold">Editar Conta Fixa Mensal</h2>
+              <button
+                type="button"
+                onClick={() => setEditingRec(null)}
+                className="rounded-full p-1 text-slate-400"
+                aria-label="Fechar edição"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!db || !editingRec) return;
+                try {
+                  const res = await updateRecurringRule(db, editingRec.id, {
+                    account_id: editingRec.account_id || accounts[0]?.id || 'acc_principal',
+                    category_id: editRecCategory || null,
+                    type: editRecType,
+                    source_type: editingRec.source_type,
+                    description: editRecDesc,
+                    amount: Number(editRecAmount.replace(',', '.')),
+                    day_of_month: Number(editRecDay) || 1,
+                    notes: editingRec.notes,
+                    syncPlannedTransactions: editRecSyncPlanned,
+                  });
+                  setEditingRec(null);
+                  await refreshData(db);
+                  scheduleAutoSync();
+                  showToast(
+                    res.updatedPlannedCount > 0
+                      ? `Conta fixa atualizada (+${res.updatedPlannedCount} previsto(s))!`
+                      : 'Conta fixa atualizada!',
+                  );
+                } catch (err) {
+                  showToast(err instanceof Error ? err.message : 'Erro ao atualizar.', 'err');
+                }
+              }}
+              className="space-y-3"
+            >
+              <input
+                required
+                value={editRecDesc}
+                onChange={(e) => setEditRecDesc(e.target.value)}
+                placeholder="Descrição"
+                className={input}
+              />
+              <div className="grid grid-cols-3 gap-2">
+                <select
+                  value={editRecType}
+                  onChange={(e) => setEditRecType(e.target.value as 'income' | 'expense')}
+                  className={input}
+                >
+                  <option value="expense">Despesa</option>
+                  <option value="income">Receita</option>
+                </select>
+                <input
+                  required
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  inputMode="decimal"
+                  value={editRecAmount}
+                  onChange={(e) => setEditRecAmount(e.target.value)}
+                  placeholder="Valor R$"
+                  className={input}
+                />
+                <input
+                  required
+                  type="number"
+                  min="1"
+                  max="31"
+                  value={editRecDay}
+                  onChange={(e) => setEditRecDay(e.target.value)}
+                  placeholder="Dia"
+                  className={input}
+                />
+              </div>
+              <select
+                value={editRecCategory}
+                onChange={(e) => setEditRecCategory(e.target.value)}
+                className={input}
+              >
+                <option value="">Sem categoria</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <label className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-300">
+                <input
+                  type="checkbox"
+                  checked={editRecSyncPlanned}
+                  onChange={(e) => setEditRecSyncPlanned(e.target.checked)}
+                  className="h-4 w-4 rounded"
+                />
+                Atualizar também lançamentos ainda previstos desta conta
+              </label>
+              <button
+                type="submit"
+                className="w-full rounded-xl bg-indigo-600 py-3 text-sm font-bold text-white"
+              >
+                Salvar Alterações
+              </button>
+            </form>
           </div>
         </div>
       )}

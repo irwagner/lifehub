@@ -21,7 +21,7 @@ import {
   type AccountWithBalance,
 } from '../repositories/financeRepo';
 import type { Category, Transaction } from '../types/domain';
-import { currentMonthISO, formatBRL, formatDateBR, todayISO } from '../utils/format';
+import { addMonthsISO, currentMonthISO, formatBRL, formatDateBR, todayISO } from '../utils/format';
 
 export type InstallmentKind = 'cartao' | 'moto' | 'seguro' | 'outro';
 
@@ -102,10 +102,16 @@ export function detectInstallmentKind(tx: Pick<Transaction, 'description' | 'not
   return { kind: 'outro', issuer, isFamily };
 }
 
+export function isTrackedInstallmentTransaction(
+  tx: Pick<Transaction, 'installment_group_id' | 'installment_total'>,
+): boolean {
+  return Boolean(tx.installment_group_id) && (tx.installment_total ?? 0) >= 1;
+}
+
 export function groupInstallmentTransactions(allTransactions: Transaction[]): InstallmentGroupView[] {
   const byGroup = new Map<string, Transaction[]>();
   for (const tx of allTransactions) {
-    if (!tx.installment_group_id || (tx.installment_total ?? 0) <= 1) continue;
+    if (!isTrackedInstallmentTransaction(tx) || !tx.installment_group_id) continue;
     const list = byGroup.get(tx.installment_group_id) ?? [];
     list.push(tx);
     byGroup.set(tx.installment_group_id, list);
@@ -222,9 +228,7 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
   const activeMonth = month || currentMonthISO();
 
   const kpis = useMemo(() => {
-    const allInstallmentTxs = allTxs.filter(
-      (t) => t.installment_group_id && (t.installment_total ?? 0) > 1,
-    );
+    const allInstallmentTxs = allTxs.filter(isTrackedInstallmentTransaction);
     const thisMonthTotal = allInstallmentTxs
       .filter((t) => t.date.startsWith(activeMonth))
       .reduce((acc, t) => acc + t.amount, 0);
@@ -240,7 +244,7 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
 
   const projection6m = useMemo(() => {
     const months = getNextMonths(activeMonth, 6);
-    const allInst = allTxs.filter((t) => t.installment_group_id && (t.installment_total ?? 0) > 1);
+    const allInst = allTxs.filter(isTrackedInstallmentTransaction);
     const rows = months.map((m) => {
       const total = allInst
         .filter((t) => t.date.startsWith(m))
@@ -252,7 +256,8 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
   }, [allTxs, activeMonth]);
 
   const parsedAmount = Number(amountInput.replace(',', '.')) || 0;
-  const parsedCount = Math.min(120, Math.max(2, Math.round(Number(installmentsCount) || 2)));
+  const parsedCount = Math.min(120, Math.max(1, Math.round(Number(installmentsCount) || 1)));
+  const isSingleBill = parsedCount === 1;
   const computedTotal =
     amountMode === 'per_parcel'
       ? Math.round(parsedAmount * parsedCount * 100) / 100
@@ -286,6 +291,7 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
         due_date: firstDate,
         status: firstPaid ? 'realized' : 'planned',
         installments: parsedCount,
+        force_installment_group: true,
         notes,
       });
 
@@ -295,10 +301,12 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
       setFirstPaid(false);
       bumpDataVersion();
       notify(
-        `Parcelamento criado: ${parsedCount}x de ${formatBRL(computedParcel)} (${formatBRL(computedTotal)}).`,
+        isSingleBill
+          ? `Conta 1x registrada: ${formatBRL(computedTotal)} (venc. ${formatDateBR(firstDate)}).`
+          : `Parcelamento criado: ${parsedCount}x de ${formatBRL(computedParcel)} (${formatBRL(computedTotal)}).`,
       );
     } catch (err) {
-      notify(err instanceof Error ? err.message : 'Erro ao criar parcelamento.', 'error');
+      notify(err instanceof Error ? err.message : 'Erro ao criar lançamento no cartão.', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -312,18 +320,24 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
       return;
     }
     bumpDataVersion();
-    notify(`Parcela ${paid.installment_number}/${paid.installment_total} marcada como paga!`);
+    notify(
+      group.totalCount === 1
+        ? `"${group.title}" (1x) marcada como paga!`
+        : `Parcela ${paid.installment_number}/${paid.installment_total} marcada como paga!`,
+    );
   };
 
   const handleDeleteGroup = async (group: InstallmentGroupView) => {
     if (!db) return;
     const ok = window.confirm(
-      `Excluir todas as ${group.totalCount} parcelas de "${group.title}"?`,
+      group.totalCount === 1
+        ? `Excluir lançamento 1x "${group.title}"?`
+        : `Excluir todas as ${group.totalCount} parcelas de "${group.title}"?`,
     );
     if (!ok) return;
     await deleteInstallmentGroup(db, group.groupId);
     bumpDataVersion();
-    notify(`Parcelamento "${group.title}" removido.`);
+    notify(`"${group.title}" removido.`);
   };
 
   return (
@@ -449,11 +463,24 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium">Quantas vezes? (2 a 120x)</label>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="block text-xs font-medium">Quantas vezes? (1 a 120x)</label>
+              <button
+                type="button"
+                onClick={() => {
+                  setInstallmentsCount('1');
+                  setFirstDate(addMonthsISO(todayISO(), 1));
+                  setFirstPaid(false);
+                }}
+                className="rounded-md bg-brand-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-brand-500 hover:bg-brand-500/25"
+              >
+                1x Próx. mês
+              </button>
+            </div>
             <input
               required
               type="number"
-              min="2"
+              min="1"
               max="120"
               value={installmentsCount}
               onChange={(e) => setInstallmentsCount(e.target.value)}
@@ -462,7 +489,18 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
           </div>
 
           <div>
-            <label className="mb-1 block text-xs font-medium">1ª parcela (data)</label>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="block text-xs font-medium">
+                {isSingleBill ? 'Vencimento / fatura' : '1ª parcela (data)'}
+              </label>
+              <button
+                type="button"
+                onClick={() => setFirstDate((prev) => addMonthsISO(prev || todayISO(), 1))}
+                className="rounded-md bg-slate-500/15 px-1.5 py-0.5 text-[10px] font-semibold opacity-80 hover:opacity-100"
+              >
+                +1 mês
+              </button>
+            </div>
             <input
               required
               type="date"
@@ -498,7 +536,7 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
                 onChange={(e) => setFirstPaid(e.target.checked)}
                 className="h-4 w-4 rounded"
               />
-              1ª parcela já foi paga
+              {isSingleBill ? 'Já foi paga' : '1ª parcela já foi paga'}
             </label>
             <label className="flex cursor-pointer items-center gap-2">
               <input
@@ -514,12 +552,18 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
           <div className="flex items-center gap-3">
             {computedTotal > 0 && (
               <span className="rounded-xl bg-brand-500/10 px-3 py-1.5 text-xs font-semibold text-brand-500">
-                {parsedCount}x de {formatBRL(computedParcel)} · Total {formatBRL(computedTotal)}
+                {isSingleBill
+                  ? `1x (fatura única) · Total ${formatBRL(computedTotal)}`
+                  : `${parsedCount}x de ${formatBRL(computedParcel)} · Total ${formatBRL(computedTotal)}`}
               </span>
             )}
             <button type="submit" disabled={submitting} className="lh-btn-primary">
               <Plus className="h-4 w-4" />
-              {submitting ? 'Gerando...' : 'Adicionar Parcelamento'}
+              {submitting
+                ? 'Salvando...'
+                : isSingleBill
+                  ? 'Adicionar no Cartão (1x)'
+                  : 'Adicionar Parcelamento'}
             </button>
           </div>
         </div>
@@ -619,9 +663,22 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
                           )}
                         </div>
                         <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400">
-                          <strong>{formatBRL(g.parcelAmount)}</strong>/mês · {g.paidCount}/{g.totalCount} pagas · Falta{' '}
-                          <strong className="text-amber-500">{formatBRL(g.remainingAmount)}</strong>
-                          {g.nextDueDate ? ` · Próxima: ${formatDateBR(g.nextDueDate)}` : ' · Quitado!'}
+                          {g.totalCount === 1 ? (
+                            <>
+                              <strong>1x · {formatBRL(g.parcelAmount)}</strong> ·{' '}
+                              {g.paidCount === 1
+                                ? 'Pago!'
+                                : g.nextDueDate
+                                  ? `Vencimento: ${formatDateBR(g.nextDueDate)}`
+                                  : 'Em aberto'}
+                            </>
+                          ) : (
+                            <>
+                              <strong>{formatBRL(g.parcelAmount)}</strong>/mês · {g.paidCount}/{g.totalCount} pagas · Falta{' '}
+                              <strong className="text-amber-500">{formatBRL(g.remainingAmount)}</strong>
+                              {g.nextDueDate ? ` · Próxima: ${formatDateBR(g.nextDueDate)}` : ' · Quitado!'}
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -633,7 +690,8 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
                           onClick={() => handlePayNext(g)}
                           className="inline-flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
                         >
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Pagar próxima
+                          <CheckCircle2 className="h-3.5 w-3.5" />{' '}
+                          {g.totalCount === 1 ? 'Marcar paga' : 'Pagar próxima'}
                         </button>
                       )}
                       <button
@@ -642,7 +700,7 @@ export const InstallmentsTabPanel: React.FC<InstallmentsTabPanelProps> = ({
                         className="lh-btn-secondary py-1.5 text-xs"
                       >
                         {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                        Parcelas
+                        {g.totalCount === 1 ? 'Detalhes' : 'Parcelas'}
                       </button>
                       <button
                         type="button"

@@ -77,6 +77,7 @@ export const createTransactionSchema = z
     due_date: z.string().regex(isoDateRegex).nullable().optional(),
     status: z.enum(['realized', 'planned']).default('realized'),
     installments: z.number().int().min(1).max(120).default(1),
+    force_installment_group: z.boolean().default(false),
     notes: z.string().max(500).default(''),
   })
   .refine(

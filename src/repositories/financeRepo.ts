@@ -166,12 +166,14 @@ export async function createTransaction(
     due_date?: string | null;
     status?: TransactionStatus;
     installments?: number;
+    force_installment_group?: boolean;
     notes?: string;
   },
 ): Promise<Transaction[]> {
   const input = createTransactionSchema.parse(rawInput);
   const now = new Date().toISOString();
-  const groupId = input.installments > 1 ? createId('inst') : null;
+  const isGrouped = input.installments > 1 || input.force_installment_group;
+  const groupId = isGrouped ? createId('inst') : null;
 
   const plan = generateInstallmentPlan({
     totalAmount: input.amount,
@@ -211,8 +213,8 @@ export async function createTransaction(
           i === 0 ? (input.due_date ?? item.due_date) : item.due_date,
           rowStatus,
           groupId,
-          input.installments > 1 ? item.installment_number : null,
-          input.installments > 1 ? item.installment_total : null,
+          isGrouped ? item.installment_number : null,
+          isGrouped ? item.installment_total : null,
           input.notes,
           now,
           now,
@@ -572,6 +574,102 @@ export async function createRecurringRule(
 
   const rows = await db.select<RecurringRule>('SELECT * FROM recurring_rules WHERE id = ?', [id]);
   return rows[0];
+}
+
+export async function updateRecurringRule(
+  db: SqlExecutor,
+  id: string,
+  input: {
+    account_id: string;
+    category_id?: string | null;
+    type: 'income' | 'expense';
+    source_type?: TransactionSourceType;
+    description: string;
+    amount: number;
+    day_of_month: number;
+    notes?: string;
+    syncPlannedTransactions?: boolean;
+  },
+): Promise<{ rule: RecurringRule; updatedPlannedCount: number }> {
+  const description = input.description.trim();
+  if (!description) throw new Error('Informe a descrição da recorrência.');
+  if (!(input.amount > 0)) throw new Error('Valor deve ser maior que zero.');
+  const day = Math.min(31, Math.max(1, Math.round(input.day_of_month)));
+  const now = new Date().toISOString();
+  const amount = round2(input.amount);
+  const sourceType: TransactionSourceType = input.source_type ?? 'outros';
+  const notes = input.notes ?? '';
+
+  await db.execute(
+    `UPDATE recurring_rules
+     SET account_id = ?, category_id = ?, type = ?, source_type = ?,
+         description = ?, amount = ?, day_of_month = ?, notes = ?, updated_at = ?
+     WHERE id = ?`,
+    [
+      input.account_id,
+      input.category_id ?? null,
+      input.type,
+      sourceType,
+      description,
+      amount,
+      day,
+      notes,
+      now,
+      id,
+    ],
+  );
+
+  const rows = await db.select<RecurringRule>('SELECT * FROM recurring_rules WHERE id = ?', [id]);
+  if (rows.length === 0) throw new Error('Recorrência não encontrada.');
+
+  let updatedPlannedCount = 0;
+  if (input.syncPlannedTransactions) {
+    const plannedTxs = await db.select<Pick<Transaction, 'id' | 'date'>>(
+      `SELECT id, date FROM transactions
+       WHERE external_hash LIKE ? AND status = 'planned'`,
+      [`rec_${id}_%`],
+    );
+
+    if (plannedTxs.length > 0) {
+      await db.transaction(async (tx) => {
+        for (const ptx of plannedTxs) {
+          const ym = ptx.date.slice(0, 7);
+          const [yStr, mStr] = ym.split('-');
+          const year = Number(yStr);
+          const monthNum = Number(mStr);
+          const lastDay =
+            Number.isFinite(year) && Number.isFinite(monthNum) && monthNum >= 1 && monthNum <= 12
+              ? new Date(year, monthNum, 0).getDate()
+              : 28;
+          const clampedDay = String(Math.min(day, lastDay)).padStart(2, '0');
+          const nextDate = `${ym}-${clampedDay}`;
+
+          await tx.execute(
+            `UPDATE transactions
+             SET account_id = ?, category_id = ?, type = ?, source_type = ?,
+                 description = ?, amount = ?, date = ?, due_date = ?, notes = ?, updated_at = ?
+             WHERE id = ?`,
+            [
+              input.account_id,
+              input.category_id ?? null,
+              input.type,
+              sourceType,
+              description,
+              amount,
+              nextDate,
+              nextDate,
+              notes || 'Gerado por regra recorrente mensal',
+              now,
+              ptx.id,
+            ],
+          );
+          updatedPlannedCount++;
+        }
+      });
+    }
+  }
+
+  return { rule: rows[0], updatedPlannedCount };
 }
 
 export async function deleteRecurringRule(db: SqlExecutor, id: string): Promise<void> {

@@ -9,8 +9,12 @@ import {
   createRecurringRule,
   createTransaction,
   deleteInstallmentGroup,
+  generateMonthlyRecurringTransactions,
+  listRecurringRules,
   listTransactions,
   markNextInstallmentPaid,
+  toggleTransactionStatus,
+  updateRecurringRule,
 } from '../repositories/financeRepo';
 import {
   buildFamilyInviteUrl,
@@ -249,5 +253,117 @@ describe('Aba Cartão & Parcelados + Financeiro da Família E2EE', () => {
 
     await dbA.close();
     await dbB.close();
+  });
+
+  it('permite compras 1x no Cartão (próximo mês) sem misturar lançamentos avulsos comuns', async () => {
+    const db = await createInMemoryTestDatabase();
+
+    // Lançamento comum 1x (PIX) NÃO deve entrar na aba Cartão & Parcelados
+    await createTransaction(db, {
+      account_id: 'acc_principal',
+      category_id: 'cat_alimentacao',
+      type: 'expense',
+      source_type: 'outros',
+      description: 'Almoço PIX',
+      amount: 32,
+      date: '2026-11-25',
+      status: 'realized',
+      installments: 1,
+    });
+
+    // Conta no cartão em 1x para pagar no próximo mês DEVE entrar na aba Cartão & Parcelados
+    await createTransaction(db, {
+      account_id: 'acc_principal',
+      category_id: null,
+      type: 'expense',
+      source_type: 'outros',
+      description: 'Farmácia Cartão',
+      amount: 145.5,
+      date: '2026-12-10',
+      due_date: '2026-12-10',
+      status: 'planned',
+      installments: 1,
+      force_installment_group: true,
+      notes: '[Cartão: Nubank]',
+    });
+
+    const groups = groupInstallmentTransactions(await listTransactions(db));
+    expect(groups).toHaveLength(1);
+    expect(groups[0].title).toBe('Farmácia Cartão');
+    expect(groups[0].totalCount).toBe(1);
+    expect(groups[0].remainingCount).toBe(1);
+    expect(groups[0].remainingAmount).toBe(145.5);
+    expect(groups[0].nextDueDate).toBe('2026-12-10');
+
+    // Quitar lançamento 1x
+    const paid = await markNextInstallmentPaid(db, groups[0].groupId);
+    expect(paid?.status).toBe('realized');
+    expect(paid?.installment_number).toBe(1);
+    expect(paid?.installment_total).toBe(1);
+
+    const afterPay = groupInstallmentTransactions(await listTransactions(db));
+    expect(afterPay[0].paidCount).toBe(1);
+    expect(afterPay[0].remainingCount).toBe(0);
+
+    // Excluir lançamento 1x
+    const removed = await deleteInstallmentGroup(db, groups[0].groupId);
+    expect(removed).toBe(1);
+    expect(groupInstallmentTransactions(await listTransactions(db))).toHaveLength(0);
+
+    await db.close();
+  });
+
+  it('edita recorrência mensal e sincroniza apenas lançamentos previstos sem alterar meses já pagos', async () => {
+    const db = await createInMemoryTestDatabase();
+
+    const rule = await createRecurringRule(db, {
+      account_id: 'acc_principal',
+      category_id: 'cat_moradia',
+      type: 'expense',
+      description: 'Internet Fibra',
+      amount: 100,
+      day_of_month: 10,
+    });
+
+    // Gera novembro e dezembro como previstos, e marca novembro como pago (realized)
+    await generateMonthlyRecurringTransactions(db, '2026-11');
+    await generateMonthlyRecurringTransactions(db, '2026-12');
+    const novTxs = await listTransactions(db, { month: '2026-11' });
+    await toggleTransactionStatus(db, novTxs[0].id);
+
+    // Edita a regra para R$ 125 no dia 15 com sincronização dos previstos
+    const res = await updateRecurringRule(db, rule.id, {
+      account_id: 'acc_principal',
+      category_id: 'cat_moradia',
+      type: 'expense',
+      description: 'Internet Fibra 500MB',
+      amount: 125,
+      day_of_month: 15,
+      notes: 'Novo plano',
+      syncPlannedTransactions: true,
+    });
+
+    expect(res.rule.description).toBe('Internet Fibra 500MB');
+    expect(res.rule.amount).toBe(125);
+    expect(res.rule.day_of_month).toBe(15);
+    expect(res.updatedPlannedCount).toBe(1);
+
+    const rules = await listRecurringRules(db);
+    expect(rules[0].description).toBe('Internet Fibra 500MB');
+
+    // Novembro já estava pago -> permanece intacto
+    const novAfter = await listTransactions(db, { month: '2026-11' });
+    expect(novAfter[0].status).toBe('realized');
+    expect(novAfter[0].amount).toBe(100);
+    expect(novAfter[0].date).toBe('2026-11-10');
+
+    // Dezembro ainda previsto -> foi atualizado automaticamente
+    const decAfter = await listTransactions(db, { month: '2026-12' });
+    expect(decAfter[0].status).toBe('planned');
+    expect(decAfter[0].description).toBe('Internet Fibra 500MB');
+    expect(decAfter[0].amount).toBe(125);
+    expect(decAfter[0].date).toBe('2026-12-15');
+
+    await db.close();
   });
 });

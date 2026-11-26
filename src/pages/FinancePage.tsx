@@ -43,6 +43,7 @@ import {
   listRecurringRules,
   listTransactions,
   toggleTransactionStatus,
+  updateRecurringRule,
   updateTransaction,
   upsertCategoryBudget,
   type AccountWithBalance,
@@ -104,6 +105,18 @@ export const FinancePage: React.FC = () => {
   const [recAmount, setRecAmount] = useState('');
   const [recDay, setRecDay] = useState('10');
   const [recCategoryId, setRecCategoryId] = useState('cat_moradia');
+
+  // Edit recurring rule modal state
+  const [editingRec, setEditingRec] = useState<RecurringRule | null>(null);
+  const [editRecDesc, setEditRecDesc] = useState('');
+  const [editRecType, setEditRecType] = useState<'income' | 'expense'>('expense');
+  const [editRecSource, setEditRecSource] = useState<TransactionSourceType>('outros');
+  const [editRecAmount, setEditRecAmount] = useState('');
+  const [editRecDay, setEditRecDay] = useState('10');
+  const [editRecAccount, setEditRecAccount] = useState('acc_principal');
+  const [editRecCategory, setEditRecCategory] = useState('');
+  const [editRecNotes, setEditRecNotes] = useState('');
+  const [editRecSyncPlanned, setEditRecSyncPlanned] = useState(true);
 
   // New budget state
   const [bdgCategoryId, setBdgCategoryId] = useState('cat_alimentacao');
@@ -250,6 +263,46 @@ export const FinancePage: React.FC = () => {
     notify(
       `${res.created} lançamento(s) previsto(s) gerado(s) para ${month} (${res.skipped} já existente(s)).`,
     );
+  };
+
+  const openEditRecurring = (rule: RecurringRule) => {
+    setEditingRec(rule);
+    setEditRecDesc(rule.description);
+    setEditRecType(rule.type);
+    setEditRecSource(rule.source_type);
+    setEditRecAmount(String(rule.amount));
+    setEditRecDay(String(rule.day_of_month));
+    setEditRecAccount(rule.account_id || accounts[0]?.id || 'acc_principal');
+    setEditRecCategory(rule.category_id ?? '');
+    setEditRecNotes(rule.notes ?? '');
+    setEditRecSyncPlanned(true);
+  };
+
+  const handleSaveEditRecurring = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !editingRec) return;
+    try {
+      const res = await updateRecurringRule(db, editingRec.id, {
+        account_id: editRecAccount,
+        category_id: editRecCategory || null,
+        type: editRecType,
+        source_type: editRecSource,
+        description: editRecDesc,
+        amount: Number(editRecAmount.replace(',', '.')),
+        day_of_month: Number(editRecDay) || 1,
+        notes: editRecNotes,
+        syncPlannedTransactions: editRecSyncPlanned,
+      });
+      setEditingRec(null);
+      bumpDataVersion();
+      notify(
+        res.updatedPlannedCount > 0
+          ? `Recorrência atualizada (+ ${res.updatedPlannedCount} lançamento(s) previsto(s) sincronizado(s)).`
+          : 'Recorrência mensal atualizada.',
+      );
+    } catch (err) {
+      notify(err instanceof Error ? err.message : 'Erro ao atualizar recorrência.', 'error');
+    }
   };
 
   const handleUpsertBudget = async (e: React.FormEvent) => {
@@ -829,12 +882,23 @@ export const FinancePage: React.FC = () => {
                     </span>
                     <button
                       type="button"
+                      onClick={() => openEditRecurring(r)}
+                      className="text-slate-400 hover:text-brand-500"
+                      aria-label={`Editar recorrência ${r.description}`}
+                      title="Editar recorrência"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={async () => {
                         if (!db) return;
                         await deleteRecurringRule(db, r.id);
                         bumpDataVersion();
                       }}
                       className="text-slate-400 hover:text-rose-500"
+                      aria-label={`Excluir recorrência ${r.description}`}
+                      title="Excluir recorrência"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -1434,6 +1498,143 @@ export const FinancePage: React.FC = () => {
               className="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"
             >
               Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Edit Recurring Rule Modal */}
+      <Modal
+        open={Boolean(editingRec)}
+        title="Editar Recorrência Mensal"
+        subtitle="Altere descrição, valor, dia do vencimento ou categoria da conta fixa."
+        onClose={() => setEditingRec(null)}
+      >
+        <form onSubmit={handleSaveEditRecurring} className="space-y-3">
+          <div>
+            <label className="mb-1 block text-xs font-medium">Descrição</label>
+            <input
+              required
+              value={editRecDesc}
+              onChange={(e) => setEditRecDesc(e.target.value)}
+              className={`${inputClass} w-full`}
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Tipo</label>
+              <select
+                value={editRecType}
+                onChange={(e) => setEditRecType(e.target.value as 'income' | 'expense')}
+                className={`${inputClass} w-full`}
+              >
+                <option value="expense">Despesa fixa</option>
+                <option value="income">Receita fixa</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Valor (R$)</label>
+              <input
+                required
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={editRecAmount}
+                onChange={(e) => setEditRecAmount(e.target.value)}
+                className={`${inputClass} w-full`}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Dia do mês (1-31)</label>
+              <input
+                required
+                type="number"
+                min="1"
+                max="31"
+                value={editRecDay}
+                onChange={(e) => setEditRecDay(e.target.value)}
+                className={`${inputClass} w-full`}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Conta</label>
+              <select
+                value={editRecAccount}
+                onChange={(e) => setEditRecAccount(e.target.value)}
+                className={`${inputClass} w-full`}
+              >
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Categoria</label>
+              <select
+                value={editRecCategory}
+                onChange={(e) => setEditRecCategory(e.target.value)}
+                className={`${inputClass} w-full`}
+              >
+                <option value="">Sem categoria</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium">Origem</label>
+              <select
+                value={editRecSource}
+                onChange={(e) => setEditRecSource(e.target.value as TransactionSourceType)}
+                className={`${inputClass} w-full`}
+              >
+                <option value="outros">Outros</option>
+                <option value="salario">Salário CLT</option>
+                <option value="aplicativos">Uber/99 Moto</option>
+                <option value="servicos_ti">Serviços TI</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium">Observações</label>
+              <input
+                value={editRecNotes}
+                onChange={(e) => setEditRecNotes(e.target.value)}
+                className={`${inputClass} w-full`}
+              />
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs dark:border-slate-800">
+            <input
+              type="checkbox"
+              checked={editRecSyncPlanned}
+              onChange={(e) => setEditRecSyncPlanned(e.target.checked)}
+              className="h-4 w-4 rounded"
+            />
+            <span>
+              Atualizar também lançamentos ainda <strong>Previstos</strong> já gerados por esta regra (meses já pagos não mudam)
+            </span>
+          </label>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setEditingRec(null)}
+              className="rounded-lg px-4 py-2 text-xs text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="rounded-lg bg-brand-600 px-5 py-2 text-xs font-semibold text-white hover:bg-brand-700"
+            >
+              Salvar Recorrência
             </button>
           </div>
         </form>
