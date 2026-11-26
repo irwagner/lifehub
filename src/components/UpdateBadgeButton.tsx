@@ -7,6 +7,7 @@ import {
   checkForGitHubUpdate,
   downloadAndInstallUpdate,
   resolveCurrentVersion,
+  selectPlatformUpdateAsset,
   type UpdateCheckResult,
 } from '../services/updater';
 
@@ -63,30 +64,30 @@ export const UpdateBadgeButton: React.FC = () => {
   };
 
   if (updateInfo?.hasUpdate) {
-    const targetAsset = updateInfo.portableAsset ?? updateInfo.installerAsset;
-    const isInstaller = !updateInfo.portableAsset && Boolean(updateInfo.installerAsset);
+    const picked = selectPlatformUpdateAsset(updateInfo);
 
     const handleUpdateNow = async () => {
       if (updating) return;
-      if (Capacitor.isNativePlatform()) {
-        const plat = Capacitor.getPlatform() === 'ios' ? 'LifeHub-iOS.ipa' : 'LifeHub-Android.apk';
+      if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios') {
         const ok = window.confirm(
-          `Nova versão v${updateInfo.latestVersion} disponível no GitHub (atual: v${updateInfo.currentVersion}).\n\nAbrir a página da Release para baixar o novo ${plat}?`,
+          `Nova versão v${updateInfo.latestVersion} disponível (atual: v${updateInfo.currentVersion}).\n\nAbrir a página da Release para baixar o novo LifeHub-iOS.ipa?`,
         );
         if (ok) {
           window.open(updateInfo.releaseUrl, '_blank', 'noopener,noreferrer');
         }
         return;
       }
-      if (!targetAsset) return;
+      if (!picked.asset) return;
       const ok = window.confirm(
-        `Nova versão v${updateInfo.latestVersion} disponível no GitHub (atual: v${updateInfo.currentVersion}).\n\nBaixar e atualizar o LifeHub automaticamente agora? Seus dados locais no SQLite são preservados.`,
+        `Nova versão v${updateInfo.latestVersion} disponível (atual: v${updateInfo.currentVersion}).\n\nBaixar e atualizar o LifeHub automaticamente agora? Seus dados locais no SQLite são preservados.`,
       );
       if (!ok) return;
       setUpdating(true);
       try {
-        notify(`Baixando LifeHub v${updateInfo.latestVersion} do GitHub...`, 'info');
-        await downloadAndInstallUpdate(targetAsset, isInstaller);
+        notify(`Baixando LifeHub v${updateInfo.latestVersion} direto no app...`, 'info');
+        const msg = await downloadAndInstallUpdate(picked.asset, picked.isInstaller);
+        notify(msg, 'info');
+        setUpdating(false);
       } catch (err) {
         notify(err instanceof Error ? err.message : 'Erro ao atualizar automaticamente.', 'error');
         setUpdating(false);

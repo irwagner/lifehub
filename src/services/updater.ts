@@ -1,7 +1,8 @@
+import { Capacitor, registerPlugin, type PluginListenerHandle } from '@capacitor/core';
 import { invoke } from '@tauri-apps/api/core';
 import { isTauriRuntime } from '../db/client';
 
-export const CURRENT_APP_VERSION = '0.5.2';
+export const CURRENT_APP_VERSION = '0.5.3';
 export const GITHUB_REPO_OWNER = 'irwagner';
 export const GITHUB_REPO_NAME = 'lifehub';
 export const GITHUB_RELEASES_API = `https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/releases/latest`;
@@ -23,7 +24,21 @@ export interface UpdateCheckResult {
   notes: string;
   portableAsset: ReleaseAssetInfo | null;
   installerAsset: ReleaseAssetInfo | null;
+  androidApkAsset: ReleaseAssetInfo | null;
+  iosIpaAsset: ReleaseAssetInfo | null;
 }
+
+interface AppUpdaterPluginInterface {
+  downloadAndInstallApk(options: {
+    url: string;
+  }): Promise<{ status: 'installer_launched' | 'permission_required'; message: string }>;
+  addListener(
+    eventName: 'downloadProgress',
+    listenerFunc: (data: { percent: number; downloaded: number; total: number }) => void,
+  ): Promise<PluginListenerHandle>;
+}
+
+const AndroidAppUpdater = registerPlugin<AppUpdaterPluginInterface>('AppUpdater');
 
 interface GitHubReleaseApiResponse {
   tag_name?: string;
@@ -109,6 +124,16 @@ export async function checkForGitHubUpdate(
   const installerAsset =
     assets.find((a) => /instalador|setup/i.test(a.name) && /\.exe$/i.test(a.name)) ?? null;
 
+  const androidApkAsset =
+    assets.find((a) => /^lifehub-android\.apk$/i.test(a.name)) ??
+    assets.find((a) => /\.apk$/i.test(a.name)) ??
+    null;
+
+  const iosIpaAsset =
+    assets.find((a) => /^lifehub-ios\.ipa$/i.test(a.name)) ??
+    assets.find((a) => /\.ipa$/i.test(a.name)) ??
+    null;
+
   return {
     hasUpdate: compareSemver(latestVersion, currentVersion) > 0,
     currentVersion,
@@ -119,12 +144,38 @@ export async function checkForGitHubUpdate(
     notes: (data.body || '').trim(),
     portableAsset,
     installerAsset,
+    androidApkAsset,
+    iosIpaAsset,
   };
+}
+
+export async function downloadAndInstallAndroidApk(
+  asset: ReleaseAssetInfo,
+  onProgress?: (percent: number) => void,
+): Promise<{ status: 'installer_launched' | 'permission_required' | 'browser_opened'; message: string }> {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    let listener: PluginListenerHandle | null = null;
+    try {
+      if (onProgress) {
+        listener = await AndroidAppUpdater.addListener('downloadProgress', (ev) => {
+          if (typeof ev.percent === 'number') onProgress(ev.percent);
+        });
+      }
+      return await AndroidAppUpdater.downloadAndInstallApk({ url: asset.downloadUrl });
+    } finally {
+      if (listener) {
+        await listener.remove().catch(() => {});
+      }
+    }
+  }
+  window.open(asset.downloadUrl, '_blank', 'noopener,noreferrer');
+  return { status: 'browser_opened', message: 'Download iniciado no navegador.' };
 }
 
 export async function downloadAndInstallUpdate(
   asset: ReleaseAssetInfo,
   isInstaller: boolean,
+  onProgress?: (percent: number) => void,
 ): Promise<string> {
   if (isTauriRuntime()) {
     return invoke<string>('download_and_apply_update', {
@@ -132,6 +183,31 @@ export async function downloadAndInstallUpdate(
       isInstaller,
     });
   }
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+    const res = await downloadAndInstallAndroidApk(asset, onProgress);
+    return res.message;
+  }
   window.open(asset.downloadUrl, '_blank', 'noopener,noreferrer');
   return 'Download iniciado no navegador.';
+}
+
+/**
+ * Picks the best update asset for the current platform (Android APK, iOS IPA, or Windows EXE).
+ */
+export function selectPlatformUpdateAsset(info: UpdateCheckResult): {
+  asset: ReleaseAssetInfo | null;
+  isInstaller: boolean;
+  platform: 'android' | 'ios' | 'windows';
+} {
+  if (Capacitor.isNativePlatform()) {
+    if (Capacitor.getPlatform() === 'android') {
+      return { asset: info.androidApkAsset, isInstaller: false, platform: 'android' };
+    }
+    if (Capacitor.getPlatform() === 'ios') {
+      return { asset: info.iosIpaAsset, isInstaller: false, platform: 'ios' };
+    }
+  }
+  const asset = info.portableAsset ?? info.installerAsset;
+  const isInstaller = !info.portableAsset && Boolean(info.installerAsset);
+  return { asset, isInstaller, platform: 'windows' };
 }

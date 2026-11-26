@@ -36,6 +36,8 @@ Prepare no painel **Presença na loja → Ficha principal**:
 - **Descrição curta (até 80 caracteres):** ex. `Finanças, rotina, Uber/99, agenda e IA Gemini 100% offline ou com sync E2EE.`
 
 ## Passo 4 — Enviar o Arquivo `LifeHub-Android.aab`
+> **Nota importante sobre `REQUEST_INSTALL_PACKAGES`:** o APK distribuído direto pelo GitHub usa a permissão `REQUEST_INSTALL_PACKAGES` para atualizar automaticamente em 1 toque dentro do próprio app. Antes de enviar o `.aab` para a Google Play Store, remova a linha `REQUEST_INSTALL_PACKAGES` em `android/app/src/main/AndroidManifest.xml`, pois na Play Store as atualizações passam a ser gerenciadas pela própria loja.
+
 1. Baixe `LifeHub-Android.aab` da última release em [github.com/irwagner/lifehub/releases](https://github.com/irwagner/lifehub/releases).
 2. No Play Console, aceite a **Assinatura de apps pelo Google Play (Play App Signing)** — a chave atual do GitHub Actions funcionará como sua **Chave de Upload (Upload Key)**.
 3. **Atenção à regra de Contas Pessoais (obrigatória pelo Google):**

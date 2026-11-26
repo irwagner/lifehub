@@ -31,6 +31,18 @@ describe('Atualização Automática pelo GitHub Releases', () => {
               browser_download_url:
                 'https://github.com/irwagner/lifehub/releases/download/v0.3.0/LifeHub-Instalador-Windows.exe',
             },
+            {
+              name: 'LifeHub-Android.apk',
+              size: 4_800_000,
+              browser_download_url:
+                'https://github.com/irwagner/lifehub/releases/download/v0.3.0/LifeHub-Android.apk',
+            },
+            {
+              name: 'LifeHub-iOS.ipa',
+              size: 1_800_000,
+              browser_download_url:
+                'https://github.com/irwagner/lifehub/releases/download/v0.3.0/LifeHub-iOS.ipa',
+            },
           ],
         }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -41,6 +53,8 @@ describe('Atualização Automática pelo GitHub Releases', () => {
     expect(info.latestVersion).toBe('0.3.0');
     expect(info.portableAsset?.name).toBe('LifeHub.exe');
     expect(info.installerAsset?.name).toBe('LifeHub-Instalador-Windows.exe');
+    expect(info.androidApkAsset?.name).toBe('LifeHub-Android.apk');
+    expect(info.iosIpaAsset?.name).toBe('LifeHub-iOS.ipa');
 
     const upToDate = await checkForGitHubUpdate(mockFetch, '0.3.0');
     expect(upToDate.hasUpdate).toBe(false);

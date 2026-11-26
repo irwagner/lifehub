@@ -29,6 +29,7 @@ import { GlobalSearchModal } from './GlobalSearchModal';
 import { RemindersMenu } from './RemindersMenu';
 import { SkinSwitcher } from './SkinSwitcher';
 import { UpdateBadgeButton } from './UpdateBadgeButton';
+import { UpdateBanner } from './UpdateBanner';
 import { WindowTitleBar } from './WindowTitleBar';
 
 interface NavItemDef {
@@ -500,6 +501,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     <>
       {renderMobileBottomBar()}
       {renderMobileQuickSheet()}
+      <UpdateBanner />
       <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AiAssistantDrawer open={aiOpen} onClose={() => setAiOpen(false)} />
       <div className="fixed bottom-24 right-4 z-[60] flex flex-col gap-2 lg:bottom-5 lg:right-5">

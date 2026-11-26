@@ -6,6 +6,7 @@ import {
   GITHUB_RELEASES_PAGE,
   checkForGitHubUpdate,
   downloadAndInstallUpdate,
+  selectPlatformUpdateAsset,
   type UpdateCheckResult,
 } from '../services/updater';
 
@@ -13,6 +14,7 @@ export const AutoUpdatePanel: React.FC = () => {
   const { notify } = useApp();
   const [checking, setChecking] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
   const [result, setResult] = useState<UpdateCheckResult | null>(null);
 
   const handleCheck = async () => {
@@ -21,7 +23,7 @@ export const AutoUpdatePanel: React.FC = () => {
       const info = await checkForGitHubUpdate();
       setResult(info);
       if (info.hasUpdate) {
-        notify(`Nova versão v${info.latestVersion} encontrada no GitHub!`);
+        notify(`Nova versão v${info.latestVersion} disponível! Toque em Atualizar Agora.`);
       } else {
         notify(`Você já está na versão mais recente (v${info.currentVersion}).`);
       }
@@ -32,22 +34,33 @@ export const AutoUpdatePanel: React.FC = () => {
     }
   };
 
-  const handleInstall = async (isInstaller: boolean) => {
+  const handleInstallPrimary = async (forceWindowsInstaller = false) => {
     if (!result) return;
-    const asset = isInstaller ? result.installerAsset : result.portableAsset;
+    const picked = selectPlatformUpdateAsset(result);
+    const asset = forceWindowsInstaller ? result.installerAsset : picked.asset;
     if (!asset) {
       notify('Arquivo de atualização não encontrado nessa release.', 'error');
       return;
     }
     setInstalling(true);
+    setProgress(picked.platform === 'android' ? 0 : null);
     try {
-      notify(`Baixando ${asset.name} (v${result.latestVersion})...`, 'info');
-      await downloadAndInstallUpdate(asset, isInstaller);
+      notify(`Baixando ${asset.name} (v${result.latestVersion}) direto no app...`, 'info');
+      const msg = await downloadAndInstallUpdate(
+        asset,
+        forceWindowsInstaller || picked.isInstaller,
+        (pct) => setProgress(pct),
+      );
+      notify(msg, 'info');
+      setInstalling(false);
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Falha ao aplicar atualização.', 'error');
       setInstalling(false);
+      setProgress(null);
     }
   };
+
+  const picked = result ? selectPlatformUpdateAsset(result) : null;
 
   return (
     <section className="lh-card space-y-3">
@@ -57,10 +70,9 @@ export const AutoUpdatePanel: React.FC = () => {
             <ArrowDownToLine className="h-4 w-4" />
           </span>
           <div>
-            <h3 className="font-semibold">Atualizações Automáticas (GitHub Releases)</h3>
+            <h3 className="font-semibold">Atualizações Automáticas no Próprio App</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Versão instalada: <strong>v{CURRENT_APP_VERSION}</strong> · Repositório público{' '}
-              <code>irwagner/lifehub</code>. Ao abrir, o app checa novas versões automaticamente sem mexer nos seus dados SQLite.
+              Versão instalada: <strong>v{CURRENT_APP_VERSION}</strong> · O app avisa e atualiza direto em 1 toque (Windows e Android APK) sem precisar abrir o GitHub e sem perder seus dados SQLite.
             </p>
           </div>
         </div>
@@ -101,22 +113,26 @@ export const AutoUpdatePanel: React.FC = () => {
                   Nova versão disponível: {result.releaseName} (v{result.latestVersion})
                 </p>
                 <div className="flex flex-wrap gap-2">
-                  {result.portableAsset && (
+                  {picked?.asset && (
                     <button
                       type="button"
                       disabled={installing}
-                      onClick={() => handleInstall(false)}
+                      onClick={() => handleInstallPrimary(false)}
                       className="lh-btn-primary"
                     >
                       <ArrowDownToLine className="h-3.5 w-3.5" />
-                      {installing ? 'Baixando e Reiniciando...' : 'Atualizar Agora (1 clique)'}
+                      {installing
+                        ? progress !== null
+                          ? `Baixando (${progress}%)...`
+                          : 'Baixando e Aplicando...'
+                        : 'Atualizar Agora (1 toque)'}
                     </button>
                   )}
-                  {result.installerAsset && (
+                  {picked?.platform === 'windows' && result.installerAsset && (
                     <button
                       type="button"
                       disabled={installing}
-                      onClick={() => handleInstall(true)}
+                      onClick={() => handleInstallPrimary(true)}
                       className="lh-btn-secondary"
                     >
                       Baixar Instalador
@@ -132,7 +148,7 @@ export const AutoUpdatePanel: React.FC = () => {
             <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span>
-                LifeHub está atualizado na última versão publicada no GitHub (v{result.latestVersion}).
+                LifeHub está atualizado na última versão disponível (v{result.latestVersion}).
               </span>
             </div>
           )}
