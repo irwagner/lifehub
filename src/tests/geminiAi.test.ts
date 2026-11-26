@@ -390,7 +390,7 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
   });
 
   it('mapeia corretamente o melhor modelo Gemini para cada tipo de tarefa no modo smart e normaliza entradas PT-BR', () => {
-    expect(GEMINI_MODEL_ROUTING_GUIDE).toHaveLength(6);
+    expect(GEMINI_MODEL_ROUTING_GUIDE).toHaveLength(7);
     expect(normalizeFlexibleTime('7h')).toBe('07:00');
     expect(normalizeFlexibleTime('7h30')).toBe('07:30');
     expect(normalizeFlexibleTime('19:05:00')).toBe('19:05');
@@ -403,12 +403,50 @@ describe('Assistente IA Gemini (ações estruturadas, privacidade e fallback)', 
     expect(classifyPromptTask('Gastei 35 reais de gasolina hoje')).toBe('quick_entry');
     expect(buildModelChain('smart', 'Gastei 35 reais de gasolina hoje')[0]).toBe('gemini-3.5-flash-lite');
 
-    // Routine / calendar planning -> Gemini 3.8 Flash
+    // Routine / calendar planning -> Flash Lite primary (tested 100% in 5s, 500/day) + 3-flash-preview fallback
     expect(classifyPromptTask('Monte minha rotina semanal de academia e estudos de TI')).toBe('routine_planning');
-    expect(buildModelChain('smart', 'Monte minha rotina semanal de academia e estudos de TI')[0]).toBe('gemini-3.8-flash');
+    const routineChain = buildModelChain('smart', 'Monte minha rotina semanal de academia e estudos de TI');
+    expect(routineChain[0]).toBe('gemini-3.5-flash-lite');
+    expect(routineChain[1]).toBe('gemini-3-flash-preview');
 
     // Deep financial analysis -> Gemini 4 Hydrogen
     expect(classifyPromptTask('Analise minhas finanças e compare CLT vs Uber Moto este mês')).toBe('deep_analysis');
     expect(buildModelChain('smart', 'Analise minhas finanças e compare CLT vs Uber Moto este mês')[0]).toBe('gemini-4-hydrogen');
+  });
+
+  it('faz fallback automático quando um modelo sofre timeout (AbortError -> 504)', async () => {
+    const db = await createInMemoryTestDatabase();
+    let attempt = 0;
+    const mockTimeoutThenOk = (async () => {
+      attempt++;
+      if (attempt === 1) {
+        const err = new Error('The operation was aborted');
+        err.name = 'AbortError';
+        throw err;
+      }
+      return new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: 'Fallback pós-timeout funcionou!' }] } }],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } },
+      );
+    }) as typeof fetch;
+
+    const reply = await askLifeHubAssistant(
+      db,
+      {
+        apiKey: 'test-key',
+        model: 'smart',
+        shareFinancialContext: false,
+        autoExecuteActions: true,
+      },
+      [],
+      'Gastei 20 reais de café',
+      mockTimeoutThenOk,
+    );
+    expect(attempt).toBe(2);
+    expect(reply.modelUsed).toBe('gemini-3-flash-preview');
+    expect(reply.text).toContain('Fallback pós-timeout');
+    await db.close();
   });
 });

@@ -1,6 +1,6 @@
 [package]
 name = "lifehub"
-version = "0.5.0"
+version = "0.5.1"
 description = "LifeHub — Central de Vida (local-first desktop app for Windows)"
 authors = ["LifeHub"]
 edition = "2021"

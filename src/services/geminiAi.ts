@@ -62,6 +62,7 @@ import type { ScheduleTemplateId } from './scheduleTemplates';
 export const ORDERED_GEMINI_FALLBACK_CHAIN = [
   'gemini-4-hydrogen',
   'gemini-3.8-flash',
+  'gemini-3-flash-preview',
   'gemini-3.6-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
@@ -84,75 +85,86 @@ export interface GeminiModelRoutingInfo {
 
 export const GEMINI_MODEL_ROUTING_GUIDE: readonly GeminiModelRoutingInfo[] = [
   {
+    id: 'gemini-3.5-flash-lite',
+    name: 'Gemini 3.5 Flash Lite',
+    tier: '1º Recomendado · Campeão Geral (0,9s–5s)',
+    dailyQuota: '500 req/dia',
+    bestFor:
+      'Testado ao vivo (12/12): melhor para lançamentos avulsos, fixos mensais (criar/editar), cartão 1x e parcelados, ideias, tarefas, hábitos, Uber/99 e até rotinas semanais de 48+ blocos em ~5s.',
+    avoidFor: 'Análises estratégicas muito longas onde vale o raciocínio profundo do Hydrogen.',
+    idealProfiles: ['quick_entry', 'routine_planning'],
+  },
+  {
     id: 'gemini-4-hydrogen',
     name: 'Gemini 4 Hydrogen',
-    tier: '1º · Topo (Raciocínio)',
+    tier: 'Topo · Raciocínio Profundo (1,4s–22s)',
     dailyQuota: '20 req/dia',
     bestFor:
-      'Diagnóstico financeiro profundo, decisões estratégicas (CLT vs Uber/99 vs TI), planejamento mensal completo e pacotes com muitas ações simultâneas.',
-    avoidFor: 'Gastar cota em lançamentos avulsos simples de 1 linha.',
+      'Diagnóstico financeiro profundo, comparações estratégicas (CLT vs Uber/99 vs TI), planejamento mensal completo e decisões complexas.',
+    avoidFor: 'Gastar a cota de 20/dia em lançamentos simples do cotidiano.',
     idealProfiles: ['deep_analysis'],
   },
   {
-    id: 'gemini-3.8-flash',
-    name: 'Gemini 3.8 Flash',
-    tier: '2º · Alta Inteligência',
-    dailyQuota: '20 req/dia',
+    id: 'gemini-3-flash-preview',
+    name: 'Gemini 3 Flash Preview',
+    tier: 'Rápido Intermediário (~1,3s)',
+    dailyQuota: 'Free Tier',
     bestFor:
-      'Montar rotina semanal no calendário, organizar blocos de treino/estudos respeitando fins de semana com o filho e corrigir múltiplos lançamentos.',
-    avoidFor: 'Perguntas banais quando o Flash Lite resolve em 1s.',
-    idealProfiles: ['routine_planning'],
-  },
-  {
-    id: 'gemini-3.6-flash',
-    name: 'Gemini 3.6 Flash',
-    tier: '3º · Avançado Equilibrado',
-    dailyQuota: '20 req/dia',
-    bestFor:
-      'Resumos semanais, criação de projetos/vagas de TI, metas financeiras e múltiplos parcelamentos/recorrências juntos.',
-    avoidFor: 'Uso contínuo pesado sem necessidade.',
+      'Fallback super veloz para rotinas, planos semanais, resumos e múltiplos comandos quando o 3.5 Flash Lite ou Hydrogen estiverem ocupados.',
+    avoidFor: 'Dependência única (pode variar por ser preview).',
     idealProfiles: ['routine_planning', 'deep_analysis'],
-  },
-  {
-    id: 'gemini-3.5-flash-lite',
-    name: 'Gemini 3.5 Flash Lite',
-    tier: '4º · Melhor Dia a Dia',
-    dailyQuota: '500 req/dia',
-    bestFor:
-      'Lançamentos rápidos: gasto/receita avulso, fixo mensal, parcelado 1x–120x (cartão/moto), ideias, tarefas, hábitos, eventos avulsos e jornadas Uber/99.',
-    avoidFor: 'Análises financeiras muito longas com múltiplas simulações.',
-    idealProfiles: ['quick_entry'],
   },
   {
     id: 'gemini-3.1-flash-lite',
     name: 'Gemini 3.1 Flash Lite',
-    tier: '5º · Econômico Contingência',
+    tier: 'Econômico Estável (~4,6s)',
     dailyQuota: '500 req/dia',
     bestFor:
-      'Backup instantâneo para lançamentos diários, edições rápidas e captura de ideias quando o 3.5 Flash Lite atingir limite.',
-    avoidFor: 'Montagem complexa de agenda com muitas regras simultâneas.',
+      'Backup estável de alta cota para lançamentos diários, correções e captura de ideias caso o 3.5 Flash Lite atinja limite.',
+    avoidFor: 'Análises financeiras muito extensas.',
     idealProfiles: ['quick_entry'],
+  },
+  {
+    id: 'gemini-3.8-flash',
+    name: 'Gemini 3.8 Flash',
+    tier: 'Alta Inteligência (sujeito a fila 503)',
+    dailyQuota: '20 req/dia',
+    bestFor:
+      'Montagem de agenda e raciocínio complexo quando disponível; agora protegido por timeout de 25s para nunca travar o chat.',
+    avoidFor: 'Modelo principal sem fallback (apresentou alta demanda/timeout nos testes ao vivo).',
+    idealProfiles: ['routine_planning', 'deep_analysis'],
+  },
+  {
+    id: 'gemini-3.6-flash',
+    name: 'Gemini 3.6 Flash',
+    tier: 'Avançado Secundário',
+    dailyQuota: '20 req/dia',
+    bestFor:
+      'Contingência inteligente para correções multi-turno e pacotes de ações quando os modelos primários falharem.',
+    avoidFor: 'Uso contínuo pesado (também sujeito a picos de latência).',
+    idealProfiles: ['routine_planning'],
   },
   {
     id: 'gemma-4-31b-it',
     name: 'Gemma 4 31B',
-    tier: '6º · Reserva Massiva',
+    tier: 'Reserva Massiva',
     dailyQuota: '14.400 req/dia',
     bestFor:
-      'Contingência de altíssima cota quando todos os modelos Flash esgotarem — ótimo para dúvidas diretas e lançamentos unitários.',
-    avoidFor: 'JSON muito extenso com 8+ ações no mesmo turno.',
+      'Contingência de altíssima cota quando todos os modelos Gemini Flash esgotarem — ótimo para dúvidas rápidas e registros simples.',
+    avoidFor: 'Pacotes JSON muito grandes (8+ ações de uma vez).',
     idealProfiles: ['quick_entry'],
   },
 ] as const;
 
 export const GEMINI_MODELS = [
-  { id: 'smart', label: 'Inteligente por Tarefa (Recomendado · Economiza cota)' },
+  { id: 'smart', label: 'Inteligente por Tarefa (Recomendado · Testado ao vivo)' },
   { id: 'auto', label: 'Automático (Melhores primeiro → Fallback)' },
-  { id: 'gemini-4-hydrogen', label: '1º · Gemini 4 Hydrogen (Topo · 20/dia)' },
-  { id: 'gemini-3.8-flash', label: '2º · Gemini 3.8 Flash (Rotina & Agenda · 20/dia)' },
-  { id: 'gemini-3.6-flash', label: '3º · Gemini 3.6 Flash (Avançado · 20/dia)' },
-  { id: 'gemini-3.5-flash-lite', label: '4º · Gemini 3.5 Flash Lite (Dia a dia · 500/dia)' },
-  { id: 'gemini-3.1-flash-lite', label: '5º · Gemini 3.1 Flash Lite (Econômico · 500/dia)' },
+  { id: 'gemini-3.5-flash-lite', label: '★ Gemini 3.5 Flash Lite (Mais rápido · 500/dia)' },
+  { id: 'gemini-4-hydrogen', label: '1º · Gemini 4 Hydrogen (Análises profundas · 20/dia)' },
+  { id: 'gemini-3-flash-preview', label: '2º · Gemini 3 Flash Preview (Veloz · 1,3s)' },
+  { id: 'gemini-3.1-flash-lite', label: '3º · Gemini 3.1 Flash Lite (Backup · 500/dia)' },
+  { id: 'gemini-3.8-flash', label: '4º · Gemini 3.8 Flash (Alta inteligência · 20/dia)' },
+  { id: 'gemini-3.6-flash', label: '5º · Gemini 3.6 Flash (Avançado · 20/dia)' },
   { id: 'gemma-4-31b-it', label: '6º · Gemma 4 31B (Reserva · 14.400/dia)' },
 ] as const;
 
@@ -759,29 +771,32 @@ export function buildModelChain(
     if (profile === 'deep_analysis') {
       return [
         'gemini-4-hydrogen',
+        'gemini-3-flash-preview',
+        'gemini-3.5-flash-lite',
         'gemini-3.8-flash',
         'gemini-3.6-flash',
-        'gemini-3.5-flash-lite',
         'gemini-3.1-flash-lite',
         'gemma-4-31b-it',
       ];
     }
     if (profile === 'routine_planning') {
       return [
-        'gemini-3.8-flash',
-        'gemini-4-hydrogen',
-        'gemini-3.6-flash',
         'gemini-3.5-flash-lite',
+        'gemini-3-flash-preview',
+        'gemini-4-hydrogen',
+        'gemini-3.8-flash',
+        'gemini-3.6-flash',
         'gemini-3.1-flash-lite',
         'gemma-4-31b-it',
       ];
     }
     return [
       'gemini-3.5-flash-lite',
+      'gemini-3-flash-preview',
       'gemini-3.1-flash-lite',
-      'gemini-3.6-flash',
-      'gemini-3.8-flash',
       'gemini-4-hydrogen',
+      'gemini-3.8-flash',
+      'gemini-3.6-flash',
       'gemma-4-31b-it',
     ];
   }
@@ -1188,26 +1203,51 @@ interface GeminiPart {
   thought?: boolean;
 }
 
+const GEMINI_REQUEST_TIMEOUT_MS = 28_000;
+const GEMINI_TEST_TIMEOUT_MS = 14_000;
+
 async function callGeminiModel(
   modelId: string,
   apiKey: string,
   systemInstruction: string,
   contents: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>,
   fetchFn: typeof fetch,
+  timeoutMs = GEMINI_REQUEST_TIMEOUT_MS,
 ): Promise<{ ok: true; text: string } | { ok: false; status: number; message: string }> {
   const url = `${GEMINI_API_BASE}/${modelId}:generateContent?key=${encodeURIComponent(apiKey.trim())}`;
-  const res = await fetchFn(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: systemInstruction }] },
-      contents,
-      generationConfig: {
-        temperature: 0.3,
-        maxOutputTokens: 4096,
-      },
-    }),
-  });
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+
+  let res: Response;
+  try {
+    res = await fetchFn(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      ...(controller ? { signal: controller.signal } : {}),
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents,
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 4096,
+        },
+      }),
+    });
+  } catch (err) {
+    if (timer) clearTimeout(timer);
+    const isAbort = err instanceof Error && err.name === 'AbortError';
+    return {
+      ok: false,
+      status: 504,
+      message: isAbort
+        ? `Tempo limite excedido (${Math.round(timeoutMs / 1000)}s) aguardando ${modelId}.`
+        : err instanceof Error
+          ? err.message
+          : 'Erro de rede ao consultar Gemini.',
+    };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
@@ -1238,7 +1278,7 @@ async function callGeminiModel(
 }
 
 function isFallbackableStatus(status: number): boolean {
-  return status === 429 || status === 404 || status === 503 || status === 502 || status === 500;
+  return status === 429 || status === 404 || status === 503 || status === 502 || status === 500 || status === 504;
 }
 
 export async function testGeminiConnection(
@@ -1260,6 +1300,7 @@ export async function testGeminiConnection(
       'Responda apenas OK em português.',
       [{ role: 'user', parts: [{ text: 'Teste de conexão. Responda apenas OK.' }] }],
       fetchFn,
+      GEMINI_TEST_TIMEOUT_MS,
     );
     if (res.ok) {
       return { ok: true, modelUsed: modelId, reply: res.text };
