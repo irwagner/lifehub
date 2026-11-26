@@ -37,9 +37,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
-      - name: Build mobile web bundle & sync Capacitor Android
+      - name: Build full LifeHub app & sync Capacitor Android
         run: |
-          pnpm run build:mobile
+          pnpm run build
           npx cap sync android
 
       - name: Build & sign Android APK
@@ -110,9 +110,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
 
-      - name: Build mobile web bundle & sync Capacitor iOS
+      - name: Build full LifeHub app & sync Capacitor iOS
         run: |
-          pnpm run build:mobile
+          pnpm run build
           npx cap sync ios
 
       - name: Compile iOS App with Xcode & package .ipa

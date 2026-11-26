@@ -275,11 +275,123 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
   );
 
+  const renderMobileBottomBar = () => {
+    const mobileTabs: Array<{
+      id: NavSection;
+      label: string;
+      icon: React.FC<{ className?: string }>;
+    }> = [
+      { id: 'dashboard', label: 'Hoje', icon: Home },
+      { id: 'finance', label: 'Finanças', icon: Wallet },
+      { id: 'work', label: 'Uber/99', icon: Bike },
+      { id: 'calendar', label: 'Agenda', icon: CalendarDays },
+    ];
+
+    return (
+      <nav
+        aria-label="Navegação mobile"
+        className="lh-safe-bottom lh-sidebar fixed inset-x-0 bottom-0 z-30 border-t px-2 pt-1.5 backdrop-blur-2xl lg:hidden"
+        style={{ borderColor: 'var(--lh-card-border)' }}
+      >
+        <div className="mx-auto grid max-w-lg grid-cols-5 gap-1">
+          {mobileTabs.map((item) => {
+            const Icon = item.icon;
+            const active = activeSection === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleSelectNav(item.id)}
+                className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold transition ${
+                  active
+                    ? 'bg-brand-600/15 text-brand-500'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            className={`flex flex-col items-center justify-center gap-0.5 rounded-xl py-1.5 text-[10px] font-semibold transition ${
+              !mobileTabs.some((t) => t.id === activeSection)
+                ? 'bg-brand-600/15 text-brand-500'
+                : 'text-slate-500 dark:text-slate-400'
+            }`}
+          >
+            <Menu className="h-4 w-4" />
+            <span>Menu</span>
+          </button>
+        </div>
+      </nav>
+    );
+  };
+
+  const renderMobileDrawerForAltShells = () =>
+    sidebarOpen ? (
+      <div className="fixed inset-0 z-40 flex lg:hidden">
+        <div
+          className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm"
+          onClick={() => setSidebarOpen(false)}
+        />
+        <aside
+          className="lh-sidebar lh-safe-top relative z-10 flex w-64 max-w-[82vw] flex-col border-r shadow-2xl"
+          style={{ borderColor: 'var(--lh-card-border)' }}
+        >
+          <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
+            {renderBrandMark()}
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(false)}
+              className="rounded-lg p-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-white/[0.06]"
+              aria-label="Fechar menu"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <nav className="flex-1 space-y-2.5 overflow-y-auto px-3 py-2" aria-label="Menu completo">
+            {NAV_GROUPS.map((group) => (
+              <div key={group.label}>
+                <p className="mb-1 px-2 text-[9.5px] font-semibold uppercase tracking-wider text-slate-400">
+                  {group.label}
+                </p>
+                <div className="space-y-0.5">
+                  {group.items.map((item) => {
+                    const Icon = item.icon;
+                    const active = activeSection === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => handleSelectNav(item.id)}
+                        className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-xs font-medium transition ${
+                          active
+                            ? 'bg-brand-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:bg-black/[0.04] dark:text-slate-300 dark:hover:bg-white/[0.06]'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 shrink-0" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </nav>
+        </aside>
+      </div>
+    ) : null;
+
   const renderOverlays = () => (
     <>
+      {renderMobileBottomBar()}
       <GlobalSearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AiAssistantDrawer open={aiOpen} onClose={() => setAiOpen(false)} />
-      <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2">
+      <div className="fixed bottom-24 right-4 z-50 flex flex-col gap-2 lg:bottom-5 lg:right-5">
         {toasts.map((t) => (
           <div
             key={t.id}
@@ -308,13 +420,13 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <WindowTitleBar />
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <header className="lh-topbar sticky top-0 z-30 border-b backdrop-blur-xl">
+          <header className="lh-topbar lh-safe-top sticky top-0 z-30 border-b backdrop-blur-xl">
             <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
               {renderBrandMark()}
 
               <nav
                 aria-label="Navegação principal"
-                className="flex items-center gap-1 overflow-x-auto rounded-2xl border p-1"
+                className="hidden items-center gap-1 overflow-x-auto rounded-2xl border p-1 lg:flex"
                 style={{
                   borderColor: 'var(--lh-card-border)',
                   backgroundColor: 'var(--lh-canvas)',
@@ -361,9 +473,10 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 sm:p-5">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 pb-24 sm:p-5 lg:pb-5">{children}</main>
         </div>
 
+        {renderMobileDrawerForAltShells()}
         {renderOverlays()}
       </div>
     );
@@ -378,7 +491,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         <WindowTitleBar />
 
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-          <header className="lh-topbar sticky top-3 z-20 mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl">
+          <header className="lh-topbar lh-safe-top sticky top-0 z-20 mx-auto mt-2 flex w-[calc(100%-1.5rem)] max-w-7xl flex-wrap items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 shadow-lg backdrop-blur-xl sm:top-3 sm:mt-3 sm:w-[calc(100%-2rem)]">
             <div className="flex items-center gap-3">
               {renderBrandMark()}
               {settings && (
@@ -392,17 +505,17 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {renderUtilities()}
           </header>
 
-          <div className="mx-auto mt-3 flex w-[calc(100%-2rem)] max-w-7xl justify-center xl:hidden">
+          <div className="mx-auto mt-3 flex w-[calc(100%-1.5rem)] max-w-7xl justify-center sm:w-[calc(100%-2rem)] xl:hidden">
             {renderQuickPills(true)}
           </div>
 
-          <main className="mx-auto w-full max-w-[1380px] flex-1 px-4 pt-3.5 pb-20 sm:px-5">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 px-4 pt-3.5 pb-24 sm:px-5 lg:pb-20">{children}</main>
         </div>
 
-        {/* Floating Windows/macOS style bottom dock */}
+        {/* Floating Windows/macOS style bottom dock (desktop only; mobile uses bottom bar) */}
         <nav
           aria-label="Dock principal"
-          className="lh-dock lh-sidebar fixed bottom-4 left-1/2 z-30 flex max-w-[95vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border px-2.5 py-2 shadow-2xl backdrop-blur-2xl"
+          className="lh-dock lh-sidebar fixed bottom-4 left-1/2 z-30 hidden max-w-[95vw] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-2xl border px-2.5 py-2 shadow-2xl backdrop-blur-2xl lg:flex"
         >
           {FLAT_NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -429,6 +542,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           })}
         </nav>
 
+        {renderMobileDrawerForAltShells()}
         {renderOverlays()}
       </div>
     );
@@ -503,7 +617,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           </aside>
 
           <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
-            <header className="lh-topbar sticky top-0 z-20 flex flex-nowrap items-center justify-between gap-2 border-b px-3.5 py-2 backdrop-blur-xl sm:px-5">
+            <header className="lh-topbar lh-safe-top sticky top-0 z-20 flex flex-nowrap items-center justify-between gap-2 border-b px-3.5 py-2 backdrop-blur-xl sm:px-5">
               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden">
                 <button
                   type="button"
@@ -518,7 +632,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
               {renderUtilities()}
             </header>
 
-            <main className="mx-auto w-full max-w-[1440px] flex-1 p-3.5 sm:p-5">{children}</main>
+            <main className="mx-auto w-full max-w-[1440px] flex-1 p-3.5 pb-24 sm:p-5 lg:pb-5">{children}</main>
           </div>
         </div>
 
@@ -545,9 +659,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         )}
 
         <aside
-          className={`lh-sidebar ${
+          className={`lh-sidebar lh-safe-top ${
             isDualTone ? 'lh-sidebar-dark-tone' : ''
-          } fixed inset-y-0 left-0 z-40 flex w-56 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:translate-x-0 ${
+          } fixed inset-y-0 left-0 z-40 flex w-60 shrink-0 flex-col backdrop-blur-xl transition-transform duration-200 lg:static lg:w-56 lg:translate-x-0 ${
             isFloating
               ? 'border lg:m-3 lg:mr-0 lg:rounded-2xl lg:shadow-xl'
               : 'border-r'
@@ -681,9 +795,9 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         {/* Main area */}
         <div className="flex min-w-0 flex-1 flex-col overflow-y-auto">
           <header
-            className={`lh-topbar sticky z-20 flex flex-nowrap items-center justify-between gap-2 backdrop-blur-xl ${
+            className={`lh-topbar lh-safe-top sticky z-20 flex flex-nowrap items-center justify-between gap-2 backdrop-blur-xl ${
               isFloating
-                ? 'top-3 mx-3.5 mt-3 rounded-2xl border px-3.5 py-2 shadow-sm sm:mx-5'
+                ? 'top-2 mx-3 mt-2 rounded-2xl border px-3.5 py-2 shadow-sm sm:top-3 sm:mx-5 sm:mt-3'
                 : 'top-0 border-b px-3.5 py-2 sm:px-5'
             }`}
           >
@@ -701,7 +815,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             {renderUtilities()}
           </header>
 
-          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 sm:p-5">{children}</main>
+          <main className="mx-auto w-full max-w-[1380px] flex-1 p-3.5 pb-24 sm:p-5 lg:pb-5">{children}</main>
         </div>
       </div>
 

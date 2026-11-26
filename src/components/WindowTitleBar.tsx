@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { Copy, Minus, Square, X } from 'lucide-react';
 import { useApp, type NavSection } from '../context/AppContext';
@@ -57,9 +58,10 @@ export const WindowTitleBar: React.FC = () => {
   const activeSkin = getSkinDefinition(settings?.ui_skin);
   const chromeStyle = resolveChromeStyle(activeSkin.id);
   const tauri = isTauriRuntime();
+  const isNativeMobile = Capacitor.isNativePlatform();
 
   useEffect(() => {
-    if (!tauri) return;
+    if (!tauri || isNativeMobile) return;
     const win = getCurrentWindow();
     let unlisten: (() => void) | undefined;
 
@@ -124,6 +126,10 @@ export const WindowTitleBar: React.FC = () => {
       // fallback to data-tauri-drag-region
     }
   };
+
+  if (isNativeMobile) {
+    return null;
+  }
 
   const sectionLabel = SECTION_TITLES[activeSection] ?? 'LifeHub';
 

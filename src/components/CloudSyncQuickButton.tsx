@@ -1,12 +1,20 @@
 import React from 'react';
+import { Capacitor } from '@capacitor/core';
 import { Cloud, CloudOff, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { isCloudSyncReady, loadCloudSyncConfig } from '../services/cloudSync';
 
 export const CloudSyncQuickButton: React.FC = () => {
   const { autoSyncStatus, triggerCloudSync } = useApp();
+  const isNativeMobile = Capacitor.isNativePlatform();
+  const defaultDevice =
+    Capacitor.getPlatform() === 'android'
+      ? 'Android App'
+      : Capacitor.getPlatform() === 'ios'
+        ? 'iPhone App'
+        : 'Windows Desktop';
 
-  const cfg = loadCloudSyncConfig('Windows Desktop');
+  const cfg = loadCloudSyncConfig(defaultDevice);
   const configured = isCloudSyncReady(cfg);
   const autoEnabled = configured && cfg.autoSync !== false;
   const busy = autoSyncStatus === 'syncing' || autoSyncStatus === 'scheduled';
@@ -54,7 +62,9 @@ export const CloudSyncQuickButton: React.FC = () => {
           ? 'Sync...'
           : autoSyncStatus === 'scheduled'
             ? 'Salvando...'
-            : 'Celular'}
+            : isNativeMobile
+              ? 'Sync'
+              : 'Celular'}
       </span>
       {autoEnabled && !busy && autoSyncStatus !== 'error' && autoSyncStatus !== 'offline' && (
         <span

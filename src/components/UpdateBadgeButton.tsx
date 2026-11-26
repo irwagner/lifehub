@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 import { ArrowDownToLine, CheckCircle2, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import {
@@ -66,7 +67,18 @@ export const UpdateBadgeButton: React.FC = () => {
     const isInstaller = !updateInfo.portableAsset && Boolean(updateInfo.installerAsset);
 
     const handleUpdateNow = async () => {
-      if (!targetAsset || updating) return;
+      if (updating) return;
+      if (Capacitor.isNativePlatform()) {
+        const plat = Capacitor.getPlatform() === 'ios' ? 'LifeHub-iOS.ipa' : 'LifeHub-Android.apk';
+        const ok = window.confirm(
+          `Nova versão v${updateInfo.latestVersion} disponível no GitHub (atual: v${updateInfo.currentVersion}).\n\nAbrir a página da Release para baixar o novo ${plat}?`,
+        );
+        if (ok) {
+          window.open(updateInfo.releaseUrl, '_blank', 'noopener,noreferrer');
+        }
+        return;
+      }
+      if (!targetAsset) return;
       const ok = window.confirm(
         `Nova versão v${updateInfo.latestVersion} disponível no GitHub (atual: v${updateInfo.currentVersion}).\n\nBaixar e atualizar o LifeHub automaticamente agora? Seus dados locais no SQLite são preservados.`,
       );

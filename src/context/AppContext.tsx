@@ -1,4 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import { getDatabase } from '../db/client';
 import type { SqlExecutor } from '../db/types';
 import { getSettings, updateSettings } from '../repositories/settingsRepo';
@@ -6,9 +9,15 @@ import {
   AutoSyncController,
   isCloudSyncReady,
   loadCloudSyncConfig,
+  parseMobilePairingHash,
+  saveCloudSyncConfig,
   syncDatabaseWithCloud,
   type AutoSyncStatus,
 } from '../services/cloudSync';
+import {
+  loadGeminiAiConfig,
+  saveGeminiAiConfig,
+} from '../services/geminiAi';
 import {
   isGoogleSheetsReady,
   loadGoogleSheetsConfig,
@@ -18,11 +27,19 @@ import {
 import {
   isFamilySyncReady,
   loadFamilyFinanceConfig,
+  parseFamilyInviteHash,
   saveFamilyFinanceConfig,
   syncFamilyFinanceHub,
 } from '../services/familyFinanceSync';
 import { getSkinDefinition } from '../services/skins';
 import type { Settings } from '../types/domain';
+
+function resolveDeviceName(): string {
+  const plat = Capacitor.getPlatform();
+  if (plat === 'android') return 'Android App';
+  if (plat === 'ios') return 'iPhone App';
+  return 'Windows Desktop';
+}
 
 export type NavSection =
   | 'dashboard'
@@ -205,12 +222,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
-  // Automatic background E2EE Sync controller (on every action + startup + window focus/online)
+  // Automatic background E2EE Sync controller (on every action + startup + window focus/visibility/online)
   useEffect(() => {
     if (!db) return;
+    const deviceName = resolveDeviceName();
     const controller = new AutoSyncController({
       debounceMs: 1200,
-      getConfig: () => loadCloudSyncConfig('Windows Desktop'),
+      getConfig: () => loadCloudSyncConfig(deviceName),
       runSyncFn: (cfg) => syncDatabaseWithCloud(db, cfg),
       onStateChange: (st) => setAutoSyncStatus(st),
       onSynced: async (res) => {
@@ -225,7 +243,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Initial silent pull/merge on app open
     const initialTimer = window.setTimeout(() => {
-      const cfg = loadCloudSyncConfig('Windows Desktop');
+      const cfg = loadCloudSyncConfig(deviceName);
       if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
         lastFocusSyncAtRef.current = Date.now();
         void controller.flushNow();
@@ -233,9 +251,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }, 1500);
 
     const handleResumeSync = () => {
+      if (document.visibilityState === 'hidden') return;
       const now = Date.now();
       if (now - lastFocusSyncAtRef.current < 15_000) return;
-      const cfg = loadCloudSyncConfig('Windows Desktop');
+      const cfg = loadCloudSyncConfig(deviceName);
       if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
         lastFocusSyncAtRef.current = now;
         void controller.flushNow();
@@ -243,27 +262,106 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
 
     const handleOnline = () => {
-      const cfg = loadCloudSyncConfig('Windows Desktop');
+      const cfg = loadCloudSyncConfig(deviceName);
       if (isCloudSyncReady(cfg) && cfg.autoSync !== false) {
         void controller.flushNow();
       }
     };
 
     window.addEventListener('focus', handleResumeSync);
+    document.addEventListener('visibilitychange', handleResumeSync);
     window.addEventListener('online', handleOnline);
+
+    // Optional native deep link handling (lifehub://pair#pair=... or #family=...)
+    let urlListenerHandle: { remove: () => Promise<void> } | null = null;
+    const handleNativeUrl = async (rawUrl: string) => {
+      const hashIdx = rawUrl.indexOf('#');
+      if (hashIdx < 0) return;
+      const hash = rawUrl.slice(hashIdx);
+
+      const paired = parseMobilePairingHash(hash);
+      if (paired) {
+        const nextCfg = {
+          ...loadCloudSyncConfig(deviceName),
+          enabled: true,
+          endpointUrl: paired.endpointUrl,
+          passphrase: paired.passphrase,
+          deviceName,
+        };
+        saveCloudSyncConfig(nextCfg);
+        if (paired.geminiApiKey) {
+          saveGeminiAiConfig({
+            ...loadGeminiAiConfig(),
+            apiKey: paired.geminiApiKey,
+            updatedAt: new Date().toISOString(),
+          });
+        }
+        notify('Link de pareamento detectado! Sincronizando...');
+        try {
+          await controller.flushNow(true);
+        } catch {
+          // user sees status
+        }
+        return;
+      }
+
+      const fam = parseFamilyInviteHash(hash);
+      if (fam) {
+        const nextFam = {
+          ...loadFamilyFinanceConfig(),
+          enabled: true,
+          endpointUrl: fam.endpointUrl,
+          familyKey: fam.familyKey,
+        };
+        saveFamilyFinanceConfig(nextFam);
+        setActiveSection('finance');
+        notify('Convite da Família detectado! Sincronizando...');
+        try {
+          const res = await syncFamilyFinanceHub(db, nextFam);
+          saveFamilyFinanceConfig({
+            ...nextFam,
+            lastSyncedAt: res.syncedAt,
+            lastRevision: res.revision,
+          });
+          setDataVersion((v) => v + 1);
+          notify('Conectado ao Financeiro da Família!');
+        } catch (err) {
+          notify(err instanceof Error ? err.message : 'Erro ao sincronizar família.', 'error');
+        }
+      }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      CapApp.getLaunchUrl()
+        .then((res) => {
+          if (res?.url) void handleNativeUrl(res.url);
+        })
+        .catch(() => {});
+      CapApp.addListener('appUrlOpen', ({ url }) => {
+        if (url) void handleNativeUrl(url);
+      })
+        .then((handle) => {
+          urlListenerHandle = handle;
+        })
+        .catch(() => {});
+    }
 
     return () => {
       window.clearTimeout(initialTimer);
       window.removeEventListener('focus', handleResumeSync);
+      document.removeEventListener('visibilitychange', handleResumeSync);
       window.removeEventListener('online', handleOnline);
+      if (urlListenerHandle) {
+        void urlListenerHandle.remove();
+      }
       controller.dispose();
       autoSyncRef.current = null;
     };
-  }, [db]);
+  }, [db, notify]);
 
   const triggerCloudSync = useCallback(
     async (options?: { manual?: boolean }) => {
-      const cfg = loadCloudSyncConfig('Windows Desktop');
+      const cfg = loadCloudSyncConfig(resolveDeviceName());
       if (!isCloudSyncReady(cfg)) {
         if (options?.manual) {
           setActiveSection('settings');
@@ -278,7 +376,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       try {
         const res = await autoSyncRef.current.flushNow(Boolean(options?.manual));
         if (options?.manual && res) {
-          notify(`Sincronizado com celular (rev. ${res.revision}).`);
+          notify(`Sincronizado com a nuvem E2EE (rev. ${res.revision}).`);
         }
       } catch (err) {
         if (options?.manual) {
@@ -291,7 +389,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   useEffect(() => {
     const root = document.documentElement;
-    if (settings?.theme === 'light') {
+    const isLight = settings?.theme === 'light';
+    if (isLight) {
       root.classList.remove('dark');
     } else {
       root.classList.add('dark');
@@ -300,6 +399,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     root.dataset.skin = skinDef.id;
     root.dataset.shell = skinDef.shell;
     root.dataset.dashboard = skinDef.dashboard;
+
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setStyle({ style: isLight ? Style.Light : Style.Dark }).catch(() => {});
+      if (Capacitor.getPlatform() === 'android') {
+        StatusBar.setBackgroundColor({ color: isLight ? '#f4f6fb' : '#070b14' }).catch(() => {});
+      }
+    }
   }, [settings?.theme, settings?.ui_skin]);
 
   return (

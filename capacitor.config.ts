@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.lifehub.mobile',
   appName: 'LifeHub',
-  webDir: 'dist-mobile',
+  webDir: 'dist',
   server: {
     androidScheme: 'https',
     iosScheme: 'capacitor',
