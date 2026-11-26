@@ -7,8 +7,8 @@ android {
         applicationId "com.lifehub.mobile"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 400
-        versionName "0.4.0"
+        versionCode 401
+        versionName "0.4.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,8 +16,25 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            def ksFile = System.getenv("LIFEHUB_KEYSTORE_FILE")
+            if (ksFile) {
+                storeFile file(ksFile)
+                storePassword System.getenv("LIFEHUB_KEYSTORE_PASS")
+                keyAlias System.getenv("LIFEHUB_KEY_ALIAS")
+                keyPassword System.getenv("LIFEHUB_KEY_PASS")
+            }
+            enableV1Signing true
+            enableV2Signing true
+            enableV3Signing true
+        }
+    }
     buildTypes {
         release {
+            if (System.getenv("LIFEHUB_KEYSTORE_FILE")) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

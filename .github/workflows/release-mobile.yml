@@ -42,45 +42,52 @@ jobs:
           pnpm run build
           npx cap sync android
 
-      - name: Build & sign Android APK
+      - name: Build & sign Android APK (Gradle V1+V2+V3)
         shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASS }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASS: ${{ secrets.ANDROID_KEY_PASS }}
         run: |
           set -euo pipefail
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
-          APK_IN=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          echo "Found APK: $APK_IN"
-          mkdir -p "$GITHUB_WORKSPACE/dist-mobile-release"
+          KS_ABS="$PWD/lifehub-release.keystore"
 
-          if [ -n "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.keystore
-            KS_PASS="${{ secrets.ANDROID_KEYSTORE_PASS }}"
-            KEY_ALIAS="${{ secrets.ANDROID_KEY_ALIAS }}"
-            KEY_PASS="${{ secrets.ANDROID_KEY_PASS }}"
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KS_ABS"
+            export LIFEHUB_KEYSTORE_FILE="$KS_ABS"
+            export LIFEHUB_KEYSTORE_PASS="$ANDROID_KEYSTORE_PASS"
+            export LIFEHUB_KEY_ALIAS="$ANDROID_KEY_ALIAS"
+            export LIFEHUB_KEY_PASS="$ANDROID_KEY_PASS"
           else
-            keytool -genkey -v \
-              -keystore release.keystore \
-              -alias lifehub \
+            keytool -genkeypair -v \
+              -keystore "$KS_ABS" \
+              -storetype PKCS12 \
+              -alias lifehub_release \
               -keyalg RSA -keysize 2048 -validity 10000 \
               -storepass lifehub2026 -keypass lifehub2026 \
-              -dname "CN=LifeHub, OU=Mobile, O=LifeHub, L=SaoPaulo, S=SP, C=BR"
-            KS_PASS="lifehub2026"
-            KEY_ALIAS="lifehub"
-            KEY_PASS="lifehub2026"
+              -dname "CN=LifeHub, OU=Mobile, O=LifeHub, L=SaoPaulo, ST=SP, C=BR"
+            export LIFEHUB_KEYSTORE_FILE="$KS_ABS"
+            export LIFEHUB_KEYSTORE_PASS="lifehub2026"
+            export LIFEHUB_KEY_ALIAS="lifehub_release"
+            export LIFEHUB_KEY_PASS="lifehub2026"
           fi
 
+          ./gradlew assembleRelease
+          APK_OUT=$(find app/build/outputs/apk/release -name "app-release.apk" | head -n 1)
+          if [ -z "$APK_OUT" ]; then
+            APK_OUT=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          fi
+          echo "Built signed APK: $APK_OUT"
+          mkdir -p "$GITHUB_WORKSPACE/dist-mobile-release"
+          cp "$APK_OUT" "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
+
           BUILD_TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
-          "$BUILD_TOOLS/zipalign" -f -v 4 "$APK_IN" "$GITHUB_WORKSPACE/dist-mobile-release/aligned.apk"
-          "$BUILD_TOOLS/apksigner" sign \
-            --ks release.keystore \
-            --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass "pass:$KS_PASS" \
-            --key-pass "pass:$KEY_PASS" \
-            --out "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk" \
-            "$GITHUB_WORKSPACE/dist-mobile-release/aligned.apk"
-          "$BUILD_TOOLS/apksigner" verify --verbose "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
-          rm -f "$GITHUB_WORKSPACE/dist-mobile-release/aligned.apk" release.keystore
+          "$BUILD_TOOLS/zipalign" -c -p 4 "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
+          "$BUILD_TOOLS/apksigner" verify --verbose --min-sdk-version 24 "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
+          rm -f "$KS_ABS"
           ls -lh "$GITHUB_WORKSPACE/dist-mobile-release/LifeHub-Android.apk"
 
       - name: Upload Android APK artifact
