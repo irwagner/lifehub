@@ -84,6 +84,29 @@ export async function updateStudyTrackChecklist(
   ]);
 }
 
+export async function createStudyTrack(
+  db: SqlExecutor,
+  input: { name: string; target_hours?: number },
+): Promise<StudyTrack> {
+  const name = input.name.trim();
+  if (!name) throw new Error('Informe o nome da trilha de estudos.');
+  const now = new Date().toISOString();
+  const id = createId('trk');
+  const targetHours = Math.max(1, Number(input.target_hours) || 20);
+  await db.execute(
+    `INSERT INTO study_tracks (id, name, status, target_hours, checklist_json, notes, created_at)
+     VALUES (?, ?, 'active', ?, '[]', '', ?)`,
+    [id, name, targetHours, now],
+  );
+  const rows = await db.select<StudyTrack>('SELECT * FROM study_tracks WHERE id = ?', [id]);
+  return rows[0];
+}
+
+export async function deleteStudyTrack(db: SqlExecutor, id: string): Promise<void> {
+  await db.execute('DELETE FROM study_tracks WHERE id = ?', [id]);
+  recordTombstone('study_tracks', id);
+}
+
 export async function getWeeklyStudyHours(
   db: SqlExecutor,
   referenceDateISO: string,

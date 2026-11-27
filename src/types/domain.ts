@@ -394,7 +394,7 @@ export const EVENT_CATEGORY_META: Record<
   { label: string; color: string }
 > = {
   trabalho: { label: 'Trabalho', color: '#6366f1' },
-  filho: { label: 'Filho / Família', color: '#ec4899' },
+  filho: { label: 'Família', color: '#ec4899' },
   academia: { label: 'Academia', color: '#10b981' },
   corrida: { label: 'Corrida', color: '#14b8a6' },
   estudos: { label: 'Estudos', color: '#3b82f6' },
@@ -412,7 +412,7 @@ export const PLATFORM_LABELS: Record<WorkPlatform, string> = {
 };
 
 export const ROUTINE_MODE_LABELS: Record<RoutineMode, string> = {
-  clt: 'Trabalho CLT',
-  apps: 'Trabalho por Aplicativos',
-  ti: 'Emprego de TI',
+  clt: 'Trabalho CLT / Fixo',
+  apps: 'Autônomo / Aplicativos',
+  ti: 'Estudos & Carreira',
 };

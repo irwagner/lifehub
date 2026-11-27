@@ -6,6 +6,7 @@ import {
   Bike,
   Briefcase,
   Building2,
+  Check,
   Copy,
   HardDrive,
   KeyRound,
@@ -13,6 +14,7 @@ import {
   QrCode,
   ShieldCheck,
   Sparkles,
+  User,
   WifiOff,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -32,37 +34,25 @@ import {
   syncDatabaseWithGoogleDrive,
   type GoogleDriveSyncMode,
 } from '../services/googleDriveSync';
+import {
+  OPTIONAL_MODULES,
+  USER_PROFILE_PRESETS,
+  type LifeHubModulesConfig,
+  type OptionalModuleKey,
+  type UserProfilePresetId,
+} from '../services/modulesConfig';
 import type { ChildWeekendMode, RoutineMode, WorkDaysPerWeek } from '../types/domain';
 import { QrCodeScannerModal, type ScannedPairingResult } from './QrCodeScannerModal';
 import { WindowTitleBar } from './WindowTitleBar';
 
 type OnboardingStage = 'welcome' | 'google' | 'offline_setup';
 
-const MODE_OPTIONS: Array<{
-  id: RoutineMode;
-  title: string;
-  desc: string;
-  icon: React.FC<{ className?: string }>;
-}> = [
-  {
-    id: 'clt',
-    title: 'Trabalho CLT',
-    desc: 'Turno fixo + deslocamento + estudos e treinos ajustados',
-    icon: Building2,
-  },
-  {
-    id: 'apps',
-    title: 'Aplicativos',
-    desc: 'Uber Moto / 99Moto com custos por km e meta semanal',
-    icon: Bike,
-  },
-  {
-    id: 'ti',
-    title: 'Emprego TI',
-    desc: 'Horário comercial com saúde, família e certificações',
-    icon: Briefcase,
-  },
-];
+const PRESET_ICONS: Record<UserProfilePresetId, React.FC<{ className?: string }>> = {
+  general: User,
+  clt: Building2,
+  apps: Bike,
+  career_focus: Briefcase,
+};
 
 function resolveCurrentDeviceName(): string {
   const plat = Capacitor.getPlatform();
@@ -72,22 +62,40 @@ function resolveCurrentDeviceName(): string {
 }
 
 export const OnboardingWizard: React.FC = () => {
-  const { db, settings, patchSettings, reloadSettings, bumpDataVersion, notify } = useApp();
+  const { db, settings, patchSettings, reloadSettings, bumpDataVersion, notify, updateModules } = useApp();
 
   const [stage, setStage] = useState<OnboardingStage>('welcome');
   const [scannerOpen, setScannerOpen] = useState(false);
 
-  // Offline setup form state
+  // Offline setup form state (universal profile + modular toggles)
+  const [selectedPreset, setSelectedPreset] = useState<UserProfilePresetId>('clt');
+  const [selectedModules, setSelectedModules] = useState<LifeHubModulesConfig>({
+    work_apps: false,
+    health: true,
+    family: true,
+    career: true,
+    ideas: true,
+  });
   const [userName, setUserName] = useState(settings?.user_name ?? '');
   const [routineMode, setRoutineMode] = useState<RoutineMode>(settings?.routine_mode ?? 'clt');
   const [workDays, setWorkDays] = useState<WorkDaysPerWeek>(settings?.work_days_per_week ?? 5);
   const [monthlyGoal, setMonthlyGoal] = useState(String(settings?.monthly_net_goal ?? 3500));
-  const [cltRef, setCltRef] = useState(String(settings?.clt_reference_net ?? 2745));
   const [childMode, setChildMode] = useState<ChildWeekendMode>(
-    settings?.child_weekend_mode ?? 'alternating',
+    settings?.child_weekend_mode ?? 'custom',
   );
   const [childAnchor, setChildAnchor] = useState(settings?.child_weekend_anchor ?? '');
-  const [commuteMinutes, setCommuteMinutes] = useState(String(settings?.commute_minutes ?? 60));
+
+  const handleSelectPreset = (presetId: UserProfilePresetId) => {
+    const preset = USER_PROFILE_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setSelectedPreset(presetId);
+    setRoutineMode(preset.routineMode);
+    setSelectedModules({ ...preset.modules });
+  };
+
+  const toggleModule = (key: OptionalModuleKey) => {
+    setSelectedModules((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   // Google Drive setup state
   const initialDrive = useMemo(() => loadGoogleDriveConfig(), []);
@@ -231,8 +239,9 @@ export const OnboardingWizard: React.FC = () => {
   const handleSkipOfflineDirect = async () => {
     setSaving(true);
     try {
+      updateModules(selectedModules);
       await patchSettings({ onboarding_completed: 1 });
-      notify('Modo 100% offline ativado! Você pode conectar PC ou Google Drive quando quiser em Configurações.');
+      notify('Modo 100% offline ativado! Você pode personalizar módulos ou conectar PC/Google Drive em Configurações.');
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao iniciar offline.', 'error');
     } finally {
@@ -244,18 +253,18 @@ export const OnboardingWizard: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
+      updateModules(selectedModules);
       await patchSettings({
         user_name: userName.trim(),
         routine_mode: routineMode,
         work_days_per_week: workDays,
         monthly_net_goal: Number(monthlyGoal) || 0,
-        clt_reference_net: Number(cltRef) || 0,
-        child_weekend_mode: childMode,
-        child_weekend_anchor: childMode === 'alternating' && childAnchor ? childAnchor : null,
-        commute_minutes: Number(commuteMinutes) || 0,
+        child_weekend_mode: selectedModules.family ? childMode : 'custom',
+        child_weekend_anchor:
+          selectedModules.family && childMode === 'alternating' && childAnchor ? childAnchor : null,
         onboarding_completed: 1,
       });
-      notify('Configuração inicial salva localmente no SQLite.');
+      notify('LifeHub personalizado e salvo localmente no SQLite.');
     } catch (err) {
       notify(err instanceof Error ? err.message : 'Erro ao salvar configuração.', 'error');
     } finally {
@@ -569,56 +578,88 @@ export const OnboardingWizard: React.FC = () => {
                 </button>
               </div>
 
-              {/* Visual routine mode selector */}
+              {/* Universal profile preset selector */}
               <div>
                 <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
-                  Modo de rotina atual
+                  Qual perfil mais combina com você?
                 </label>
-                <div className="grid gap-3 sm:grid-cols-3">
-                  {MODE_OPTIONS.map((opt) => {
-                    const Icon = opt.icon;
-                    const active = routineMode === opt.id;
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {USER_PROFILE_PRESETS.map((preset) => {
+                    const Icon = PRESET_ICONS[preset.id];
+                    const active = selectedPreset === preset.id;
                     return (
                       <button
-                        key={opt.id}
+                        key={preset.id}
                         type="button"
-                        onClick={() => setRoutineMode(opt.id)}
-                        className={`rounded-2xl border p-3.5 text-left transition ${
+                        onClick={() => handleSelectPreset(preset.id)}
+                        className={`rounded-2xl border p-3 text-left transition ${
                           active
                             ? 'border-brand-500 bg-brand-500/15 shadow-glow'
                             : 'border-white/[0.08] bg-white/[0.02] hover:border-white/[0.16] hover:bg-white/[0.04]'
                         }`}
                       >
-                        <Icon
-                          className={`h-5 w-5 ${active ? 'text-brand-400' : 'text-slate-400'}`}
-                        />
-                        <p className="mt-2 text-sm font-semibold text-white">{opt.title}</p>
-                        <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{opt.desc}</p>
+                        <div className="flex items-center gap-2">
+                          <Icon
+                            className={`h-4 w-4 shrink-0 ${active ? 'text-brand-400' : 'text-slate-400'}`}
+                          />
+                          <p className="text-sm font-semibold text-white">{preset.title}</p>
+                        </div>
+                        <p className="mt-1 text-[11px] leading-snug text-slate-400">{preset.desc}</p>
                       </button>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              {/* Modular toggles */}
+              <div>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                  Módulos ativos (Finanças e Agenda já vêm incluídos)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {OPTIONAL_MODULES.map((mod) => {
+                    const active = selectedModules[mod.key];
+                    return (
+                      <button
+                        key={mod.key}
+                        type="button"
+                        onClick={() => toggleModule(mod.key)}
+                        className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition ${
+                          active
+                            ? 'border-emerald-500/50 bg-emerald-500/15 text-emerald-300'
+                            : 'border-white/10 bg-white/[0.02] text-slate-400 hover:border-white/20'
+                        }`}
+                      >
+                        {active && <Check className="h-3.5 w-3.5" />}
+                        <span>{mod.shortLabel}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-1.5 text-[11px] text-slate-500">
+                  Você pode ativar ou ocultar qualquer módulo depois em Configurações.
+                </p>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Como prefere ser chamado (opcional)
+                    Seu nome (opcional)
                   </label>
                   <input
                     type="text"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Ex.: Wagner"
+                    placeholder="Ex.: Ana, Carlos..."
                     className="lh-input"
                   />
                 </div>
 
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Dias de trabalho por semana
+                    Dias de trabalho/sem
                   </label>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {([4, 5, 6] as WorkDaysPerWeek[]).map((d) => (
                       <button
                         key={d}
@@ -630,94 +671,64 @@ export const OnboardingWizard: React.FC = () => {
                             : 'border-white/[0.08] bg-slate-950/70 text-slate-300 hover:border-white/[0.18]'
                         }`}
                       >
-                        {d} dias
+                        {d}d
                       </button>
                     ))}
                   </div>
                 </div>
-              </div>
 
-              <div className="grid gap-4 sm:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Meta líquida mensal (R$)
+                    Meta mensal líquida (R$)
                   </label>
                   <input
                     type="number"
-                    step="50"
+                    step="100"
                     min="0"
                     value={monthlyGoal}
                     onChange={(e) => setMonthlyGoal(e.target.value)}
                     className="lh-input tabular-nums"
                   />
                 </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Ref. líquido CLT (R$)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    min="0"
-                    value={cltRef}
-                    onChange={(e) => setCltRef(e.target.value)}
-                    className="lh-input tabular-nums"
-                  />
-                </div>
-
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Deslocamento médio (min)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="360"
-                    value={commuteMinutes}
-                    onChange={(e) => setCommuteMinutes(e.target.value)}
-                    className="lh-input tabular-nums"
-                  />
-                </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Fins de semana com filho
-                  </label>
-                  <select
-                    value={childMode}
-                    onChange={(e) => setChildMode(e.target.value as ChildWeekendMode)}
-                    className="lh-input"
-                  >
-                    <option value="all">Todos os fins de semana</option>
-                    <option value="alternating">Fins de semana alternados (quinzenal)</option>
-                    <option value="custom">Manual no calendário</option>
-                  </select>
-                </div>
+              {selectedModules.family && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-medium text-slate-300">
+                      Fins de semana reservados (família/filhos)
+                    </label>
+                    <select
+                      value={childMode}
+                      onChange={(e) => setChildMode(e.target.value as ChildWeekendMode)}
+                      className="lh-input"
+                    >
+                      <option value="custom">Somente manual (sem bloqueio automático)</option>
+                      <option value="all">Todos os fins de semana</option>
+                      <option value="alternating">Fins de semana alternados (quinzenal)</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="mb-1.5 block text-xs font-medium text-slate-300">
-                    Data âncora (se alternado)
-                  </label>
-                  <input
-                    type="date"
-                    disabled={childMode !== 'alternating'}
-                    value={childAnchor}
-                    onChange={(e) => setChildAnchor(e.target.value)}
-                    className="lh-input disabled:opacity-40"
-                  />
-                  <p className="mt-1 text-[11px] text-slate-500">
-                    Opcional: o app nunca presume uma data inicial automaticamente.
-                  </p>
+                  {childMode === 'alternating' && (
+                    <div>
+                      <label className="mb-1.5 block text-xs font-medium text-slate-300">
+                        Data de referência (opcional)
+                      </label>
+                      <input
+                        type="date"
+                        value={childAnchor}
+                        onChange={(e) => setChildAnchor(e.target.value)}
+                        className="lh-input"
+                      />
+                    </div>
+                  )}
                 </div>
-              </div>
+              )}
 
               <div className="flex items-start gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.06] p-3.5 text-xs text-slate-300">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
                 <span>
-                  Privacidade garantida: começa <strong>limpo, sem dados financeiros inventados</strong>, não solicita credenciais da Uber/99 e funciona 100% offline.
+                  Privacidade garantida: começa <strong>limpo, sem dados inventados</strong>, funciona 100% offline e adapta as telas ao seu jeito.
                 </span>
               </div>
 

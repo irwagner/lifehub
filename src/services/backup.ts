@@ -71,12 +71,22 @@ export interface SyncedGoogleDriveExtension {
   updatedAt: string;
 }
 
+export interface SyncedModulesExtension {
+  work_apps: boolean;
+  health: boolean;
+  family: boolean;
+  career: boolean;
+  ideas: boolean;
+  updatedAt: string;
+}
+
 export interface SyncedClientExtensions {
   geminiAi?: SyncedGeminiExtension;
   aiMemory?: SyncedAiMemoryItem[];
   googleSheets?: SyncedGoogleSheetsExtension;
   googleDrive?: SyncedGoogleDriveExtension;
   familyFinance?: SyncedFamilyFinanceExtension;
+  modules?: SyncedModulesExtension;
   tombstones?: Record<string, string>;
 }
 
@@ -136,6 +146,16 @@ const clientExtensionsSchema = z
         shareBalance: z.boolean(),
         autoIncludeHousehold: z.boolean(),
         autoSync: z.boolean(),
+        updatedAt: z.string(),
+      })
+      .optional(),
+    modules: z
+      .object({
+        work_apps: z.boolean(),
+        health: z.boolean(),
+        family: z.boolean(),
+        career: z.boolean(),
+        ideas: z.boolean(),
         updatedAt: z.string(),
       })
       .optional(),

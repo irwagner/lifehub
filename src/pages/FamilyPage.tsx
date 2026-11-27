@@ -106,9 +106,9 @@ export const FamilyPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Família & Fins de Semana com o Filho</h2>
+        <h2 className="text-2xl font-bold">Família & Fins de Semana</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Configure a frequência sem assumir data inicial. Os fins de semana reservados bloqueiam trabalho automaticamente nos templates.
+          Reserve fins de semana para a família, filhos ou descanso sem presumir data inicial. Os dias reservados protegem sua agenda automaticamente.
         </p>
       </div>
 
@@ -136,7 +136,7 @@ export const FamilyPage: React.FC = () => {
             {mode === 'alternating' && (
               <div>
                 <label className="mb-1 block text-xs font-medium">
-                  Data âncora de um fim de semana com o filho
+                  Data âncora de um fim de semana reservado
                 </label>
                 <input
                   type="date"

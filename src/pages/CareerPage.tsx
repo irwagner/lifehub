@@ -16,8 +16,10 @@ import { useApp } from '../context/AppContext';
 import {
   createJobApplication,
   createStudySession,
+  createStudyTrack,
   deleteJobApplication,
   deleteStudySession,
+  deleteStudyTrack,
   getWeeklyStudyHours,
   listJobApplications,
   listStudySessions,
@@ -74,6 +76,8 @@ export const CareerPage: React.FC = () => {
   const [studyDate, setStudyDate] = useState(todayISO());
   const [studyMinutes, setStudyMinutes] = useState('60');
   const [studyTopic, setStudyTopic] = useState('');
+  const [newTrackName, setNewTrackName] = useState('');
+  const [newTrackHours, setNewTrackHours] = useState('20');
 
   // Optional study stopwatch
   const [timerRunning, setTimerRunning] = useState(false);
@@ -236,18 +240,56 @@ export const CareerPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">Estudos & Carreira em TI</h2>
+        <h2 className="text-2xl font-bold">Estudos, Carreira & Projetos</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
           Meta semanal de estudos: {formatNumber(weeklyHours, 1)}h /{' '}
-          {settings?.study_weekly_goal_hours ?? 6}h · Suporte, Redes, Infraestrutura, Segurança e Portfólio.
+          {settings?.study_weekly_goal_hours ?? 6}h · Crie trilhas para qualquer área (faculdade, concursos, idiomas, TI ou negócios).
         </p>
       </div>
 
       {/* Study Tracks with practical exercises checklist */}
       <section className={cardClass}>
-        <div className="mb-3 flex items-center gap-2">
-          <BookOpen className="h-4 w-4 text-sky-500" />
-          <h3 className="font-semibold">Trilhas de Estudo & Exercícios Práticos</h3>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-sky-500" />
+            <h3 className="font-semibold">Trilhas de Estudo & Exercícios Práticos</h3>
+          </div>
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              if (!db || !newTrackName.trim()) return;
+              try {
+                await createStudyTrack(db, {
+                  name: newTrackName,
+                  target_hours: Number(newTrackHours) || 20,
+                });
+                setNewTrackName('');
+                bumpDataVersion();
+                notify('Nova trilha de estudos criada!');
+              } catch (err) {
+                notify(err instanceof Error ? err.message : 'Erro ao criar trilha.', 'error');
+              }
+            }}
+            className="flex flex-wrap items-center gap-1.5"
+          >
+            <input
+              value={newTrackName}
+              onChange={(e) => setNewTrackName(e.target.value)}
+              placeholder="Nova trilha (ex.: Inglês, Concurso...)"
+              className="lh-input w-48 py-1.5 text-xs"
+            />
+            <input
+              type="number"
+              min="1"
+              value={newTrackHours}
+              onChange={(e) => setNewTrackHours(e.target.value)}
+              title="Meta de horas"
+              className="lh-input w-16 py-1.5 text-xs"
+            />
+            <button type="submit" className="lh-btn-primary py-1.5 text-xs">
+              <Plus className="h-3.5 w-3.5" /> Trilha
+            </button>
+          </form>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {tracks.map((t) => {
@@ -262,23 +304,38 @@ export const CareerPage: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-2">
                   <p className="text-sm font-semibold">{t.name}</p>
-                  <select
-                    value={t.status}
-                    onChange={async (e) => {
-                      if (!db) return;
-                      await updateStudyTrackStatus(
-                        db,
-                        t.id,
-                        e.target.value as 'planned' | 'active' | 'completed',
-                      );
-                      bumpDataVersion();
-                    }}
-                    className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-[11px] dark:border-slate-700"
-                  >
-                    <option value="planned">Planejada</option>
-                    <option value="active">Ativa</option>
-                    <option value="completed">Concluída</option>
-                  </select>
+                  <div className="flex items-center gap-1">
+                    <select
+                      value={t.status}
+                      onChange={async (e) => {
+                        if (!db) return;
+                        await updateStudyTrackStatus(
+                          db,
+                          t.id,
+                          e.target.value as 'planned' | 'active' | 'completed',
+                        );
+                        bumpDataVersion();
+                      }}
+                      className="rounded border border-slate-300 bg-transparent px-1.5 py-0.5 text-[11px] dark:border-slate-700"
+                    >
+                      <option value="planned">Planejada</option>
+                      <option value="active">Ativa</option>
+                      <option value="completed">Concluída</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!db) return;
+                        await deleteStudyTrack(db, t.id);
+                        bumpDataVersion();
+                        notify(`Trilha "${t.name}" removida.`);
+                      }}
+                      title="Remover trilha"
+                      className="rounded p-1 text-slate-400 hover:bg-rose-500/10 hover:text-rose-500"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                 </div>
                 <p className="mt-1.5 text-xs text-slate-500">
                   {formatNumber(t.loggedHours, 1)}h / {t.target_hours}h

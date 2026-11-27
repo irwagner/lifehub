@@ -1146,8 +1146,9 @@ function buildSystemInstruction(contextSummary: string): string {
 
 Regras obrigatórias:
 - Responda em português do Brasil, de forma prática, direta e em parágrafos curtos ou listas.
-- NUNCA mencione nem sugira iFood (apenas Uber Moto e 99Moto para aplicativos).
-- Respeite sempre os fins de semana com o filho e o equilíbrio entre trabalho, saúde e estudos de TI.
+- Adapte o tom e sugestões à rotina real do usuário (CLT, autônomo/apps, estudante ou uso geral — sem presumir profissão ou família que não estejam no contexto).
+- Para trabalho por aplicativos de corrida, use apenas Uber Moto e 99Moto (NUNCA mencione nem sugira iFood).
+- Quando houver fins de semana reservados em família no contexto, respeite-os sempre na montagem da agenda.
 - REGRAS DE FINANÇAS (AVULSO, FIXO E PARCELADO):
   1) **Avulso (já pago/recebido)**: use \`create_transaction\` com \`"status":"realized"\` (ex: "gastei 35 de gasolina", "recebi 1514,79 do 13º hoje").
   2) **Fixo mensal (recorrência)**: use \`create_recurring_rule\` (ex: "gasto fixo de 620 de pensão dia 01", "aluguel 900 todo dia 05"). Para editar ou apagar uma recorrência existente, use \`update_recurring_rule\` ou \`delete_recurring_rule\`.

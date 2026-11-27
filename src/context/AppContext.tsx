@@ -38,6 +38,12 @@ import {
   syncFamilyFinanceHub,
 } from '../services/familyFinanceSync';
 import { getSkinDefinition } from '../services/skins';
+import {
+  isNavSectionEnabled,
+  loadModulesConfig,
+  saveModulesConfig,
+  type LifeHubModulesConfig,
+} from '../services/modulesConfig';
 import type { Settings } from '../types/domain';
 
 function resolveDeviceName(): string {
@@ -89,6 +95,8 @@ interface AppContextValue {
   toasts: ToastMessage[];
   autoSyncStatus: AutoSyncStatus;
   triggerCloudSync: (options?: { manual?: boolean }) => Promise<void>;
+  modules: LifeHubModulesConfig;
+  updateModules: (patch: Partial<LifeHubModulesConfig>) => void;
 }
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -103,6 +111,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [dataVersion, setDataVersion] = useState(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const [autoSyncStatus, setAutoSyncStatus] = useState<AutoSyncStatus>('idle');
+  const [modules, setModules] = useState<LifeHubModulesConfig>(() => loadModulesConfig());
 
   const autoSyncRef = useRef<AutoSyncController | null>(null);
   const sheetsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -195,6 +204,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (res.remoteHadData) {
           const fresh = await getSettings(db);
           setSettings(fresh);
+          setModules(
+            loadModulesConfig({ onboardingCompleted: fresh.onboarding_completed === 1 }),
+          );
           setDataVersion((v) => v + 1);
         }
       } catch {
@@ -230,6 +242,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!db) return;
     const fresh = await getSettings(db);
     setSettings(fresh);
+    setModules(
+      loadModulesConfig({ onboardingCompleted: fresh.onboarding_completed === 1 }),
+    );
   }, [db]);
 
   const patchSettings = useCallback(
@@ -255,6 +270,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (!active) return;
         setDb(database);
         setSettings(loadedSettings);
+        setModules(
+          loadModulesConfig({ onboardingCompleted: loadedSettings.onboarding_completed === 1 }),
+        );
         setLoading(false);
       } catch (err) {
         if (!active) return;
@@ -280,6 +298,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         if (res.remoteHadData) {
           const fresh = await getSettings(db);
           setSettings(fresh);
+          setModules(
+            loadModulesConfig({ onboardingCompleted: fresh.onboarding_completed === 1 }),
+          );
           setDataVersion((v) => v + 1);
         }
       },
@@ -453,6 +474,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [settings?.theme, settings?.ui_skin]);
 
+  const updateModules = useCallback(
+    (patch: Partial<LifeHubModulesConfig>) => {
+      setModules((prev) => {
+        const next = saveModulesConfig({
+          ...prev,
+          ...patch,
+          updatedAt: new Date().toISOString(),
+        });
+        if (!isNavSectionEnabled(activeSection, next)) {
+          setActiveSection('dashboard');
+        }
+        return next;
+      });
+      bumpDataVersion();
+    },
+    [activeSection, bumpDataVersion],
+  );
+
   return (
     <AppContext.Provider
       value={{
@@ -472,6 +511,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         toasts,
         autoSyncStatus,
         triggerCloudSync,
+        modules,
+        updateModules,
       }}
     >
       {children}

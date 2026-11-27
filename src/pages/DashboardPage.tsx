@@ -32,7 +32,7 @@ import {
 } from '../utils/format';
 
 export const DashboardPage: React.FC = () => {
-  const { db, dataVersion, bumpDataVersion, openQuickAction, setActiveSection, notify } = useApp();
+  const { db, dataVersion, bumpDataVersion, openQuickAction, setActiveSection, notify, modules } = useApp();
   const [snapshot, setSnapshot] = useState<DashboardSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
@@ -171,7 +171,7 @@ export const DashboardPage: React.FC = () => {
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-          Estudos & Carreira TI
+          Estudos & Carreira
         </span>
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-500/12 text-sky-500 ring-1 ring-sky-500/20">
           <Briefcase className="h-3.5 w-3.5" />
@@ -209,7 +209,7 @@ export const DashboardPage: React.FC = () => {
     >
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-          Fim de Semana c/ Filho
+          Família & Fins de Semana
         </span>
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-pink-500/12 text-pink-500 ring-1 ring-pink-500/20">
           <Users className="h-3.5 w-3.5" />
@@ -555,9 +555,9 @@ export const DashboardPage: React.FC = () => {
         {/* Dense 4-meter row */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {financeCard}
-          {workCard}
-          {careerCard}
-          {familyCard}
+          {modules.work_apps && workCard}
+          {modules.career && careerCard}
+          {modules.family && familyCard}
         </div>
 
         {/* 3-panel operational telemetry split */}
@@ -567,7 +567,7 @@ export const DashboardPage: React.FC = () => {
           {billsSection}
         </div>
 
-        {habitsSection}
+        {modules.health && habitsSection}
         {recommendationsSection}
         <MonthlyReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
       </div>
@@ -607,9 +607,9 @@ export const DashboardPage: React.FC = () => {
         {/* Horizontal KPI chips bar */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {financeCard}
-          {workCard}
-          {careerCard}
-          {familyCard}
+          {modules.work_apps && workCard}
+          {modules.career && careerCard}
+          {modules.family && familyCard}
         </div>
 
         {/* 3 equal Kanban-style operational columns */}
@@ -649,7 +649,7 @@ export const DashboardPage: React.FC = () => {
           </div>
         </div>
 
-        {habitsSection}
+        {modules.health && habitsSection}
         {recommendationsSection}
         <MonthlyReportModal open={reportOpen} onClose={() => setReportOpen(false)} />
       </div>
@@ -692,16 +692,16 @@ export const DashboardPage: React.FC = () => {
           <div className="lg:col-span-7">{scheduleSection}</div>
           <div className="grid gap-4 sm:grid-cols-2 lg:col-span-5">
             {financeCard}
-            {workCard}
-            {careerCard}
-            {familyCard}
+            {modules.work_apps && workCard}
+            {modules.career && careerCard}
+            {modules.family && familyCard}
           </div>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-12">
-          <div className="lg:col-span-4">{tasksSection}</div>
-          <div className="lg:col-span-4">{habitsSection}</div>
-          <div className="lg:col-span-4">{billsSection}</div>
+        <div className={`grid gap-5 ${modules.health ? 'lg:grid-cols-12' : 'lg:grid-cols-2'}`}>
+          <div className={modules.health ? 'lg:col-span-4' : ''}>{tasksSection}</div>
+          {modules.health && <div className="lg:col-span-4">{habitsSection}</div>}
+          <div className={modules.health ? 'lg:col-span-4' : ''}>{billsSection}</div>
         </div>
 
         {recommendationsSection}
@@ -745,9 +745,11 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:col-span-7">
+          <div
+            className={`grid gap-4 ${modules.work_apps ? 'sm:grid-cols-2' : ''} lg:col-span-7`}
+          >
             {financeCard}
-            {workCard}
+            {modules.work_apps && workCard}
           </div>
         </div>
 
@@ -755,13 +757,13 @@ export const DashboardPage: React.FC = () => {
         <div className="grid gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-8">
             {scheduleSection}
-            {habitsSection}
+            {modules.health && habitsSection}
             {recommendationsSection}
           </div>
           <div className="space-y-5 lg:col-span-4">
             {tasksSection}
-            {careerCard}
-            {familyCard}
+            {modules.career && careerCard}
+            {modules.family && familyCard}
             {billsSection}
           </div>
         </div>
@@ -819,9 +821,9 @@ export const DashboardPage: React.FC = () => {
       {/* KPI Cards */}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {financeCard}
-        {workCard}
-        {careerCard}
-        {familyCard}
+        {modules.work_apps && workCard}
+        {modules.career && careerCard}
+        {modules.family && familyCard}
       </div>
 
       {/* Main 2-column grid */}
@@ -831,8 +833,8 @@ export const DashboardPage: React.FC = () => {
       </div>
 
       {/* Habits + Upcoming Bills */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        {habitsSection}
+      <div className={`grid gap-4 ${modules.health ? 'lg:grid-cols-2' : ''}`}>
+        {modules.health && habitsSection}
         {billsSection}
       </div>
 

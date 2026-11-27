@@ -100,13 +100,13 @@ export const HealthPage: React.FC = () => {
       <div>
         <h2 className="text-2xl font-bold">Saúde & Hábitos</h2>
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          Consistência realista (academia 3x, corrida 1–3x, sono e descanso), sem penalizar semanas com o filho ou imprevistos.
+          Consistência realista (academia, corrida, sono, água e descanso), sem penalizar semanas mais cheias ou imprevistos.
         </p>
       </div>
 
       {hasChildThisWeek && (
         <div className="rounded-xl border border-pink-500/30 bg-pink-500/10 px-4 py-3 text-xs text-pink-300">
-          Esta semana inclui <strong>fim de semana com o filho</strong>. Priorize descanso e convivência — nenhuma métrica penaliza semanas mais leves.
+          Esta semana inclui <strong>fim de semana reservado em família</strong>. Priorize descanso e convivência — nenhuma métrica penaliza semanas mais leves.
         </div>
       )}
 

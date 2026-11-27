@@ -14,10 +14,10 @@ const SECTION_TITLES: Record<NavSection, string> = {
   dashboard: 'Hoje',
   calendar: 'Calendário',
   finance: 'Financeiro',
-  work: 'Trabalho (Uber/99)',
+  work: 'Trabalho & Apps',
   health: 'Saúde & Hábitos',
   family: 'Família',
-  career: 'Estudos & Carreira TI',
+  career: 'Estudos & Carreira',
   ideas: 'Ideias & Revisão',
   settings: 'Configurações & Skins',
 };

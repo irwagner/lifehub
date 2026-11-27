@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { useApp, type NavSection, type QuickActionType } from '../context/AppContext';
+import { isNavSectionEnabled } from '../services/modulesConfig';
 import { getSkinDefinition } from '../services/skins';
 import { CURRENT_APP_VERSION } from '../services/updater';
 import { ROUTINE_MODE_LABELS } from '../types/domain';
@@ -56,15 +57,15 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Dinheiro & Renda',
     items: [
       { id: 'finance', label: 'Financeiro', shortLabel: 'Finanças', icon: Wallet },
-      { id: 'work', label: 'Trabalho', shortLabel: 'Trabalho', icon: Bike },
+      { id: 'work', label: 'Trabalho / Apps', shortLabel: 'Trabalho', icon: Bike },
     ],
   },
   {
     label: 'Vida & Evolução',
     items: [
-      { id: 'health', label: 'Saúde', shortLabel: 'Saúde', icon: Heart },
+      { id: 'health', label: 'Saúde & Hábitos', shortLabel: 'Saúde', icon: Heart },
       { id: 'family', label: 'Família', shortLabel: 'Família', icon: Users },
-      { id: 'career', label: 'Estudos & TI', shortLabel: 'Estudos', icon: Briefcase },
+      { id: 'career', label: 'Estudos & Carreira', shortLabel: 'Estudos', icon: Briefcase },
       { id: 'ideas', label: 'Ideias & Revisão', shortLabel: 'Ideias', icon: Lightbulb },
     ],
   },
@@ -98,6 +99,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     setActiveSection,
     openQuickAction,
     toasts,
+    modules,
   } = useApp();
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -105,7 +107,19 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const [aiOpen, setAiOpen] = useState(false);
   const [mobileQuickOpen, setMobileQuickOpen] = useState(false);
 
-  const activeNavMeta = FLAT_NAV_ITEMS.find((i) => i.id === activeSection) ?? FLAT_NAV_ITEMS[0];
+  const visibleNavGroups = NAV_GROUPS.map((g) => ({
+    ...g,
+    items: g.items.filter((item) => isNavSectionEnabled(item.id, modules)),
+  })).filter((g) => g.items.length > 0);
+
+  const visibleNavItems = FLAT_NAV_ITEMS.filter((item) => isNavSectionEnabled(item.id, modules));
+  const visibleQuickPills = QUICK_PILLS.filter((pill) => {
+    if (pill.action === 'work_session') return modules.work_apps;
+    if (pill.action === 'idea') return modules.ideas;
+    return true;
+  });
+
+  const activeNavMeta = visibleNavItems.find((i) => i.id === activeSection) ?? FLAT_NAV_ITEMS[0];
 
   const activeSkin = getSkinDefinition(settings?.ui_skin);
   const shell = activeSkin.shell;
@@ -261,7 +275,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
   const renderQuickPills = (compact = false) => (
     <div className="flex flex-nowrap items-center gap-1 overflow-x-auto">
-      {QUICK_PILLS.map((pill) => (
+      {visibleQuickPills.map((pill) => (
         <button
           key={pill.action}
           type="button"
@@ -367,7 +381,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </button>
           </div>
           <div className="grid grid-cols-2 gap-2.5">
-            {QUICK_PILLS.map((pill) => (
+            {visibleQuickPills.map((pill) => (
               <button
                 key={pill.action}
                 type="button"
@@ -387,6 +401,20 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     ) : null;
 
   const renderMobileBottomBar = () => {
+    const thirdTab: {
+      id: NavSection;
+      label: string;
+      icon: React.FC<{ className?: string }>;
+    } = modules.work_apps
+      ? { id: 'work', label: 'Trabalho', icon: Bike }
+      : modules.health
+        ? { id: 'health', label: 'Saúde', icon: Heart }
+        : modules.career
+          ? { id: 'career', label: 'Estudos', icon: Briefcase }
+          : modules.ideas
+            ? { id: 'ideas', label: 'Ideias', icon: Lightbulb }
+            : { id: 'settings', label: 'Config', icon: SettingsIcon };
+
     const mobileTabs: Array<{
       id: NavSection;
       label: string;
@@ -394,7 +422,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     }> = [
       { id: 'dashboard', label: 'Hoje', icon: Home },
       { id: 'finance', label: 'Finanças', icon: Wallet },
-      { id: 'work', label: 'Uber/99', icon: Bike },
+      thirdTab,
       { id: 'calendar', label: 'Agenda', icon: CalendarDays },
     ];
 
@@ -464,7 +492,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             </button>
           </div>
           <nav className="flex-1 space-y-2.5 overflow-y-auto px-3 py-2" aria-label="Menu completo">
-            {NAV_GROUPS.map((group) => (
+            {visibleNavGroups.map((group) => (
               <div key={group.label}>
                 <p className="mb-1 px-2 text-[9.5px] font-semibold uppercase tracking-wider text-slate-400">
                   {group.label}
@@ -546,7 +574,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
                   backgroundColor: 'var(--lh-canvas)',
                 }}
               >
-                {FLAT_NAV_ITEMS.map((item) => {
+                {visibleNavItems.map((item) => {
                   const Icon = item.icon;
                   const active = activeSection === item.id;
                   return (
@@ -829,7 +857,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
 
           {/* Grouped Navigation */}
           <nav className="flex-1 space-y-2.5 overflow-y-auto px-2.5 py-1.5" aria-label="Navegação principal">
-            {NAV_GROUPS.map((group) => (
+            {visibleNavGroups.map((group) => (
               <div key={group.label}>
                 <p
                   className={`mb-1 px-2.5 text-[9.5px] font-semibold uppercase tracking-wider ${

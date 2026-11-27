@@ -304,7 +304,7 @@ export const IdeasPage: React.FC = () => {
               <p className="font-bold">{facts.workoutsCount}</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-              <p className="text-[11px] text-slate-500">Estudos TI</p>
+              <p className="text-[11px] text-slate-500">Estudos</p>
               <p className="font-bold">{formatNumber(facts.studyHours, 1)}h</p>
             </div>
             <div className="rounded-xl border border-slate-200 p-3 dark:border-slate-800">
@@ -316,7 +316,7 @@ export const IdeasPage: React.FC = () => {
           <form onSubmit={handleSaveReview} className="grid gap-3 md:grid-cols-3">
             <div>
               <label className="mb-1 block text-xs font-medium">
-                Como foi o tempo com seu filho / família?
+                Como foi seu tempo pessoal / em família?
               </label>
               <textarea
                 rows={3}

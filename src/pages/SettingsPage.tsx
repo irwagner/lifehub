@@ -5,6 +5,7 @@ import {
   Database,
   Download,
   FolderOpen,
+  LayoutGrid,
   Moon,
   Palette,
   Sparkles,
@@ -26,6 +27,7 @@ import {
   restoreBackupJson,
 } from '../services/backup';
 import { loadDemoData } from '../services/demoSeed';
+import { OPTIONAL_MODULES } from '../services/modulesConfig';
 import {
   CLASSIC_SKINS,
   CONCEPT_SKINS,
@@ -40,7 +42,7 @@ import type { ChildWeekendMode, RoutineMode, ThemeMode, WorkDaysPerWeek } from '
 import { todayISO } from '../utils/format';
 
 export const SettingsPage: React.FC = () => {
-  const { db, settings, patchSettings, reloadSettings, bumpDataVersion, notify } = useApp();
+  const { db, settings, patchSettings, reloadSettings, bumpDataVersion, notify, modules, updateModules } = useApp();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const sqliteFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -49,7 +51,7 @@ export const SettingsPage: React.FC = () => {
   const [routineMode, setRoutineMode] = useState<RoutineMode>(settings?.routine_mode ?? 'clt');
   const [workDays, setWorkDays] = useState<WorkDaysPerWeek>(settings?.work_days_per_week ?? 5);
   const [monthlyGoal, setMonthlyGoal] = useState(String(settings?.monthly_net_goal ?? 3500));
-  const [cltRef, setCltRef] = useState(String(settings?.clt_reference_net ?? 2745));
+  const [cltRef, setCltRef] = useState(String(settings?.clt_reference_net ?? 0));
   const [maintPerKm, setMaintPerKm] = useState(String(settings?.maintenance_per_km ?? 0.18));
   const [deprecPerKm, setDeprecPerKm] = useState(String(settings?.depreciation_per_km ?? 0.1));
   const [vehiclePayment, setVehiclePayment] = useState(
@@ -433,6 +435,7 @@ export const SettingsPage: React.FC = () => {
 
         <div className="flex flex-wrap gap-1.5">
           {[
+            { id: 'sec-modules', label: 'Módulos' },
             { id: 'sec-updates', label: 'GitHub Updates' },
             { id: 'sec-mobile-qr', label: 'Celular & QR Code' },
             { id: 'sec-google-drive', label: 'Google Drive' },
@@ -453,6 +456,62 @@ export const SettingsPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* Active Modules Customizer — Tailor LifeHub to any user */}
+      <section id="sec-modules" className={`${cardClass} space-y-3`}>
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-brand-500/15 text-brand-500">
+            <LayoutGrid className="h-4 w-4" />
+          </span>
+          <div>
+            <h3 className="font-semibold">Módulos Ativos (Personalize o LifeHub para sua rotina)</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Ative apenas o que faz sentido para você. Finanças, Agenda e Configurações ficam sempre disponíveis; ocultar um módulo não apaga nenhum dado.
+            </p>
+          </div>
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {OPTIONAL_MODULES.map((mod) => {
+            const active = modules[mod.key];
+            return (
+              <button
+                key={mod.key}
+                type="button"
+                onClick={() => {
+                  updateModules({ [mod.key]: !active });
+                  notify(
+                    !active
+                      ? `Módulo "${mod.shortLabel}" ativado no menu e no Dashboard.`
+                      : `Módulo "${mod.shortLabel}" ocultado (seus dados continuam salvos).`,
+                    'info',
+                  );
+                }}
+                className={`flex items-start justify-between gap-2.5 rounded-2xl border p-3 text-left transition ${
+                  active
+                    ? 'border-emerald-500/40 bg-emerald-500/[0.08]'
+                    : 'border-slate-200/80 opacity-75 hover:opacity-100 dark:border-white/10'
+                }`}
+              >
+                <div className="min-w-0">
+                  <p className="text-xs font-bold">{mod.shortLabel}</p>
+                  <p className="mt-0.5 text-[11px] leading-snug text-slate-500 dark:text-slate-400">
+                    {mod.description}
+                  </p>
+                </div>
+                <span
+                  className={`mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[10px] font-bold ${
+                    active
+                      ? 'border-emerald-500 bg-emerald-500 text-slate-950'
+                      : 'border-slate-400/50 text-transparent'
+                  }`}
+                >
+                  <Check className="h-3.5 w-3.5" />
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       {/* GitHub Releases Auto-Updater — Top visibility */}
       <div id="sec-updates">
@@ -546,9 +605,9 @@ export const SettingsPage: React.FC = () => {
               onChange={(e) => setRoutineMode(e.target.value as RoutineMode)}
               className={inputClass}
             >
-              <option value="clt">Trabalho CLT</option>
-              <option value="apps">Trabalho por Aplicativos (Uber/99)</option>
-              <option value="ti">Emprego de TI</option>
+              <option value="clt">Trabalho CLT / Fixo</option>
+              <option value="apps">Autônomo / Aplicativos</option>
+              <option value="ti">Estudos &amp; Carreira</option>
             </select>
           </div>
           <div>
@@ -619,7 +678,7 @@ export const SettingsPage: React.FC = () => {
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="mb-1 block text-xs font-medium">Fins de semana com filho</label>
+            <label className="mb-1 block text-xs font-medium">Fins de semana reservados (família)</label>
             <select
               value={childMode}
               onChange={(e) => setChildMode(e.target.value as ChildWeekendMode)}

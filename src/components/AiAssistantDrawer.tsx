@@ -28,11 +28,11 @@ import {
 } from '../services/geminiAi';
 
 const QUICK_PROMPTS = [
-  'Monte minha rotina semanal de academia seg/qua/sex 14:30 e estudos TI seg a sex 19:00',
-  'Comprei um fone de R$ 180 em 1x no cartão Nubank para pagar no próximo mês',
+  'Monte minha rotina semanal de academia seg/qua/sex 18:00 e estudos seg a qui 20:00',
+  'Comprei um fone de R$ 180 em 1x no cartão para pagar no próximo mês',
   'Adicione gasto fixo mensal de R$ 119,90 de internet todo dia 10',
-  'Anote a ideia: criar script de backup automático com impacto 4 e esforço 2',
-  'Rodei 85 km na Uber Moto hoje, fiz 190 bruto e gastei 32 de gasolina',
+  'Anote a ideia: organizar meus gastos por meta mensal com impacto 4 e esforço 2',
+  'Resuma minhas finanças deste mês e diga o que posso melhorar',
 ];
 
 export const AiAssistantDrawer: React.FC<{

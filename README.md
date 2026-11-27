@@ -2,8 +2,8 @@
 
 # LifeHub — Central de Vida
 
-**Seu painel pessoal local-first para Windows, iPhone e Android.**  
-Organize finanças reais, trabalho por aplicativos (Uber Moto / 99Moto), agenda, saúde, estudos de TI e família — com **36 skins ao vivo**, **Assistente IA Gemini opcional**, **QR Code offline** e **sincronização criptografada ponta a ponta gratuita**.
+**Seu painel pessoal modular e local-first para Windows, iPhone e Android.**  
+Organize finanças reais, agenda, tarefas, saúde & hábitos, estudos & carreira (trilhas personalizadas), família e trabalho/aplicativos opcional — ativando só os módulos que fazem sentido para a sua rotina, com **36 skins ao vivo**, **Assistente IA Gemini opcional**, **QR Code offline** e **sincronização criptografada ponta a ponta gratuita**.
 
 [![Última Versão](https://img.shields.io/github/v/release/irwagner/lifehub?label=Release&color=6366f1&style=for-the-badge)](https://github.com/irwagner/lifehub/releases/latest)
 [![Windows x64](https://img.shields.io/badge/Windows%2010%2F11-Tauri%202%20%2B%20SQLite-0ea5e9?style=for-the-badge&logo=windows)](https://github.com/irwagner/lifehub/releases/latest)
@@ -11,7 +11,7 @@ Organize finanças reais, trabalho por aplicativos (Uber Moto / 99Moto), agenda,
 [![Privacidade E2EE](https://img.shields.io/badge/Sync%20Zero--Knowledge-AES--256--GCM-22c55e?style=for-the-badge)](https://github.com/irwagner/lifehub#-app-celular-iphone--android--qr-code-offline)
 
 <p>
-  <a href="https://github.com/irwagner/lifehub/releases/latest"><strong>⬇️ Baixar para Windows (v0.5.4)</strong></a>
+  <a href="https://github.com/irwagner/lifehub/releases/latest"><strong>⬇️ Baixar para Windows (v0.6.0)</strong></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/irwagner/lifehub/releases/latest/download/LifeHub-Android.apk"><strong>🤖 Baixar Android (.apk)</strong></a>
   &nbsp;·&nbsp;

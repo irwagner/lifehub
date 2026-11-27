@@ -17,33 +17,33 @@ export interface ScheduleTemplateMeta {
 export const SCHEDULE_TEMPLATES: ScheduleTemplateMeta[] = [
   {
     id: 'apps_5d',
-    name: 'Aplicativos — Padrão 5 dias',
+    name: 'Autônomo / Apps — 5 dias',
     description:
-      'Seg–Sex 06:00–12:30 Uber/99, pausa/almoço 12:30–14:00, academia Seg/Qua/Sex 14:30, corrida Ter/Qui 19:00, estudos/carreira 16:00.',
+      'Seg–Sex 06:00–12:30 trabalho, pausa/almoço 12:30–14:00, academia Seg/Qua/Sex, corrida Ter/Qui e bloco de estudos/projetos à tarde.',
   },
   {
     id: 'apps_4d',
-    name: 'Aplicativos — Semana 4 dias',
+    name: 'Autônomo / Apps — 4 dias',
     description:
-      'Seg/Ter/Qui/Sex manhã em aplicativos; Quarta-feira reservada para entrevistas, estudos concentrados, família ou descanso.',
+      'Seg/Ter/Qui/Sex manhã de trabalho; Quarta-feira reservada para estudos, entrevistas, família ou descanso.',
   },
   {
     id: 'apps_6d',
-    name: 'Aplicativos — Semana 6 dias',
+    name: 'Autônomo / Apps — 6 dias',
     description:
-      'Inclui sábado manhã (06:00–12:00) somente quando o fim de semana NÃO estiver reservado para o filho.',
+      'Inclui sábado manhã (06:00–12:00) somente quando o fim de semana NÃO estiver reservado para a família.',
   },
   {
     id: 'clt',
-    name: 'Trabalho CLT (Portaria 12h–20h)',
+    name: 'Trabalho CLT / Turno Comercial',
     description:
-      'Turno 12:00–20:00 com blocos de deslocamento Magé–Rio, treinos e estudos pela manhã sem comprometer o sono.',
+      'Expediente comercial 08:00–17:00 Seg–Sex com pausas, treinos, estudos e fins de semana equilibrados.',
   },
   {
     id: 'ti',
-    name: 'Emprego de TI (Comercial)',
+    name: 'Estudos & Carreira (Foco em Evolução)',
     description:
-      'Expediente 09:00–18:00 Seg–Sex com academia/corrida, estudos noturnos leves e fins de semana protegidos.',
+      'Rotina equilibrada para cursos, faculdade, concursos ou transição de carreira, com blocos de estudo, saúde e descanso.',
   },
 ];
 
@@ -126,12 +126,12 @@ export function buildWeekEventsFromTemplate(
       events.push(makeBlock(days[idx], '14:30', '15:30', 'Academia', 'academia', templateId));
     }
 
-    // Tarde carreira/estudos conforme tabela 4 do blueprint
+    // Tarde carreira/estudos
     events.push(
-      makeBlock(days[0], '16:00', '17:00', 'Estudos TI', 'estudos', templateId),
-      makeBlock(days[1], '16:00', '17:00', 'Candidaturas e currículo TI', 'entrevista', templateId),
-      makeBlock(days[2], '16:00', '17:00', 'Projeto / Portfólio TI', 'estudos', templateId),
-      makeBlock(days[3], '16:00', '17:00', 'Estudos TI', 'estudos', templateId),
+      makeBlock(days[0], '16:00', '17:00', 'Estudos', 'estudos', templateId),
+      makeBlock(days[1], '16:00', '17:00', 'Carreira e oportunidades', 'entrevista', templateId),
+      makeBlock(days[2], '16:00', '17:00', 'Projeto pessoal / Portfólio', 'estudos', templateId),
+      makeBlock(days[3], '16:00', '17:00', 'Estudos', 'estudos', templateId),
       makeBlock(days[4], '16:00', '17:00', 'Revisão semanal', 'geral', templateId),
     );
 
@@ -141,17 +141,17 @@ export function buildWeekEventsFromTemplate(
       makeBlock(days[3], '19:00', '20:00', 'Corrida noturna', 'corrida', templateId),
     );
 
-    // Sábado opcional no modo 6 dias — SOMENTE se não for fim de semana com o filho
+    // Sábado opcional no modo 6 dias — SOMENTE se não for fim de semana reservado para a família
     if (templateId === 'apps_6d' && !hasChildThisWeekend) {
       events.push(
         makeBlock(
           sat,
           '06:00',
           '12:00',
-          'Uber Moto / 99Moto (Sábado)',
+          'Jornada de Sábado (Apps / Autônomo)',
           'trabalho',
           templateId,
-          'Incluído porque não há reserva de fim de semana com o filho.',
+          'Incluído porque não há reserva de fim de semana em família.',
         ),
       );
     }
@@ -159,37 +159,37 @@ export function buildWeekEventsFromTemplate(
     for (let idx = 0; idx < 5; idx++) {
       const d = days[idx];
       events.push(
-        makeBlock(d, '10:45', '12:00', 'Deslocamento Magé → Rio', 'deslocamento', templateId),
-        makeBlock(d, '12:00', '20:00', 'Turno Portaria (CLT)', 'trabalho', templateId),
-        makeBlock(d, '20:00', '21:15', 'Deslocamento Rio → Magé', 'deslocamento', templateId),
+        makeBlock(d, '07:15', '08:00', 'Deslocamento (Ida)', 'deslocamento', templateId),
+        makeBlock(d, '08:00', '17:00', 'Expediente / Trabalho (08h–17h)', 'trabalho', templateId),
+        makeBlock(d, '17:00', '17:45', 'Deslocamento (Volta)', 'deslocamento', templateId),
       );
     }
-    // Treinos e estudos pela manhã antes do turno CLT
     for (const idx of [0, 2, 4]) {
-      events.push(makeBlock(days[idx], '07:30', '08:30', 'Academia', 'academia', templateId));
+      events.push(makeBlock(days[idx], '18:00', '19:00', 'Academia', 'academia', templateId));
     }
     events.push(
-      makeBlock(days[1], '07:30', '08:30', 'Corrida matinal', 'corrida', templateId),
-      makeBlock(days[3], '07:30', '08:30', 'Corrida matinal', 'corrida', templateId),
-      makeBlock(days[0], '09:00', '10:00', 'Estudos TI', 'estudos', templateId),
-      makeBlock(days[2], '09:00', '10:00', 'Candidaturas TI', 'entrevista', templateId),
-      makeBlock(days[4], '09:00', '10:00', 'Estudos TI / Revisão', 'estudos', templateId),
+      makeBlock(days[1], '18:30', '19:30', 'Corrida / Caminhada', 'corrida', templateId),
+      makeBlock(days[3], '18:30', '19:30', 'Corrida / Caminhada', 'corrida', templateId),
+      makeBlock(days[0], '20:00', '21:00', 'Estudos / Leitura', 'estudos', templateId),
+      makeBlock(days[2], '20:00', '21:00', 'Projeto Pessoal', 'estudos', templateId),
+      makeBlock(days[4], '19:30', '20:30', 'Revisão semanal', 'geral', templateId),
     );
   } else if (templateId === 'ti') {
     for (let idx = 0; idx < 5; idx++) {
       const d = days[idx];
       events.push(
-        makeBlock(d, '09:00', '18:00', 'Expediente TI', 'trabalho', templateId),
+        makeBlock(d, '09:00', '12:00', 'Bloco Principal: Estudos / Carreira', 'estudos', templateId),
+        makeBlock(d, '14:00', '17:30', 'Prática / Trabalho / Projetos', 'trabalho', templateId),
       );
     }
     for (const idx of [0, 2, 4]) {
       events.push(makeBlock(days[idx], '18:30', '19:30', 'Academia', 'academia', templateId));
     }
     events.push(
-      makeBlock(days[1], '19:00', '20:00', 'Corrida', 'corrida', templateId),
-      makeBlock(days[3], '19:00', '20:00', 'Corrida', 'corrida', templateId),
-      makeBlock(days[0], '20:00', '21:00', 'Estudos / Certificação TI', 'estudos', templateId),
-      makeBlock(days[2], '20:00', '21:00', 'Projeto / Laboratório TI', 'estudos', templateId),
+      makeBlock(days[1], '19:00', '20:00', 'Corrida / Exercício', 'corrida', templateId),
+      makeBlock(days[3], '19:00', '20:00', 'Corrida / Exercício', 'corrida', templateId),
+      makeBlock(days[0], '20:00', '21:00', 'Revisão de Conteúdo', 'estudos', templateId),
+      makeBlock(days[2], '20:00', '21:00', 'Portfólio / Aplicações', 'entrevista', templateId),
     );
   }
 
@@ -199,7 +199,7 @@ export function buildWeekEventsFromTemplate(
         sat,
         '08:00',
         '20:00',
-        'Fim de semana com o filho (bloqueado para trabalho)',
+        'Fim de semana em família (tempo reservado)',
         'filho',
         templateId,
         'Reservado automaticamente conforme regra de fins de semana.',
@@ -208,7 +208,7 @@ export function buildWeekEventsFromTemplate(
         sun,
         '08:00',
         '19:00',
-        'Fim de semana com o filho (bloqueado para trabalho)',
+        'Fim de semana em família (tempo reservado)',
         'filho',
         templateId,
         'Reservado automaticamente conforme regra de fins de semana.',

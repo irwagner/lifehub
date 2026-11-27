@@ -32,6 +32,10 @@ import {
   mergeTombstoneMaps,
   saveTombstones,
 } from './syncTombstones';
+import {
+  MODULES_CONFIG_STORAGE_KEY,
+  saveModulesConfig,
+} from './modulesConfig';
 
 export interface CloudSyncConfig {
   enabled: boolean;
@@ -428,6 +432,14 @@ function mergeClientExtensions(
     }
   }
 
+  let mergedModules = local?.modules;
+  const rMods = remote?.modules;
+  if (!mergedModules && rMods) {
+    mergedModules = rMods;
+  } else if (mergedModules && rMods && (rMods.updatedAt || '') > (mergedModules.updatedAt || '')) {
+    mergedModules = rMods;
+  }
+
   const mergedTombstones = mergeTombstoneMaps(local?.tombstones, remote?.tombstones);
   const hasTombstones = Object.keys(mergedTombstones).length > 0;
 
@@ -437,6 +449,7 @@ function mergeClientExtensions(
     !mergedSheets &&
     !mergedDrive &&
     !mergedFamily &&
+    !mergedModules &&
     !hasTombstones
   ) {
     return undefined;
@@ -447,6 +460,7 @@ function mergeClientExtensions(
     ...(mergedSheets ? { googleSheets: mergedSheets } : {}),
     ...(mergedDrive ? { googleDrive: mergedDrive } : {}),
     ...(mergedFamily ? { familyFinance: mergedFamily } : {}),
+    ...(mergedModules ? { modules: mergedModules } : {}),
     ...(hasTombstones ? { tombstones: mergedTombstones } : {}),
   };
 }
@@ -645,19 +659,46 @@ function readSyncedGoogleDriveMeta(): SyncedClientExtensions['googleDrive'] | un
   }
 }
 
+function readSyncedModulesMeta(): SyncedClientExtensions['modules'] | undefined {
+  try {
+    const raw = localStorage.getItem(MODULES_CONFIG_STORAGE_KEY);
+    if (!raw) return undefined;
+    const parsed = JSON.parse(raw) as {
+      work_apps?: boolean;
+      health?: boolean;
+      family?: boolean;
+      career?: boolean;
+      ideas?: boolean;
+      updatedAt?: string;
+    };
+    return {
+      work_apps: Boolean(parsed.work_apps),
+      health: parsed.health !== false,
+      family: parsed.family !== false,
+      career: parsed.career !== false,
+      ideas: parsed.ideas !== false,
+      updatedAt: parsed.updatedAt ?? new Date().toISOString(),
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 export function collectLocalClientExtensions(): SyncedClientExtensions | undefined {
   const aiCfg = loadGeminiAiConfig();
   const memories = loadAiMemory();
   const sheetsCfg = loadGoogleSheetsConfig();
   const driveMeta = readSyncedGoogleDriveMeta();
   const famCfg = loadFamilyFinanceConfig();
+  const modulesMeta = readSyncedModulesMeta();
   const tombstones = loadTombstones();
   const hasAiKey = aiCfg.apiKey.trim().length > 0;
   const hasSheets = isGoogleSheetsReady(sheetsCfg);
   const hasDrive = Boolean(driveMeta);
   const hasFamily = isFamilySyncReady(famCfg);
+  const hasModules = Boolean(modulesMeta);
   const hasTombstones = Object.keys(tombstones).length > 0;
-  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasDrive && !hasFamily && !hasTombstones) {
+  if (!hasAiKey && memories.length === 0 && !hasSheets && !hasDrive && !hasFamily && !hasModules && !hasTombstones) {
     return undefined;
   }
   return {
@@ -698,6 +739,7 @@ export function collectLocalClientExtensions(): SyncedClientExtensions | undefin
           },
         }
       : {}),
+    ...(modulesMeta ? { modules: modulesMeta } : {}),
     ...(hasTombstones ? { tombstones } : {}),
   };
 }
@@ -766,6 +808,9 @@ export function applyMergedClientExtensions(ext?: SyncedClientExtensions): void 
       autoSync: ext.familyFinance.autoSync,
       updatedAt: ext.familyFinance.updatedAt,
     });
+  }
+  if (ext.modules) {
+    saveModulesConfig(ext.modules);
   }
   if (ext.tombstones && Object.keys(ext.tombstones).length > 0) {
     saveTombstones(mergeTombstoneMaps(loadTombstones(), ext.tombstones));
